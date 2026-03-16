@@ -1,0 +1,46 @@
+// token.rs
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TokenKind {
+    // --- Literals ---
+    Number(i64),
+    Ident(String),
+
+    // --- Keywords ---
+    Sayi,      // sayı
+    Mantik,    // mantık
+    Eger,      // eğer
+    Degilse,   // değilse
+    Dongu,     // döngü
+    Kir,       // kır
+    Devam,     // devam
+    Don,       // dön
+    Dogru,     // doğru
+    Yanlis,    // yanlış
+
+    // --- Punctuation ---
+    LParen,    // (
+    RParen,    // )
+    LBrace,    // {
+    RBrace,    // }
+    Comma,     // ,
+    Colon,     // :
+    Semicolon, // ;
+
+    // --- Operators ---
+    Assign,        // =
+    Arrow,         // ->
+    Plus,          // +
+    Minus,         // -
+    Star,          // *
+    Slash,         // /
+    EqEq,          // ==
+    NotEq,         // !=
+    Less,
+    Greater,
+    LessEq,
+    GreaterEq,
+
+    // --- Special ---
+    Eof,
+}

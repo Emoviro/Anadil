@@ -1,0 +1,146 @@
+Türkçe Programlama Dili – V1 Final Tanımı
+1. Dilin Amacı
+Bu dil Türkçe anahtar kelimeler kullanan, okunabilir, statik tipli ve native derlenen bir programlama dilidir. V1 sürümünün amacı küçük ama sağlam bir çekirdek oluşturmak ve dili ileride büyütmeye uygun bir temel kurmaktır.
+2. Temel Veri Tipleri
+sayı
+mantık
+3. Değişken Tanımlama
+Değişken tanımı şu biçimdedir:
+isim: tip = değer;
+Örnek:
+x: sayı = 10;
+y: sayı = 20;
+durum: mantık = yanlış;
+4. Atama
+x = 30;
+durum = doğru;
+5. İfade Sonlandırma
+Her ifade noktalı virgül ile biter.
+x: sayı = 10;
+yazdir(x);
+x = x + 1;
+6. Aritmetik Operatörler
++
+-
+*
+/
+7. Karşılaştırma Operatörleri
+==
+!=
+<
+>
+<=
+>=
+8. Koşul Yapısı
+eğer (x < y) {
+    yazdir(x);
+} değilse {
+    yazdir(y);
+}
+9. Döngü Yapısı
+Sonsuz döngü:
+döngü {
+    yazdir(1);
+}
+Koşullu döngü:
+döngü (x < 10) {
+    x = x + 1;
+}
+Sayaçlı döngü:
+döngü (i: sayı = 0; i < 10; i = i + 1) {
+    yazdir(i);
+}
+10. Döngü Kontrol İfadeleri
+kır
+döngü {
+    eğer (x == 10) {
+        kır;
+    }
+}
+devam
+döngü (i: sayı = 0; i < 10; i = i + 1) {
+    eğer (i == 5) {
+        devam;
+    }
+    yazdir(i);
+}
+11. Fonksiyon Tanımı
+Fonksiyon tanımlamak için özel bir anahtar kelime kullanılmaz.
+İsim(parametreler) {
+    ...
+}
+İsim(parametreler) -> tip {
+    ...
+}
+12. Fonksiyon Kuralları
+Parametre varsa veri tipi yazılmak zorundadır.
+Dönüş tipi belirtilirse fonksiyon değer döndürmelidir.
+Dönüş tipi belirtilmezse fonksiyon dönüşsüz kabul edilir.
+Topla(a: sayı, b: sayı) -> sayı {
+    dön a + b;
+}
+YazdirDeger(x: sayı) {
+    yazdir(x);
+}
+13. Program Giriş Noktası
+Her program bir Ana() fonksiyonu içermelidir. Program çalıştırıldığında yürütme Ana() fonksiyonundan başlar.
+Ana() {
+    yazdir(10);
+}
+14. Yerleşik Fonksiyon
+yazdir(değer);
+15. Örnek Program
+Topla(a: sayı, b: sayı) -> sayı {
+    dön a + b;
+}
+
+BuyukMu(x: sayı) -> mantık {
+    dön x > 10;
+}
+
+Ana() {
+
+    x: sayı = 10;
+    y: sayı = 20;
+
+    sonuc: sayı = Topla(x, y);
+
+    eğer (BuyukMu(sonuc)) {
+        yazdir(sonuc);
+    } değilse {
+        yazdir(0);
+    }
+
+}
+16. V1’de Olmayan Özellikler
+•	sınıf
+•	nesne
+•	dizi
+•	metin
+•	yapı
+•	modül sistemi
+•	generic tipler
+•	garbage collector
+•	pointer
+•	inheritance
+•	method call
+•	property access
+17. Token Listesi
+Anahtar Kelimeler
+sayı
+mantık
+eğer
+değilse
+döngü
+kır
+devam
+dön
+doğru
+yanlış
+Operatörler
++ - * / = == != < > <= >= ->
+Ayraçlar
+( ) { } ; , :
+Diğer
+IDENT
+NUMBER

@@ -1,0 +1,43 @@
+// main.rs
+
+mod error;
+mod lexer;
+mod token;
+
+use lexer::Lexer;
+
+fn main() {
+
+    let source = r#"
+Topla(a: sayı, b: sayı) -> sayı {
+    dön a + b;
+}
+
+Ana() {
+    x: sayı = 10;
+    y: sayı = 20;
+    sonuc: sayı = Topla(x, y);
+    yazdir(sonuc);
+}
+"#;
+
+    let mut lexer = Lexer::new(source);
+
+    match lexer.tokenize() {
+
+        Ok(tokens) => {
+            for token in tokens {
+                println!("{:?}", token);
+            }
+        }
+
+        Err(err) => {
+            eprintln!(
+                "Lexer hatası: {} (satır {}, sütun {})",
+                err.message,
+                err.line,
+                err.column
+            );
+        }
+    }
+}
