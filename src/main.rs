@@ -2,10 +2,12 @@ mod ast;
 mod error;
 mod lexer;
 mod parser;
+mod sema;
 mod token;
 
 use lexer::Lexer;
 use parser::Parser;
+use sema::Analyzer;
 
 fn main() {
     let examples = [
@@ -15,11 +17,20 @@ fn main() {
 Topla(a: sayı, b: sayı) -> sayı {
     dön a + b;
 }
+
+Ana() {
+    sonuç: sayı = Topla(1, 2);
+    yazdir(sonuç);
+}
 "#,
         ),
         (
             "Örnek 2",
             r#"
+Topla(a: sayı, b: sayı) -> sayı {
+    dön a + b;
+}
+
 Ana() {
     x: sayı = 10;
     y: sayı = 20;
@@ -46,8 +57,11 @@ Ana() {
     for (label, source) in examples {
         println!("== {label} ==");
 
-        match parse_source(source) {
-            Ok(program) => println!("{program:#?}"),
+        match compile_frontend(source) {
+            Ok(program) => {
+                println!("Semantic analiz başarılı.");
+                println!("{program:#?}");
+            }
             Err(message) => eprintln!("{message}"),
         }
 
@@ -56,14 +70,18 @@ Ana() {
 }
 
 // This keeps the frontend pipeline visible while the project grows.
-fn parse_source(source: &str) -> Result<ast::Program, String> {
+fn compile_frontend(source: &str) -> Result<ast::Program, String> {
     let mut lexer = Lexer::new(source);
     let tokens = lexer
         .tokenize()
         .map_err(|error| format!("Lexer hatası: {error}"))?;
 
     let mut parser = Parser::new(tokens);
-    parser
+    let program = parser
         .parse_program()
-        .map_err(|error| format!("Parser hatası: {error}"))
+        .map_err(|error| format!("Parser hatası: {error}"))?;
+
+    Analyzer::analyze(&program).map_err(|error| format!("Semantic hata: {error}"))?;
+
+    Ok(program)
 }

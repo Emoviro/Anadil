@@ -1,3 +1,5 @@
+use std::fmt;
+
 // Program is the top-level container for parsed functions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
@@ -19,10 +21,25 @@ pub struct Param {
     pub ty: Type,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Type {
     Sayi,
     Mantik,
+}
+
+impl Type {
+    pub fn name(self) -> &'static str {
+        match self {
+            Type::Sayi => "sayı",
+            Type::Mantik => "mantık",
+        }
+    }
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str((*self).name())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
