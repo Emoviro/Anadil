@@ -1,8 +1,8 @@
 use std::fmt;
 
 use crate::ast::{
-    AssignStmt, BinaryOp, Block, Expr, Function, IfStmt, LoopPart, LoopStmt, Param, Program, Stmt,
-    Type, VarDecl,
+    AssignStmt, BinaryOp, Block, Expr, ExprKind, Function, IfStmt, LoopPart, LoopStmt, Param,
+    Program, SourceSpan, Stmt, StmtKind, Type, VarDecl,
 };
 use crate::token::{Token, TokenKind};
 
@@ -10,8 +10,7 @@ use crate::token::{Token, TokenKind};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParseError {
     pub message: String,
-    pub line: usize,
-    pub column: usize,
+    pub span: SourceSpan,
 }
 
 impl ParseError {
@@ -22,16 +21,14 @@ impl ParseError {
                 expected.into(),
                 found.kind.describe()
             ),
-            line: found.line,
-            column: found.column,
+            span: found.span(),
         }
     }
 
-    fn message(message: impl Into<String>, found: &Token) -> Self {
+    fn message(message: impl Into<String>, span: SourceSpan) -> Self {
         Self {
             message: message.into(),
-            line: found.line,
-            column: found.column,
+            span,
         }
     }
 }
@@ -41,7 +38,7 @@ impl fmt::Display for ParseError {
         write!(
             f,
             "{} (satır {}, sütun {})",
-            self.message, self.line, self.column
+            self.message, self.span.line, self.span.column
         )
     }
 }
@@ -70,10 +67,10 @@ impl Parser {
     }
 
     fn parse_function(&mut self) -> Result<Function, ParseError> {
-        let name = self.expect_ident()?;
-        self.expect("`(`", |kind| matches!(kind, TokenKind::LParen))?;
+        let (name, span) = self.expect_ident()?;
+        self.expect_token("`(`", |kind| matches!(kind, TokenKind::LParen))?;
         let params = self.parse_params()?;
-        self.expect("`)`", |kind| matches!(kind, TokenKind::RParen))?;
+        self.expect_token("`)`", |kind| matches!(kind, TokenKind::RParen))?;
 
         let return_type = if self
             .consume_if(|kind| matches!(kind, TokenKind::Arrow))
@@ -87,6 +84,7 @@ impl Parser {
         let body = self.parse_block()?;
 
         Ok(Function {
+            span,
             name,
             params,
             return_type,
@@ -102,10 +100,10 @@ impl Parser {
         }
 
         loop {
-            let name = self.expect_ident()?;
-            self.expect("`:`", |kind| matches!(kind, TokenKind::Colon))?;
+            let (name, span) = self.expect_ident()?;
+            self.expect_token("`:`", |kind| matches!(kind, TokenKind::Colon))?;
             let ty = self.parse_type()?;
-            params.push(Param { name, ty });
+            params.push(Param { span, name, ty });
 
             if self
                 .consume_if(|kind| matches!(kind, TokenKind::Comma))
@@ -136,76 +134,64 @@ impl Parser {
     }
 
     fn parse_block(&mut self) -> Result<Block, ParseError> {
-        self.expect("`{`", |kind| matches!(kind, TokenKind::LBrace))?;
-
+        let lbrace = self.expect_token("`{`", |kind| matches!(kind, TokenKind::LBrace))?;
         let mut statements = Vec::new();
+
         while !self.check(|kind| matches!(kind, TokenKind::RBrace | TokenKind::Eof)) {
             statements.push(self.parse_statement()?);
         }
 
-        self.expect("`}`", |kind| matches!(kind, TokenKind::RBrace))?;
-        Ok(Block { statements })
+        self.expect_token("`}`", |kind| matches!(kind, TokenKind::RBrace))?;
+
+        Ok(Block {
+            span: lbrace.span(),
+            statements,
+        })
     }
 
     fn parse_statement(&mut self) -> Result<Stmt, ParseError> {
-        if self
-            .consume_if(|kind| matches!(kind, TokenKind::Eger))
-            .is_some()
-        {
+        if self.check(|kind| matches!(kind, TokenKind::Eger)) {
             return self.parse_if_statement();
         }
 
-        if self
-            .consume_if(|kind| matches!(kind, TokenKind::Dongu))
-            .is_some()
-        {
+        if self.check(|kind| matches!(kind, TokenKind::Dongu)) {
             return self.parse_loop_statement();
         }
 
-        if self
-            .consume_if(|kind| matches!(kind, TokenKind::Kir))
-            .is_some()
-        {
-            self.expect("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
-            return Ok(Stmt::Break);
+        if self.check(|kind| matches!(kind, TokenKind::Kir)) {
+            return self.parse_break_statement();
         }
 
-        if self
-            .consume_if(|kind| matches!(kind, TokenKind::Devam))
-            .is_some()
-        {
-            self.expect("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
-            return Ok(Stmt::Continue);
+        if self.check(|kind| matches!(kind, TokenKind::Devam)) {
+            return self.parse_continue_statement();
         }
 
-        if self
-            .consume_if(|kind| matches!(kind, TokenKind::Don))
-            .is_some()
-        {
+        if self.check(|kind| matches!(kind, TokenKind::Don)) {
             return self.parse_return_statement();
         }
 
         if self.is_var_decl_start() {
             let decl = self.parse_var_decl()?;
-            self.expect("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
-            return Ok(Stmt::VarDecl(decl));
+            self.expect_token("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
+            return Ok(Stmt::new(decl.span, StmtKind::VarDecl(decl)));
         }
 
         if self.is_assignment_start() {
             let assign = self.parse_assignment()?;
-            self.expect("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
-            return Ok(Stmt::Assign(assign));
+            self.expect_token("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
+            return Ok(Stmt::new(assign.span, StmtKind::Assign(assign)));
         }
 
         let expr = self.parse_expression()?;
-        self.expect("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
-        Ok(Stmt::Expr(expr))
+        self.expect_token("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
+        Ok(Stmt::new(expr.span, StmtKind::Expr(expr)))
     }
 
     fn parse_if_statement(&mut self) -> Result<Stmt, ParseError> {
-        self.expect("`(`", |kind| matches!(kind, TokenKind::LParen))?;
+        let if_token = self.expect_token("`eğer`", |kind| matches!(kind, TokenKind::Eger))?;
+        self.expect_token("`(`", |kind| matches!(kind, TokenKind::LParen))?;
         let condition = self.parse_expression()?;
-        self.expect("`)`", |kind| matches!(kind, TokenKind::RParen))?;
+        self.expect_token("`)`", |kind| matches!(kind, TokenKind::RParen))?;
 
         let then_branch = self.parse_block()?;
         let else_branch = if self
@@ -217,25 +203,37 @@ impl Parser {
             None
         };
 
-        Ok(Stmt::If(IfStmt {
-            condition,
-            then_branch,
-            else_branch,
-        }))
+        let span = if_token.span();
+        Ok(Stmt::new(
+            span,
+            StmtKind::If(IfStmt {
+                span,
+                condition,
+                then_branch,
+                else_branch,
+            }),
+        ))
     }
 
     fn parse_loop_statement(&mut self) -> Result<Stmt, ParseError> {
+        let loop_token = self.expect_token("`döngü`", |kind| matches!(kind, TokenKind::Dongu))?;
+        let span = loop_token.span();
+
         if self.check(|kind| matches!(kind, TokenKind::LBrace)) {
             let body = self.parse_block()?;
-            return Ok(Stmt::Loop(LoopStmt {
-                init: None,
-                condition: None,
-                step: None,
-                body,
-            }));
+            return Ok(Stmt::new(
+                span,
+                StmtKind::Loop(LoopStmt {
+                    span,
+                    init: None,
+                    condition: None,
+                    step: None,
+                    body,
+                }),
+            ));
         }
 
-        self.expect("`(`", |kind| matches!(kind, TokenKind::LParen))?;
+        self.expect_token("`(`", |kind| matches!(kind, TokenKind::LParen))?;
 
         if self.has_top_level_semicolon_before_rparen() {
             let init = if self.check(|kind| matches!(kind, TokenKind::Semicolon)) {
@@ -243,59 +241,83 @@ impl Parser {
             } else {
                 Some(self.parse_loop_part()?)
             };
-            self.expect("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
+            self.expect_token("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
 
             let condition = if self.check(|kind| matches!(kind, TokenKind::Semicolon)) {
                 None
             } else {
                 Some(self.parse_expression()?)
             };
-            self.expect("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
+            self.expect_token("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
 
             let step = if self.check(|kind| matches!(kind, TokenKind::RParen)) {
                 None
             } else {
                 Some(self.parse_loop_part()?)
             };
-            self.expect("`)`", |kind| matches!(kind, TokenKind::RParen))?;
+            self.expect_token("`)`", |kind| matches!(kind, TokenKind::RParen))?;
 
             let body = self.parse_block()?;
-            return Ok(Stmt::Loop(LoopStmt {
-                init,
-                condition,
-                step,
-                body,
-            }));
+
+            return Ok(Stmt::new(
+                span,
+                StmtKind::Loop(LoopStmt {
+                    span,
+                    init,
+                    condition,
+                    step,
+                    body,
+                }),
+            ));
         }
 
         if self.check(|kind| matches!(kind, TokenKind::RParen)) {
             return Err(ParseError::message(
                 "Koşullu döngü içinde bir ifade bekleniyordu",
-                self.current(),
+                self.current_span(),
             ));
         }
 
         let condition = Some(self.parse_expression()?);
-        self.expect("`)`", |kind| matches!(kind, TokenKind::RParen))?;
+        self.expect_token("`)`", |kind| matches!(kind, TokenKind::RParen))?;
         let body = self.parse_block()?;
 
-        Ok(Stmt::Loop(LoopStmt {
-            init: None,
-            condition,
-            step: None,
-            body,
-        }))
+        Ok(Stmt::new(
+            span,
+            StmtKind::Loop(LoopStmt {
+                span,
+                init: None,
+                condition,
+                step: None,
+                body,
+            }),
+        ))
+    }
+
+    fn parse_break_statement(&mut self) -> Result<Stmt, ParseError> {
+        let token = self.expect_token("`kır`", |kind| matches!(kind, TokenKind::Kir))?;
+        self.expect_token("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
+        Ok(Stmt::new(token.span(), StmtKind::Break))
+    }
+
+    fn parse_continue_statement(&mut self) -> Result<Stmt, ParseError> {
+        let token = self.expect_token("`devam`", |kind| matches!(kind, TokenKind::Devam))?;
+        self.expect_token("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
+        Ok(Stmt::new(token.span(), StmtKind::Continue))
     }
 
     fn parse_return_statement(&mut self) -> Result<Stmt, ParseError> {
+        let token = self.expect_token("`dön`", |kind| matches!(kind, TokenKind::Don))?;
+        let span = token.span();
+
         if self.check(|kind| matches!(kind, TokenKind::Semicolon)) {
             self.bump();
-            return Ok(Stmt::Return(None));
+            return Ok(Stmt::new(span, StmtKind::Return(None)));
         }
 
         let value = self.parse_expression()?;
-        self.expect("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
-        Ok(Stmt::Return(Some(value)))
+        self.expect_token("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
+        Ok(Stmt::new(span, StmtKind::Return(Some(value))))
     }
 
     fn parse_loop_part(&mut self) -> Result<LoopPart, ParseError> {
@@ -311,21 +333,30 @@ impl Parser {
     }
 
     fn parse_var_decl(&mut self) -> Result<VarDecl, ParseError> {
-        let name = self.expect_ident()?;
-        self.expect("`:`", |kind| matches!(kind, TokenKind::Colon))?;
+        let (name, span) = self.expect_ident()?;
+        self.expect_token("`:`", |kind| matches!(kind, TokenKind::Colon))?;
         let ty = self.parse_type()?;
-        self.expect("`=`", |kind| matches!(kind, TokenKind::Assign))?;
+        self.expect_token("`=`", |kind| matches!(kind, TokenKind::Assign))?;
         let value = self.parse_expression()?;
 
-        Ok(VarDecl { name, ty, value })
+        Ok(VarDecl {
+            span,
+            name,
+            ty,
+            value,
+        })
     }
 
     fn parse_assignment(&mut self) -> Result<AssignStmt, ParseError> {
-        let target = self.expect_ident()?;
-        self.expect("`=`", |kind| matches!(kind, TokenKind::Assign))?;
+        let (target, span) = self.expect_ident()?;
+        self.expect_token("`=`", |kind| matches!(kind, TokenKind::Assign))?;
         let value = self.parse_expression()?;
 
-        Ok(AssignStmt { target, value })
+        Ok(AssignStmt {
+            span,
+            target,
+            value,
+        })
     }
 
     fn parse_expression(&mut self) -> Result<Expr, ParseError> {
@@ -354,12 +385,16 @@ impl Parser {
                 break;
             };
 
+            let span = expr.span;
             let right = self.parse_comparison()?;
-            expr = Expr::Binary {
-                left: Box::new(expr),
-                op,
-                right: Box::new(right),
-            };
+            expr = Expr::new(
+                span,
+                ExprKind::Binary {
+                    left: Box::new(expr),
+                    op,
+                    right: Box::new(right),
+                },
+            );
         }
 
         Ok(expr)
@@ -397,12 +432,16 @@ impl Parser {
                 break;
             };
 
+            let span = expr.span;
             let right = self.parse_term()?;
-            expr = Expr::Binary {
-                left: Box::new(expr),
-                op,
-                right: Box::new(right),
-            };
+            expr = Expr::new(
+                span,
+                ExprKind::Binary {
+                    left: Box::new(expr),
+                    op,
+                    right: Box::new(right),
+                },
+            );
         }
 
         Ok(expr)
@@ -430,12 +469,16 @@ impl Parser {
                 break;
             };
 
+            let span = expr.span;
             let right = self.parse_factor()?;
-            expr = Expr::Binary {
-                left: Box::new(expr),
-                op,
-                right: Box::new(right),
-            };
+            expr = Expr::new(
+                span,
+                ExprKind::Binary {
+                    left: Box::new(expr),
+                    op,
+                    right: Box::new(right),
+                },
+            );
         }
 
         Ok(expr)
@@ -463,12 +506,16 @@ impl Parser {
                 break;
             };
 
+            let span = expr.span;
             let right = self.parse_primary()?;
-            expr = Expr::Binary {
-                left: Box::new(expr),
-                op,
-                right: Box::new(right),
-            };
+            expr = Expr::new(
+                span,
+                ExprKind::Binary {
+                    left: Box::new(expr),
+                    op,
+                    right: Box::new(right),
+                },
+            );
         }
 
         Ok(expr)
@@ -477,35 +524,36 @@ impl Parser {
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
         match self.current().kind.clone() {
             TokenKind::Number(value) => {
-                self.bump();
-                Ok(Expr::Number(value))
+                let token = self.bump();
+                Ok(Expr::new(token.span(), ExprKind::Number(value)))
             }
             TokenKind::Dogru => {
-                self.bump();
-                Ok(Expr::Bool(true))
+                let token = self.bump();
+                Ok(Expr::new(token.span(), ExprKind::Bool(true)))
             }
             TokenKind::Yanlis => {
-                self.bump();
-                Ok(Expr::Bool(false))
+                let token = self.bump();
+                Ok(Expr::new(token.span(), ExprKind::Bool(false)))
             }
             TokenKind::Ident(name) => {
-                self.bump();
+                let token = self.bump();
+                let span = token.span();
 
                 if self
                     .consume_if(|kind| matches!(kind, TokenKind::LParen))
                     .is_some()
                 {
                     let args = self.parse_arguments()?;
-                    self.expect("`)`", |kind| matches!(kind, TokenKind::RParen))?;
-                    Ok(Expr::Call { callee: name, args })
+                    self.expect_token("`)`", |kind| matches!(kind, TokenKind::RParen))?;
+                    Ok(Expr::new(span, ExprKind::Call { callee: name, args }))
                 } else {
-                    Ok(Expr::Variable(name))
+                    Ok(Expr::new(span, ExprKind::Variable(name)))
                 }
             }
             TokenKind::LParen => {
                 self.bump();
                 let expr = self.parse_expression()?;
-                self.expect("`)`", |kind| matches!(kind, TokenKind::RParen))?;
+                self.expect_token("`)`", |kind| matches!(kind, TokenKind::RParen))?;
                 Ok(expr)
             }
             _ => Err(ParseError::expected("bir ifade", self.current())),
@@ -533,11 +581,11 @@ impl Parser {
         Ok(args)
     }
 
-    fn expect_ident(&mut self) -> Result<String, ParseError> {
+    fn expect_ident(&mut self) -> Result<(String, SourceSpan), ParseError> {
         match self.current().kind.clone() {
             TokenKind::Ident(name) => {
-                self.bump();
-                Ok(name)
+                let token = self.bump();
+                Ok((name, token.span()))
             }
             _ => Err(ParseError::expected("bir tanımlayıcı", self.current())),
         }
@@ -547,6 +595,10 @@ impl Parser {
         self.tokens
             .get(self.pos)
             .unwrap_or_else(|| self.tokens.last().expect("token stream is empty"))
+    }
+
+    fn current_span(&self) -> SourceSpan {
+        self.current().span()
     }
 
     fn peek_kind(&self) -> Option<&TokenKind> {
@@ -585,7 +637,7 @@ impl Parser {
         }
     }
 
-    fn expect<F>(&mut self, expected: &str, predicate: F) -> Result<Token, ParseError>
+    fn expect_token<F>(&mut self, expected: &str, predicate: F) -> Result<Token, ParseError>
     where
         F: Fn(&TokenKind) -> bool,
     {
@@ -634,7 +686,7 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::Parser;
-    use crate::ast::{BinaryOp, Expr, LoopPart, Stmt, Type};
+    use crate::ast::{BinaryOp, ExprKind, LoopPart, StmtKind, Type};
     use crate::lexer::Lexer;
 
     fn parse(source: &str) -> crate::ast::Program {
@@ -661,9 +713,12 @@ Topla(a: sayı, b: sayı) -> sayı {
         assert_eq!(function.return_type.as_ref(), Some(&Type::Sayi));
         assert_eq!(function.params.len(), 2);
 
-        match &function.body.statements[0] {
-            Stmt::Return(Some(Expr::Binary { op, .. })) => assert_eq!(*op, BinaryOp::Add),
-            other => panic!("beklenmeyen dönüş ifadesi: {other:?}"),
+        match &function.body.statements[0].kind {
+            StmtKind::Return(Some(expr)) => match &expr.kind {
+                ExprKind::Binary { op, .. } => assert_eq!(*op, BinaryOp::Add),
+                other => panic!("beklenmeyen dönüş ifadesi: {other:?}"),
+            },
+            other => panic!("beklenmeyen statement: {other:?}"),
         }
     }
 
@@ -684,9 +739,9 @@ Ana() {
         assert_eq!(function.name.as_str(), "Ana");
         assert_eq!(function.body.statements.len(), 4);
 
-        match &function.body.statements[2] {
-            Stmt::VarDecl(decl) => match &decl.value {
-                Expr::Call { callee, args } => {
+        match &function.body.statements[2].kind {
+            StmtKind::VarDecl(decl) => match &decl.value.kind {
+                ExprKind::Call { callee, args } => {
                     assert_eq!(callee, "Topla");
                     assert_eq!(args.len(), 2);
                 }
@@ -713,8 +768,8 @@ Ana() {
 
         let function = &program.functions[0];
 
-        match &function.body.statements[0] {
-            Stmt::Loop(loop_stmt) => {
+        match &function.body.statements[0].kind {
+            StmtKind::Loop(loop_stmt) => {
                 assert!(matches!(&loop_stmt.init, Some(LoopPart::VarDecl(_))));
                 assert!(matches!(&loop_stmt.step, Some(LoopPart::Assign(_))));
                 assert_eq!(loop_stmt.body.statements.len(), 2);

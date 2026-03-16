@@ -1,3 +1,5 @@
+use crate::ast::SourceSpan;
+
 // Tokens are the shared contract between the lexer and the parser.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenKind {
@@ -94,5 +96,9 @@ pub struct Token {
 impl Token {
     pub fn new(kind: TokenKind, line: usize, column: usize) -> Self {
         Self { kind, line, column }
+    }
+
+    pub fn span(&self) -> SourceSpan {
+        SourceSpan::new(self.line, self.column)
     }
 }

@@ -2,25 +2,42 @@ use std::collections::HashMap;
 use std::fmt;
 
 use crate::ast::{
-    AssignStmt, BinaryOp, Block, Expr, Function, LoopPart, Program, Stmt, Type, VarDecl,
+    AssignStmt, BinaryOp, Block, Expr, ExprKind, Function, LoopPart, Program, SourceSpan, Stmt,
+    StmtKind, Type, VarDecl,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SemanticError {
     pub message: String,
+    pub span: Option<SourceSpan>,
 }
 
 impl SemanticError {
     fn new(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),
+            span: None,
+        }
+    }
+
+    fn at(span: SourceSpan, message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+            span: Some(span),
         }
     }
 }
 
 impl fmt::Display for SemanticError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.message)
+        match self.span {
+            Some(span) => write!(
+                f,
+                "{} (satır {}, sütun {})",
+                self.message, span.line, span.column
+            ),
+            None => f.write_str(&self.message),
+        }
     }
 }
 
@@ -83,8 +100,7 @@ impl ScopeStack {
 }
 
 #[derive(Debug)]
-struct FunctionContext<'a> {
-    name: &'a str,
+struct FunctionContext {
     return_type: Option<Type>,
     loop_depth: usize,
     saw_value_return: bool,
@@ -123,10 +139,13 @@ impl Analyzer {
                 .insert(function.name.clone(), signature)
                 .is_some()
             {
-                return Err(SemanticError::new(format!(
-                    "`{}` fonksiyonu birden fazla kez tanımlanmış",
-                    function.name
-                )));
+                return Err(SemanticError::at(
+                    function.span,
+                    format!(
+                        "`{}` fonksiyonu birden fazla kez tanımlanmış",
+                        function.name
+                    ),
+                ));
             }
         }
 
@@ -150,7 +169,6 @@ impl Analyzer {
     fn analyze_function(&self, function: &Function) -> Result<(), SemanticError> {
         let mut scopes = ScopeStack::new();
         let mut context = FunctionContext {
-            name: &function.name,
             return_type: function.return_type,
             loop_depth: 0,
             saw_value_return: false,
@@ -158,8 +176,8 @@ impl Analyzer {
 
         for param in &function.params {
             if !scopes.declare(&param.name, param.ty) {
-                return Err(self.function_error(
-                    context.name,
+                return Err(SemanticError::at(
+                    param.span,
                     format!("`{}` parametresi birden fazla kez tanımlanmış", param.name),
                 ));
             }
@@ -168,9 +186,9 @@ impl Analyzer {
         self.analyze_block(&function.body, &mut scopes, &mut context, false)?;
 
         if context.return_type.is_some() && !context.saw_value_return {
-            return Err(self.function_error(
-                context.name,
-                "dönüş tipi belirtilen fonksiyonda en az bir `dön` ifadesi bulunmalı",
+            return Err(SemanticError::at(
+                function.span,
+                "Dönüş tipi belirtilen fonksiyonda en az bir `dön` ifadesi bulunmalı",
             ));
         }
 
@@ -181,7 +199,7 @@ impl Analyzer {
         &self,
         block: &Block,
         scopes: &mut ScopeStack,
-        context: &mut FunctionContext<'_>,
+        context: &mut FunctionContext,
         create_scope: bool,
     ) -> Result<(), SemanticError> {
         if create_scope {
@@ -203,18 +221,17 @@ impl Analyzer {
         &self,
         statement: &Stmt,
         scopes: &mut ScopeStack,
-        context: &mut FunctionContext<'_>,
+        context: &mut FunctionContext,
     ) -> Result<(), SemanticError> {
-        match statement {
-            Stmt::VarDecl(decl) => self.analyze_var_decl(decl, scopes, context),
-            Stmt::Assign(assign) => self.analyze_assignment(assign, scopes, context),
-            Stmt::If(if_stmt) => {
-                let condition_type =
-                    self.expect_value_expr(&if_stmt.condition, scopes, context, "`eğer` koşulu")?;
+        match &statement.kind {
+            StmtKind::VarDecl(decl) => self.analyze_var_decl(decl, scopes, context),
+            StmtKind::Assign(assign) => self.analyze_assignment(assign, scopes, context),
+            StmtKind::If(if_stmt) => {
+                let condition_type = self.expect_value_expr(&if_stmt.condition, scopes, context)?;
 
                 if condition_type != Type::Mantik {
-                    return Err(self.function_error(
-                        context.name,
+                    return Err(SemanticError::at(
+                        if_stmt.condition.span,
                         format!(
                             "`eğer` koşulu `mantık` olmalı, bulunan `{}`",
                             condition_type
@@ -230,7 +247,7 @@ impl Analyzer {
 
                 Ok(())
             }
-            Stmt::Loop(loop_stmt) => {
+            StmtKind::Loop(loop_stmt) => {
                 scopes.push_scope();
 
                 let result = (|| {
@@ -239,12 +256,11 @@ impl Analyzer {
                     }
 
                     if let Some(condition) = &loop_stmt.condition {
-                        let condition_type =
-                            self.expect_value_expr(condition, scopes, context, "`döngü` koşulu")?;
+                        let condition_type = self.expect_value_expr(condition, scopes, context)?;
 
                         if condition_type != Type::Mantik {
-                            return Err(self.function_error(
-                                context.name,
+                            return Err(SemanticError::at(
+                                condition.span,
                                 format!(
                                     "`döngü` koşulu `mantık` olmalı, bulunan `{}`",
                                     condition_type
@@ -266,28 +282,30 @@ impl Analyzer {
                 scopes.pop_scope();
                 result
             }
-            Stmt::Break => {
+            StmtKind::Break => {
                 if context.loop_depth == 0 {
-                    Err(self.function_error(
-                        context.name,
+                    Err(SemanticError::at(
+                        statement.span,
                         "`kır` ifadesi yalnızca döngü içinde kullanılabilir",
                     ))
                 } else {
                     Ok(())
                 }
             }
-            Stmt::Continue => {
+            StmtKind::Continue => {
                 if context.loop_depth == 0 {
-                    Err(self.function_error(
-                        context.name,
+                    Err(SemanticError::at(
+                        statement.span,
                         "`devam` ifadesi yalnızca döngü içinde kullanılabilir",
                     ))
                 } else {
                     Ok(())
                 }
             }
-            Stmt::Return(value) => self.analyze_return(value.as_ref(), scopes, context),
-            Stmt::Expr(expr) => {
+            StmtKind::Return(value) => {
+                self.analyze_return(statement.span, value.as_ref(), scopes, context)
+            }
+            StmtKind::Expr(expr) => {
                 self.infer_expr_type(expr, scopes, context)?;
                 Ok(())
             }
@@ -298,7 +316,7 @@ impl Analyzer {
         &self,
         part: &LoopPart,
         scopes: &mut ScopeStack,
-        context: &mut FunctionContext<'_>,
+        context: &mut FunctionContext,
     ) -> Result<(), SemanticError> {
         match part {
             LoopPart::VarDecl(decl) => self.analyze_var_decl(decl, scopes, context),
@@ -314,14 +332,13 @@ impl Analyzer {
         &self,
         decl: &VarDecl,
         scopes: &mut ScopeStack,
-        context: &mut FunctionContext<'_>,
+        context: &mut FunctionContext,
     ) -> Result<(), SemanticError> {
-        let value_type =
-            self.expect_value_expr(&decl.value, scopes, context, "değişken başlangıç değeri")?;
+        let value_type = self.expect_value_expr(&decl.value, scopes, context)?;
 
         if value_type != decl.ty {
-            return Err(self.function_error(
-                context.name,
+            return Err(SemanticError::at(
+                decl.span,
                 format!(
                     "`{}` değişkeni `{}` tipinde, ama atanan ifade `{}` tipinde",
                     decl.name, decl.ty, value_type
@@ -330,8 +347,8 @@ impl Analyzer {
         }
 
         if !scopes.declare(&decl.name, decl.ty) {
-            return Err(self.function_error(
-                context.name,
+            return Err(SemanticError::at(
+                decl.span,
                 format!("`{}` aynı scope içinde yeniden tanımlanmış", decl.name),
             ));
         }
@@ -343,20 +360,20 @@ impl Analyzer {
         &self,
         assign: &AssignStmt,
         scopes: &mut ScopeStack,
-        context: &mut FunctionContext<'_>,
+        context: &mut FunctionContext,
     ) -> Result<(), SemanticError> {
         let Some(target_type) = scopes.lookup(&assign.target) else {
-            return Err(self.function_error(
-                context.name,
+            return Err(SemanticError::at(
+                assign.span,
                 format!("Tanımsız değişkene atama yapılıyor: `{}`", assign.target),
             ));
         };
 
-        let value_type = self.expect_value_expr(&assign.value, scopes, context, "atama ifadesi")?;
+        let value_type = self.expect_value_expr(&assign.value, scopes, context)?;
 
         if value_type != target_type {
-            return Err(self.function_error(
-                context.name,
+            return Err(SemanticError::at(
+                assign.span,
                 format!(
                     "`{}` değişkeni `{}` tipinde, ama atanan ifade `{}` tipinde",
                     assign.target, target_type, value_type
@@ -369,28 +386,30 @@ impl Analyzer {
 
     fn analyze_return(
         &self,
+        return_span: SourceSpan,
         value: Option<&Expr>,
         scopes: &ScopeStack,
-        context: &mut FunctionContext<'_>,
+        context: &mut FunctionContext,
     ) -> Result<(), SemanticError> {
         match (context.return_type, value) {
             (None, None) => Ok(()),
-            (None, Some(_)) => {
-                Err(self.function_error(context.name, "dönüşsüz fonksiyon değer döndüremez"))
-            }
-            (Some(expected_type), None) => Err(self.function_error(
-                context.name,
+            (None, Some(_)) => Err(SemanticError::at(
+                return_span,
+                "Dönüşsüz fonksiyon değer döndüremez",
+            )),
+            (Some(expected_type), None) => Err(SemanticError::at(
+                return_span,
                 format!(
-                    "bu fonksiyon `{}` döndürmeli, `dön` ifadesi ise değer içermiyor",
+                    "Bu fonksiyon `{}` döndürmeli, `dön` ifadesi ise değer içermiyor",
                     expected_type
                 ),
             )),
             (Some(expected_type), Some(expr)) => {
-                let actual_type = self.expect_value_expr(expr, scopes, context, "`dön` ifadesi")?;
+                let actual_type = self.expect_value_expr(expr, scopes, context)?;
 
                 if actual_type != expected_type {
-                    return Err(self.function_error(
-                        context.name,
+                    return Err(SemanticError::at(
+                        return_span,
                         format!(
                             "`dön` ifadesi `{}` tipinde olmalı, bulunan `{}`",
                             expected_type, actual_type
@@ -408,14 +427,13 @@ impl Analyzer {
         &self,
         expr: &Expr,
         scopes: &ScopeStack,
-        context: &FunctionContext<'_>,
-        usage: &str,
+        context: &FunctionContext,
     ) -> Result<Type, SemanticError> {
         match self.infer_expr_type(expr, scopes, context)? {
             ExprType::Value(ty) => Ok(ty),
-            ExprType::Void => Err(self.function_error(
-                context.name,
-                format!("{usage} değer üretmeli, ancak ifade dönüşsüz"),
+            ExprType::Void => Err(SemanticError::at(
+                expr.span,
+                "Bu ifade değer üretmeli, ancak dönüşsüz",
             )),
         }
     }
@@ -424,42 +442,44 @@ impl Analyzer {
         &self,
         expr: &Expr,
         scopes: &ScopeStack,
-        context: &FunctionContext<'_>,
+        context: &FunctionContext,
     ) -> Result<ExprType, SemanticError> {
-        match expr {
-            Expr::Number(_) => Ok(ExprType::Value(Type::Sayi)),
-            Expr::Bool(_) => Ok(ExprType::Value(Type::Mantik)),
-            Expr::Variable(name) => {
+        match &expr.kind {
+            ExprKind::Number(_) => Ok(ExprType::Value(Type::Sayi)),
+            ExprKind::Bool(_) => Ok(ExprType::Value(Type::Mantik)),
+            ExprKind::Variable(name) => {
                 let Some(ty) = scopes.lookup(name) else {
-                    return Err(self.function_error(
-                        context.name,
+                    return Err(SemanticError::at(
+                        expr.span,
                         format!("Tanımsız değişken kullanılıyor: `{name}`"),
                     ));
                 };
 
                 Ok(ExprType::Value(ty))
             }
-            Expr::Call { callee, args } => self.analyze_call_expr(callee, args, scopes, context),
-            Expr::Binary { left, op, right } => {
-                let left_type = self.expect_value_expr(left, scopes, context, "sol operand")?;
-                let right_type = self.expect_value_expr(right, scopes, context, "sağ operand")?;
+            ExprKind::Call { callee, args } => {
+                self.analyze_call_expr(expr.span, callee, args, scopes, context)
+            }
+            ExprKind::Binary { left, op, right } => {
+                let left_type = self.expect_value_expr(left, scopes, context)?;
+                let right_type = self.expect_value_expr(right, scopes, context)?;
 
                 match op {
                     BinaryOp::Add | BinaryOp::Subtract | BinaryOp::Multiply | BinaryOp::Divide => {
-                        self.expect_numeric_operands(*op, left_type, right_type, context)?;
+                        self.expect_numeric_operands(expr.span, *op, left_type, right_type)?;
                         Ok(ExprType::Value(Type::Sayi))
                     }
                     BinaryOp::Less
                     | BinaryOp::Greater
                     | BinaryOp::LessEqual
                     | BinaryOp::GreaterEqual => {
-                        self.expect_numeric_operands(*op, left_type, right_type, context)?;
+                        self.expect_numeric_operands(expr.span, *op, left_type, right_type)?;
                         Ok(ExprType::Value(Type::Mantik))
                     }
                     BinaryOp::Equal | BinaryOp::NotEqual => {
                         if left_type != right_type {
-                            return Err(self.function_error(
-                                context.name,
+                            return Err(SemanticError::at(
+                                expr.span,
                                 format!(
                                     "`{}` ve `{}` tipleri `{}` işleminde karşılaştırılamaz",
                                     left_type,
@@ -478,20 +498,21 @@ impl Analyzer {
 
     fn analyze_call_expr(
         &self,
+        call_span: SourceSpan,
         callee: &str,
         args: &[Expr],
         scopes: &ScopeStack,
-        context: &FunctionContext<'_>,
+        context: &FunctionContext,
     ) -> Result<ExprType, SemanticError> {
         let mut arg_types = Vec::with_capacity(args.len());
         for arg in args {
-            arg_types.push(self.expect_value_expr(arg, scopes, context, "fonksiyon argümanı")?);
+            arg_types.push(self.expect_value_expr(arg, scopes, context)?);
         }
 
         if let Some(signature) = self.functions.get(callee) {
             if arg_types.len() != signature.params.len() {
-                return Err(self.function_error(
-                    context.name,
+                return Err(SemanticError::at(
+                    call_span,
                     format!(
                         "`{}` fonksiyonu {} argüman bekliyor, {} argüman verildi",
                         callee,
@@ -505,8 +526,8 @@ impl Analyzer {
                 arg_types.iter().zip(signature.params.iter()).enumerate()
             {
                 if arg_type != param_type {
-                    return Err(self.function_error(
-                        context.name,
+                    return Err(SemanticError::at(
+                        args[index].span,
                         format!(
                             "`{}` çağrısındaki {}. argüman `{}` olmalı, bulunan `{}`",
                             callee,
@@ -526,8 +547,8 @@ impl Analyzer {
 
         if callee == "yazdir" {
             if arg_types.len() != 1 {
-                return Err(self.function_error(
-                    context.name,
+                return Err(SemanticError::at(
+                    call_span,
                     "`yazdir` yerleşik fonksiyonu tam olarak 1 argüman bekler",
                 ));
             }
@@ -535,24 +556,24 @@ impl Analyzer {
             return Ok(ExprType::Void);
         }
 
-        Err(self.function_error(
-            context.name,
+        Err(SemanticError::at(
+            call_span,
             format!("Tanımsız fonksiyon çağrısı: `{callee}`"),
         ))
     }
 
     fn expect_numeric_operands(
         &self,
+        span: SourceSpan,
         op: BinaryOp,
         left: Type,
         right: Type,
-        context: &FunctionContext<'_>,
     ) -> Result<(), SemanticError> {
         if left == Type::Sayi && right == Type::Sayi {
             Ok(())
         } else {
-            Err(self.function_error(
-                context.name,
+            Err(SemanticError::at(
+                span,
                 format!(
                     "`{}` işlemi yalnızca `sayı` operandları kabul eder, bulunan `{}` ve `{}`",
                     self.binary_op_name(op),
@@ -576,13 +597,6 @@ impl Analyzer {
             BinaryOp::LessEqual => "<=",
             BinaryOp::GreaterEqual => ">=",
         }
-    }
-
-    fn function_error(&self, function_name: &str, message: impl Into<String>) -> SemanticError {
-        SemanticError::new(format!(
-            "`{function_name}` fonksiyonunda {}",
-            message.into()
-        ))
     }
 }
 
@@ -634,7 +648,7 @@ Topla(a: sayı, b: sayı) -> sayı {
     }
 
     #[test]
-    fn rejects_variable_type_mismatch() {
+    fn reports_line_and_column_for_type_mismatch() {
         let source = r#"
 Ana() {
     x: sayı = doğru;
@@ -642,11 +656,11 @@ Ana() {
 "#;
 
         let error = analyze(source).expect_err("semantic analysis should fail");
-        assert!(error.contains("`x` değişkeni"));
+        assert!(error.contains("satır 3, sütun 5"));
     }
 
     #[test]
-    fn rejects_break_outside_loop() {
+    fn reports_line_and_column_for_break_outside_loop() {
         let source = r#"
 Ana() {
     kır;
@@ -654,7 +668,7 @@ Ana() {
 "#;
 
         let error = analyze(source).expect_err("semantic analysis should fail");
-        assert!(error.contains("`kır` ifadesi"));
+        assert!(error.contains("satır 3, sütun 5"));
     }
 
     #[test]
@@ -682,6 +696,6 @@ Ana() {
 "#;
 
         let error = analyze(source).expect_err("semantic analysis should fail");
-        assert!(error.contains("dönüşsüz fonksiyon"));
+        assert!(error.contains("satır 3, sütun 5"));
     }
 }

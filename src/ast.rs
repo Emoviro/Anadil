@@ -1,5 +1,24 @@
 use std::fmt;
 
+// A lightweight source span is enough for precise diagnostics in V1.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SourceSpan {
+    pub line: usize,
+    pub column: usize,
+}
+
+impl SourceSpan {
+    pub const fn new(line: usize, column: usize) -> Self {
+        Self { line, column }
+    }
+}
+
+impl fmt::Display for SourceSpan {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "satır {}, sütun {}", self.line, self.column)
+    }
+}
+
 // Program is the top-level container for parsed functions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
@@ -9,6 +28,7 @@ pub struct Program {
 // Functions are the only valid top-level declarations in V1.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Function {
+    pub span: SourceSpan,
     pub name: String,
     pub params: Vec<Param>,
     pub return_type: Option<Type>,
@@ -17,6 +37,7 @@ pub struct Function {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Param {
+    pub span: SourceSpan,
     pub name: String,
     pub ty: Type,
 }
@@ -44,11 +65,24 @@ impl fmt::Display for Type {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Block {
+    pub span: SourceSpan,
     pub statements: Vec<Stmt>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Stmt {
+pub struct Stmt {
+    pub span: SourceSpan,
+    pub kind: StmtKind,
+}
+
+impl Stmt {
+    pub fn new(span: SourceSpan, kind: StmtKind) -> Self {
+        Self { span, kind }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StmtKind {
     VarDecl(VarDecl),
     Assign(AssignStmt),
     If(IfStmt),
@@ -61,6 +95,7 @@ pub enum Stmt {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VarDecl {
+    pub span: SourceSpan,
     pub name: String,
     pub ty: Type,
     pub value: Expr,
@@ -68,12 +103,14 @@ pub struct VarDecl {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AssignStmt {
+    pub span: SourceSpan,
     pub target: String,
     pub value: Expr,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IfStmt {
+    pub span: SourceSpan,
     pub condition: Expr,
     pub then_branch: Block,
     pub else_branch: Option<Block>,
@@ -82,6 +119,7 @@ pub struct IfStmt {
 // Counter loops reuse a small statement subset for init and step.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoopStmt {
+    pub span: SourceSpan,
     pub init: Option<LoopPart>,
     pub condition: Option<Expr>,
     pub step: Option<LoopPart>,
@@ -96,7 +134,19 @@ pub enum LoopPart {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Expr {
+pub struct Expr {
+    pub span: SourceSpan,
+    pub kind: ExprKind,
+}
+
+impl Expr {
+    pub fn new(span: SourceSpan, kind: ExprKind) -> Self {
+        Self { span, kind }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExprKind {
     Number(i64),
     Bool(bool),
     Variable(String),
