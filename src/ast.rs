@@ -83,10 +83,7 @@ pub enum Expr {
     Number(i64),
     Bool(bool),
     Variable(String),
-    Call {
-        callee: String,
-        args: Vec<Expr>,
-    },
+    Call { callee: String, args: Vec<Expr> },
     Binary {
         left: Box<Expr>,
         op: BinaryOp,

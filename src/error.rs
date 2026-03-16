@@ -20,11 +20,7 @@ impl LexError {
 
 impl fmt::Display for LexError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} (satır {}, sütun {})",
-            self.message, self.line, self.column
-        )
+        write!(f, "{} (satır {}, sütun {})", self.message, self.line, self.column)
     }
 }
 
