@@ -103,7 +103,6 @@ impl ScopeStack {
 struct FunctionContext {
     return_type: Option<Type>,
     loop_depth: usize,
-    saw_value_return: bool,
 }
 
 // The analyzer validates the parsed AST and prepares it for later compiler stages.
@@ -171,7 +170,6 @@ impl Analyzer {
         let mut context = FunctionContext {
             return_type: function.return_type,
             loop_depth: 0,
-            saw_value_return: false,
         };
 
         for param in &function.params {
@@ -183,12 +181,12 @@ impl Analyzer {
             }
         }
 
-        self.analyze_block(&function.body, &mut scopes, &mut context, false)?;
+        let body_returns = self.analyze_block(&function.body, &mut scopes, &mut context, false)?;
 
-        if context.return_type.is_some() && !context.saw_value_return {
+        if function.return_type.is_some() && !body_returns {
             return Err(SemanticError::at(
                 function.span,
-                "Dönüş tipi belirtilen fonksiyonda en az bir `dön` ifadesi bulunmalı",
+                "Dönüş tipi belirtilen fonksiyonda tüm kontrol yolları bir değer döndürmeli",
             ));
         }
 
@@ -201,20 +199,26 @@ impl Analyzer {
         scopes: &mut ScopeStack,
         context: &mut FunctionContext,
         create_scope: bool,
-    ) -> Result<(), SemanticError> {
+    ) -> Result<bool, SemanticError> {
         if create_scope {
             scopes.push_scope();
         }
 
+        let mut definitely_returns = false;
+
         for statement in &block.statements {
-            self.analyze_statement(statement, scopes, context)?;
+            if definitely_returns {
+                break;
+            }
+
+            definitely_returns = self.analyze_statement(statement, scopes, context)?;
         }
 
         if create_scope {
             scopes.pop_scope();
         }
 
-        Ok(())
+        Ok(definitely_returns)
     }
 
     fn analyze_statement(
@@ -222,10 +226,16 @@ impl Analyzer {
         statement: &Stmt,
         scopes: &mut ScopeStack,
         context: &mut FunctionContext,
-    ) -> Result<(), SemanticError> {
+    ) -> Result<bool, SemanticError> {
         match &statement.kind {
-            StmtKind::VarDecl(decl) => self.analyze_var_decl(decl, scopes, context),
-            StmtKind::Assign(assign) => self.analyze_assignment(assign, scopes, context),
+            StmtKind::VarDecl(decl) => {
+                self.analyze_var_decl(decl, scopes, context)?;
+                Ok(false)
+            }
+            StmtKind::Assign(assign) => {
+                self.analyze_assignment(assign, scopes, context)?;
+                Ok(false)
+            }
             StmtKind::If(if_stmt) => {
                 let condition_type = self.expect_value_expr(&if_stmt.condition, scopes, context)?;
 
@@ -239,13 +249,16 @@ impl Analyzer {
                     ));
                 }
 
-                self.analyze_block(&if_stmt.then_branch, scopes, context, true)?;
+                let then_returns =
+                    self.analyze_block(&if_stmt.then_branch, scopes, context, true)?;
 
-                if let Some(else_branch) = &if_stmt.else_branch {
-                    self.analyze_block(else_branch, scopes, context, true)?;
-                }
+                let else_returns = if let Some(else_branch) = &if_stmt.else_branch {
+                    self.analyze_block(else_branch, scopes, context, true)?
+                } else {
+                    false
+                };
 
-                Ok(())
+                Ok(then_returns && else_returns)
             }
             StmtKind::Loop(loop_stmt) => {
                 scopes.push_scope();
@@ -276,7 +289,10 @@ impl Analyzer {
                     context.loop_depth += 1;
                     let body_result = self.analyze_block(&loop_stmt.body, scopes, context, true);
                     context.loop_depth -= 1;
-                    body_result
+                    body_result?;
+
+                    // Conservative rule: loops are not assumed to return on every path.
+                    Ok(false)
                 })();
 
                 scopes.pop_scope();
@@ -289,7 +305,7 @@ impl Analyzer {
                         "`kır` ifadesi yalnızca döngü içinde kullanılabilir",
                     ))
                 } else {
-                    Ok(())
+                    Ok(false)
                 }
             }
             StmtKind::Continue => {
@@ -299,15 +315,16 @@ impl Analyzer {
                         "`devam` ifadesi yalnızca döngü içinde kullanılabilir",
                     ))
                 } else {
-                    Ok(())
+                    Ok(false)
                 }
             }
             StmtKind::Return(value) => {
-                self.analyze_return(statement.span, value.as_ref(), scopes, context)
+                self.analyze_return(statement.span, value.as_ref(), scopes, context)?;
+                Ok(true)
             }
             StmtKind::Expr(expr) => {
                 self.infer_expr_type(expr, scopes, context)?;
-                Ok(())
+                Ok(false)
             }
         }
     }
@@ -417,7 +434,6 @@ impl Analyzer {
                     ));
                 }
 
-                context.saw_value_return = true;
                 Ok(())
             }
         }
@@ -636,6 +652,26 @@ Ana() {
     }
 
     #[test]
+    fn accepts_if_else_when_both_branches_return() {
+        let source = r#"
+Karar(x: mantık) -> sayı {
+    eğer (x) {
+        dön 1;
+    } değilse {
+        dön 0;
+    }
+}
+
+Ana() {
+    sonuc: sayı = Karar(doğru);
+    yazdir(sonuc);
+}
+"#;
+
+        assert!(analyze(source).is_ok());
+    }
+
+    #[test]
     fn rejects_missing_entry_point() {
         let source = r#"
 Topla(a: sayı, b: sayı) -> sayı {
@@ -697,5 +733,23 @@ Ana() {
 
         let error = analyze(source).expect_err("semantic analysis should fail");
         assert!(error.contains("satır 3, sütun 5"));
+    }
+
+    #[test]
+    fn rejects_non_void_function_when_some_paths_do_not_return() {
+        let source = r#"
+Karar(x: mantık) -> sayı {
+    eğer (x) {
+        dön 1;
+    }
+}
+
+Ana() {
+    yazdir(1);
+}
+"#;
+
+        let error = analyze(source).expect_err("semantic analysis should fail");
+        assert!(error.contains("tüm kontrol yolları"));
     }
 }

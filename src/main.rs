@@ -1,10 +1,12 @@
 mod ast;
+mod diagnostics;
 mod error;
 mod lexer;
 mod parser;
 mod sema;
 mod token;
 
+use diagnostics::{format_lex_error, format_parse_error, format_semantic_error};
 use lexer::Lexer;
 use parser::Parser;
 use sema::Analyzer;
@@ -74,14 +76,14 @@ fn compile_frontend(source: &str) -> Result<ast::Program, String> {
     let mut lexer = Lexer::new(source);
     let tokens = lexer
         .tokenize()
-        .map_err(|error| format!("Lexer hatası: {error}"))?;
+        .map_err(|error| format_lex_error(source, &error))?;
 
     let mut parser = Parser::new(tokens);
     let program = parser
         .parse_program()
-        .map_err(|error| format!("Parser hatası: {error}"))?;
+        .map_err(|error| format_parse_error(source, &error))?;
 
-    Analyzer::analyze(&program).map_err(|error| format!("Semantic hata: {error}"))?;
+    Analyzer::analyze(&program).map_err(|error| format_semantic_error(source, &error))?;
 
     Ok(program)
 }
