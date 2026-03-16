@@ -5,6 +5,7 @@ mod lexer;
 mod parser;
 mod sema;
 mod token;
+mod typed;
 
 use diagnostics::{format_lex_error, format_parse_error, format_semantic_error};
 use lexer::Lexer;
@@ -72,7 +73,7 @@ Ana() {
 }
 
 // This keeps the frontend pipeline visible while the project grows.
-fn compile_frontend(source: &str) -> Result<ast::Program, String> {
+fn compile_frontend(source: &str) -> Result<typed::TypedProgram, String> {
     let mut lexer = Lexer::new(source);
     let tokens = lexer
         .tokenize()
@@ -83,7 +84,5 @@ fn compile_frontend(source: &str) -> Result<ast::Program, String> {
         .parse_program()
         .map_err(|error| format_parse_error(source, &error))?;
 
-    Analyzer::analyze(&program).map_err(|error| format_semantic_error(source, &error))?;
-
-    Ok(program)
+    Analyzer::analyze(&program).map_err(|error| format_semantic_error(source, &error))
 }

@@ -5,6 +5,11 @@ use crate::ast::{
     AssignStmt, BinaryOp, Block, Expr, ExprKind, Function, LoopPart, Program, SourceSpan, Stmt,
     StmtKind, Type, VarDecl,
 };
+use crate::typed::{
+    BuiltinFunction, CallTarget, TypedAssignStmt, TypedBlock, TypedExpr, TypedExprKind,
+    TypedExprType, TypedFunction, TypedIfStmt, TypedLoopPart, TypedLoopStmt, TypedParam,
+    TypedProgram, TypedStmt, TypedStmtKind, TypedVarDecl,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SemanticError {
@@ -111,7 +116,7 @@ pub struct Analyzer {
 }
 
 impl Analyzer {
-    pub fn analyze(program: &Program) -> Result<(), SemanticError> {
+    pub fn analyze(program: &Program) -> Result<TypedProgram, SemanticError> {
         let mut analyzer = Self {
             functions: HashMap::new(),
         };
@@ -123,11 +128,18 @@ impl Analyzer {
             analyzer.analyze_function(function)?;
         }
 
-        Ok(())
+        analyzer.build_typed_program(program)
     }
 
     fn collect_function_signatures(&mut self, program: &Program) -> Result<(), SemanticError> {
         for function in &program.functions {
+            if BuiltinFunction::from_name(&function.name).is_some() {
+                return Err(SemanticError::at(
+                    function.span,
+                    format!("`{}` adı yerleşik fonksiyon için ayrılmış", function.name),
+                ));
+            }
+
             let signature = FunctionSignature {
                 params: function.params.iter().map(|param| param.ty).collect(),
                 return_type: function.return_type,
@@ -160,6 +172,12 @@ impl Analyzer {
 
         if !entry.params.is_empty() {
             return Err(SemanticError::new("`Ana()` fonksiyonu parametre alamaz"));
+        }
+
+        if entry.return_type.is_some() {
+            return Err(SemanticError::new(
+                "`Ana()` fonksiyonu dönüş tipi belirtemez",
+            ));
         }
 
         Ok(())
@@ -614,20 +632,693 @@ impl Analyzer {
             BinaryOp::GreaterEqual => ">=",
         }
     }
+
+    fn build_typed_program(&self, program: &Program) -> Result<TypedProgram, SemanticError> {
+        let mut functions = Vec::with_capacity(program.functions.len());
+
+        for function in &program.functions {
+            functions.push(self.build_typed_function(function)?);
+        }
+
+        Ok(TypedProgram { functions })
+    }
+
+    fn build_typed_function(&self, function: &Function) -> Result<TypedFunction, SemanticError> {
+        let mut scopes = ScopeStack::new();
+        let mut context = FunctionContext {
+            return_type: function.return_type,
+            loop_depth: 0,
+        };
+
+        let mut params = Vec::with_capacity(function.params.len());
+        for param in &function.params {
+            scopes.declare(&param.name, param.ty);
+            params.push(TypedParam {
+                span: param.span,
+                name: param.name.clone(),
+                ty: param.ty,
+            });
+        }
+
+        let body = self.build_typed_block(&function.body, &mut scopes, &mut context, false)?;
+
+        Ok(TypedFunction {
+            span: function.span,
+            name: function.name.clone(),
+            params,
+            return_type: function.return_type,
+            body,
+        })
+    }
+
+    fn build_typed_block(
+        &self,
+        block: &Block,
+        scopes: &mut ScopeStack,
+        context: &mut FunctionContext,
+        create_scope: bool,
+    ) -> Result<TypedBlock, SemanticError> {
+        if create_scope {
+            scopes.push_scope();
+        }
+
+        let mut definitely_returns = false;
+        let mut statements = Vec::with_capacity(block.statements.len());
+
+        for statement in &block.statements {
+            if definitely_returns {
+                break;
+            }
+
+            let (typed_stmt, stmt_returns) =
+                self.build_typed_statement(statement, scopes, context)?;
+            definitely_returns = stmt_returns;
+            statements.push(typed_stmt);
+        }
+
+        if create_scope {
+            scopes.pop_scope();
+        }
+
+        Ok(TypedBlock {
+            span: block.span,
+            statements,
+            definitely_returns,
+        })
+    }
+
+    fn build_typed_statement(
+        &self,
+        statement: &Stmt,
+        scopes: &mut ScopeStack,
+        context: &mut FunctionContext,
+    ) -> Result<(TypedStmt, bool), SemanticError> {
+        match &statement.kind {
+            StmtKind::VarDecl(decl) => Ok((
+                TypedStmt {
+                    span: statement.span,
+                    kind: TypedStmtKind::VarDecl(self.build_typed_var_decl(decl, scopes, context)?),
+                },
+                false,
+            )),
+            StmtKind::Assign(assign) => Ok((
+                TypedStmt {
+                    span: statement.span,
+                    kind: TypedStmtKind::Assign(
+                        self.build_typed_assignment(assign, scopes, context)?,
+                    ),
+                },
+                false,
+            )),
+            StmtKind::If(if_stmt) => {
+                let condition =
+                    self.expect_typed_value_expr(&if_stmt.condition, scopes, context)?;
+                let condition_type = match condition.ty {
+                    TypedExprType::Value(ty) => ty,
+                    TypedExprType::Void => unreachable!(),
+                };
+
+                if condition_type != Type::Mantik {
+                    return Err(SemanticError::at(
+                        if_stmt.condition.span,
+                        format!(
+                            "`eğer` koşulu `mantık` olmalı, bulunan `{}`",
+                            condition_type
+                        ),
+                    ));
+                }
+
+                let then_branch =
+                    self.build_typed_block(&if_stmt.then_branch, scopes, context, true)?;
+                let else_branch = if let Some(else_branch) = &if_stmt.else_branch {
+                    Some(self.build_typed_block(else_branch, scopes, context, true)?)
+                } else {
+                    None
+                };
+
+                let definitely_returns = then_branch.definitely_returns
+                    && else_branch
+                        .as_ref()
+                        .is_some_and(|branch| branch.definitely_returns);
+
+                Ok((
+                    TypedStmt {
+                        span: statement.span,
+                        kind: TypedStmtKind::If(TypedIfStmt {
+                            span: if_stmt.span,
+                            condition,
+                            then_branch,
+                            else_branch,
+                        }),
+                    },
+                    definitely_returns,
+                ))
+            }
+            StmtKind::Loop(loop_stmt) => {
+                scopes.push_scope();
+
+                let result = (|| {
+                    let init = if let Some(init) = &loop_stmt.init {
+                        Some(self.build_typed_loop_part(init, scopes, context)?)
+                    } else {
+                        None
+                    };
+
+                    let condition = if let Some(condition) = &loop_stmt.condition {
+                        let typed_condition =
+                            self.expect_typed_value_expr(condition, scopes, context)?;
+                        let condition_type = match typed_condition.ty {
+                            TypedExprType::Value(ty) => ty,
+                            TypedExprType::Void => unreachable!(),
+                        };
+
+                        if condition_type != Type::Mantik {
+                            return Err(SemanticError::at(
+                                condition.span,
+                                format!(
+                                    "`döngü` koşulu `mantık` olmalı, bulunan `{}`",
+                                    condition_type
+                                ),
+                            ));
+                        }
+
+                        Some(typed_condition)
+                    } else {
+                        None
+                    };
+
+                    let step = if let Some(step) = &loop_stmt.step {
+                        Some(self.build_typed_loop_part(step, scopes, context)?)
+                    } else {
+                        None
+                    };
+
+                    context.loop_depth += 1;
+                    let body = self.build_typed_block(&loop_stmt.body, scopes, context, true);
+                    context.loop_depth -= 1;
+
+                    Ok((
+                        TypedStmt {
+                            span: statement.span,
+                            kind: TypedStmtKind::Loop(TypedLoopStmt {
+                                span: loop_stmt.span,
+                                init,
+                                condition,
+                                step,
+                                body: body?,
+                            }),
+                        },
+                        false,
+                    ))
+                })();
+
+                scopes.pop_scope();
+                result
+            }
+            StmtKind::Break => Ok((
+                TypedStmt {
+                    span: statement.span,
+                    kind: TypedStmtKind::Break,
+                },
+                false,
+            )),
+            StmtKind::Continue => Ok((
+                TypedStmt {
+                    span: statement.span,
+                    kind: TypedStmtKind::Continue,
+                },
+                false,
+            )),
+            StmtKind::Return(value) => Ok((
+                TypedStmt {
+                    span: statement.span,
+                    kind: TypedStmtKind::Return(self.build_typed_return(
+                        statement.span,
+                        value.as_ref(),
+                        scopes,
+                        context,
+                    )?),
+                },
+                true,
+            )),
+            StmtKind::Expr(expr) => Ok((
+                TypedStmt {
+                    span: statement.span,
+                    kind: TypedStmtKind::Expr(self.build_typed_expr(expr, scopes, context)?),
+                },
+                false,
+            )),
+        }
+    }
+
+    fn build_typed_loop_part(
+        &self,
+        part: &LoopPart,
+        scopes: &mut ScopeStack,
+        context: &mut FunctionContext,
+    ) -> Result<TypedLoopPart, SemanticError> {
+        match part {
+            LoopPart::VarDecl(decl) => Ok(TypedLoopPart::VarDecl(
+                self.build_typed_var_decl(decl, scopes, context)?,
+            )),
+            LoopPart::Assign(assign) => Ok(TypedLoopPart::Assign(
+                self.build_typed_assignment(assign, scopes, context)?,
+            )),
+            LoopPart::Expr(expr) => Ok(TypedLoopPart::Expr(
+                self.build_typed_expr(expr, scopes, context)?,
+            )),
+        }
+    }
+
+    fn build_typed_var_decl(
+        &self,
+        decl: &VarDecl,
+        scopes: &mut ScopeStack,
+        context: &mut FunctionContext,
+    ) -> Result<TypedVarDecl, SemanticError> {
+        let value = self.expect_typed_value_expr(&decl.value, scopes, context)?;
+        let value_type = match value.ty {
+            TypedExprType::Value(ty) => ty,
+            TypedExprType::Void => unreachable!(),
+        };
+
+        if value_type != decl.ty {
+            return Err(SemanticError::at(
+                decl.span,
+                format!(
+                    "`{}` değişkeni `{}` tipinde, ama atanan ifade `{}` tipinde",
+                    decl.name, decl.ty, value_type
+                ),
+            ));
+        }
+
+        scopes.declare(&decl.name, decl.ty);
+
+        Ok(TypedVarDecl {
+            span: decl.span,
+            name: decl.name.clone(),
+            ty: decl.ty,
+            value,
+        })
+    }
+
+    fn build_typed_assignment(
+        &self,
+        assign: &AssignStmt,
+        scopes: &mut ScopeStack,
+        context: &mut FunctionContext,
+    ) -> Result<TypedAssignStmt, SemanticError> {
+        let target_type = scopes.lookup(&assign.target).ok_or_else(|| {
+            SemanticError::at(
+                assign.span,
+                format!("Tanımsız değişkene atama yapılıyor: `{}`", assign.target),
+            )
+        })?;
+
+        let value = self.expect_typed_value_expr(&assign.value, scopes, context)?;
+        let value_type = match value.ty {
+            TypedExprType::Value(ty) => ty,
+            TypedExprType::Void => unreachable!(),
+        };
+
+        if value_type != target_type {
+            return Err(SemanticError::at(
+                assign.span,
+                format!(
+                    "`{}` değişkeni `{}` tipinde, ama atanan ifade `{}` tipinde",
+                    assign.target, target_type, value_type
+                ),
+            ));
+        }
+
+        Ok(TypedAssignStmt {
+            span: assign.span,
+            target: assign.target.clone(),
+            target_type,
+            value,
+        })
+    }
+
+    fn build_typed_return(
+        &self,
+        return_span: SourceSpan,
+        value: Option<&Expr>,
+        scopes: &ScopeStack,
+        context: &mut FunctionContext,
+    ) -> Result<Option<TypedExpr>, SemanticError> {
+        match (context.return_type, value) {
+            (None, None) => Ok(None),
+            (None, Some(_)) => Err(SemanticError::at(
+                return_span,
+                "Dönüşsüz fonksiyon değer döndüremez",
+            )),
+            (Some(expected_type), None) => Err(SemanticError::at(
+                return_span,
+                format!(
+                    "Bu fonksiyon `{}` döndürmeli, `dön` ifadesi ise değer içermiyor",
+                    expected_type
+                ),
+            )),
+            (Some(expected_type), Some(expr)) => {
+                let typed_expr = self.expect_typed_value_expr(expr, scopes, context)?;
+                let actual_type = match typed_expr.ty {
+                    TypedExprType::Value(ty) => ty,
+                    TypedExprType::Void => unreachable!(),
+                };
+
+                if actual_type != expected_type {
+                    return Err(SemanticError::at(
+                        return_span,
+                        format!(
+                            "`dön` ifadesi `{}` tipinde olmalı, bulunan `{}`",
+                            expected_type, actual_type
+                        ),
+                    ));
+                }
+
+                Ok(Some(typed_expr))
+            }
+        }
+    }
+
+    fn expect_typed_value_expr(
+        &self,
+        expr: &Expr,
+        scopes: &ScopeStack,
+        context: &FunctionContext,
+    ) -> Result<TypedExpr, SemanticError> {
+        let typed_expr = self.build_typed_expr(expr, scopes, context)?;
+
+        match typed_expr.ty {
+            TypedExprType::Value(_) => Ok(typed_expr),
+            TypedExprType::Void => Err(SemanticError::at(
+                expr.span,
+                "Bu ifade değer üretmeli, ancak dönüşsüz",
+            )),
+        }
+    }
+
+    fn build_typed_expr(
+        &self,
+        expr: &Expr,
+        scopes: &ScopeStack,
+        context: &FunctionContext,
+    ) -> Result<TypedExpr, SemanticError> {
+        match &expr.kind {
+            ExprKind::Number(value) => Ok(TypedExpr {
+                span: expr.span,
+                ty: TypedExprType::Value(Type::Sayi),
+                kind: TypedExprKind::Number(*value),
+            }),
+            ExprKind::Bool(value) => Ok(TypedExpr {
+                span: expr.span,
+                ty: TypedExprType::Value(Type::Mantik),
+                kind: TypedExprKind::Bool(*value),
+            }),
+            ExprKind::Variable(name) => {
+                let ty = scopes.lookup(name).ok_or_else(|| {
+                    SemanticError::at(
+                        expr.span,
+                        format!("Tanımsız değişken kullanılıyor: `{name}`"),
+                    )
+                })?;
+
+                Ok(TypedExpr {
+                    span: expr.span,
+                    ty: TypedExprType::Value(ty),
+                    kind: TypedExprKind::Variable(name.clone()),
+                })
+            }
+            ExprKind::Call { callee, args } => {
+                self.build_typed_call_expr(expr.span, callee, args, scopes, context)
+            }
+            ExprKind::Binary { left, op, right } => {
+                let left = self.expect_typed_value_expr(left, scopes, context)?;
+                let right = self.expect_typed_value_expr(right, scopes, context)?;
+
+                let left_type = match left.ty {
+                    TypedExprType::Value(ty) => ty,
+                    TypedExprType::Void => unreachable!(),
+                };
+                let right_type = match right.ty {
+                    TypedExprType::Value(ty) => ty,
+                    TypedExprType::Void => unreachable!(),
+                };
+
+                let result_type = match op {
+                    BinaryOp::Add | BinaryOp::Subtract | BinaryOp::Multiply | BinaryOp::Divide => {
+                        self.expect_numeric_operands(expr.span, *op, left_type, right_type)?;
+                        TypedExprType::Value(Type::Sayi)
+                    }
+                    BinaryOp::Less
+                    | BinaryOp::Greater
+                    | BinaryOp::LessEqual
+                    | BinaryOp::GreaterEqual => {
+                        self.expect_numeric_operands(expr.span, *op, left_type, right_type)?;
+                        TypedExprType::Value(Type::Mantik)
+                    }
+                    BinaryOp::Equal | BinaryOp::NotEqual => {
+                        if left_type != right_type {
+                            return Err(SemanticError::at(
+                                expr.span,
+                                format!(
+                                    "`{}` ve `{}` tipleri `{}` işleminde karşılaştırılamaz",
+                                    left_type,
+                                    right_type,
+                                    self.binary_op_name(*op)
+                                ),
+                            ));
+                        }
+
+                        TypedExprType::Value(Type::Mantik)
+                    }
+                };
+
+                Ok(TypedExpr {
+                    span: expr.span,
+                    ty: result_type,
+                    kind: TypedExprKind::Binary {
+                        left: Box::new(left),
+                        op: *op,
+                        right: Box::new(right),
+                    },
+                })
+            }
+        }
+    }
+
+    fn build_typed_call_expr(
+        &self,
+        call_span: SourceSpan,
+        callee: &str,
+        args: &[Expr],
+        scopes: &ScopeStack,
+        context: &FunctionContext,
+    ) -> Result<TypedExpr, SemanticError> {
+        let mut typed_args = Vec::with_capacity(args.len());
+        for arg in args {
+            typed_args.push(self.expect_typed_value_expr(arg, scopes, context)?);
+        }
+
+        if let Some(signature) = self.functions.get(callee) {
+            if typed_args.len() != signature.params.len() {
+                return Err(SemanticError::at(
+                    call_span,
+                    format!(
+                        "`{}` fonksiyonu {} argüman bekliyor, {} argüman verildi",
+                        callee,
+                        signature.params.len(),
+                        typed_args.len()
+                    ),
+                ));
+            }
+
+            for (index, (arg, param_type)) in
+                typed_args.iter().zip(signature.params.iter()).enumerate()
+            {
+                let arg_type = match arg.ty {
+                    TypedExprType::Value(ty) => ty,
+                    TypedExprType::Void => unreachable!(),
+                };
+
+                if arg_type != *param_type {
+                    return Err(SemanticError::at(
+                        arg.span,
+                        format!(
+                            "`{}` çağrısındaki {}. argüman `{}` olmalı, bulunan `{}`",
+                            callee,
+                            index + 1,
+                            param_type,
+                            arg_type
+                        ),
+                    ));
+                }
+            }
+
+            return Ok(TypedExpr {
+                span: call_span,
+                ty: match signature.return_type {
+                    Some(ty) => TypedExprType::Value(ty),
+                    None => TypedExprType::Void,
+                },
+                kind: TypedExprKind::Call {
+                    target: CallTarget::Function(callee.to_string()),
+                    args: typed_args,
+                },
+            });
+        }
+
+        if let Some(builtin) = BuiltinFunction::from_name(callee) {
+            match builtin {
+                BuiltinFunction::Yazdir => {
+                    if typed_args.len() != 1 {
+                        return Err(SemanticError::at(
+                            call_span,
+                            "`yazdir` yerleşik fonksiyonu tam olarak 1 argüman bekler",
+                        ));
+                    }
+                }
+            }
+
+            return Ok(TypedExpr {
+                span: call_span,
+                ty: match builtin.return_type() {
+                    Some(ty) => TypedExprType::Value(ty),
+                    None => TypedExprType::Void,
+                },
+                kind: TypedExprKind::Call {
+                    target: CallTarget::Builtin(builtin),
+                    args: typed_args,
+                },
+            });
+        }
+
+        Err(SemanticError::at(
+            call_span,
+            format!("Tanımsız fonksiyon çağrısı: `{callee}`"),
+        ))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::Analyzer;
+    use crate::ast::Type;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
+    use crate::typed::{BuiltinFunction, CallTarget, TypedExprKind, TypedExprType, TypedStmtKind};
 
-    fn analyze(source: &str) -> Result<(), String> {
+    fn analyze(source: &str) -> Result<crate::typed::TypedProgram, String> {
         let mut lexer = Lexer::new(source);
         let tokens = lexer.tokenize().map_err(|error| error.to_string())?;
         let mut parser = Parser::new(tokens);
         let program = parser.parse_program().map_err(|error| error.to_string())?;
         Analyzer::analyze(&program).map_err(|error| error.to_string())
+    }
+
+    #[test]
+    fn builds_typed_call_targets() {
+        let source = r#"
+Topla(a: sayı, b: sayı) -> sayı {
+    dön a + b;
+}
+
+Ana() {
+    sonuc: sayı = Topla(1, 2);
+    yazdir(sonuc);
+}
+"#;
+
+        let program = analyze(source).expect("semantic analysis should succeed");
+        let main_function = program
+            .functions
+            .iter()
+            .find(|function| function.name == "Ana")
+            .expect("Ana function should exist");
+
+        let TypedStmtKind::VarDecl(var_decl) = &main_function.body.statements[0].kind else {
+            panic!("first statement should be a typed variable declaration");
+        };
+
+        let TypedExprKind::Call { target, .. } = &var_decl.value.kind else {
+            panic!("variable initializer should be a typed function call");
+        };
+        assert_eq!(target, &CallTarget::Function("Topla".to_string()));
+
+        let TypedStmtKind::Expr(expr) = &main_function.body.statements[1].kind else {
+            panic!("second statement should be a typed expression");
+        };
+
+        let TypedExprKind::Call { target, .. } = &expr.kind else {
+            panic!("expression statement should be a builtin call");
+        };
+        assert_eq!(target, &CallTarget::Builtin(BuiltinFunction::Yazdir));
+    }
+
+    #[test]
+    fn types_function_call_result() {
+        let source = r#"
+Topla(a: sayı, b: sayı) -> sayı {
+    dön a + b;
+}
+
+Ana() {
+    sonuc: sayı = Topla(1, 2);
+    yazdir(sonuc);
+}
+"#;
+
+        let program = analyze(source).expect("semantic analysis should succeed");
+        let main_function = program
+            .functions
+            .iter()
+            .find(|function| function.name == "Ana")
+            .expect("Ana function should exist");
+
+        let TypedStmtKind::VarDecl(var_decl) = &main_function.body.statements[0].kind else {
+            panic!("first statement should be a typed variable declaration");
+        };
+
+        assert_eq!(var_decl.ty, Type::Sayi);
+        assert_eq!(var_decl.value.ty, TypedExprType::Value(Type::Sayi));
+    }
+
+    #[test]
+    fn rejects_entry_point_return_type() {
+        let source = r#"
+Ana() -> sayı {
+    dön 1;
+}
+"#;
+
+        let error = analyze(source).expect_err("semantic analysis should fail");
+        assert!(error.contains("dönüş tipi"));
+    }
+
+    #[test]
+    fn rejects_reserved_builtin_name_as_function() {
+        let source = r#"
+yazdir(x: sayı) {
+}
+
+Ana() {
+}
+"#;
+
+        let error = analyze(source).expect_err("semantic analysis should fail");
+        assert!(error.contains("yerleşik"));
+    }
+
+    #[test]
+    fn rejects_using_void_builtin_as_value() {
+        let source = r#"
+Ana() {
+    sonuc: sayı = yazdir(1);
+}
+"#;
+
+        let error = analyze(source).expect_err("semantic analysis should fail");
+        assert!(error.contains("değer üretmeli"));
     }
 
     #[test]
