@@ -38,7 +38,11 @@ impl ParseError {
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} (satır {}, sütun {})", self.message, self.line, self.column)
+        write!(
+            f,
+            "{} (satır {}, sütun {})",
+            self.message, self.line, self.column
+        )
     }
 }
 
@@ -71,7 +75,10 @@ impl Parser {
         let params = self.parse_params()?;
         self.expect("`)`", |kind| matches!(kind, TokenKind::RParen))?;
 
-        let return_type = if self.consume_if(|kind| matches!(kind, TokenKind::Arrow)).is_some() {
+        let return_type = if self
+            .consume_if(|kind| matches!(kind, TokenKind::Arrow))
+            .is_some()
+        {
             Some(self.parse_type()?)
         } else {
             None
@@ -100,7 +107,10 @@ impl Parser {
             let ty = self.parse_type()?;
             params.push(Param { name, ty });
 
-            if self.consume_if(|kind| matches!(kind, TokenKind::Comma)).is_none() {
+            if self
+                .consume_if(|kind| matches!(kind, TokenKind::Comma))
+                .is_none()
+            {
                 break;
             }
         }
@@ -118,7 +128,10 @@ impl Parser {
                 self.bump();
                 Ok(Type::Mantik)
             }
-            _ => Err(ParseError::expected("bir tip (`sayı` veya `mantık`)", self.current())),
+            _ => Err(ParseError::expected(
+                "bir tip (`sayı` veya `mantık`)",
+                self.current(),
+            )),
         }
     }
 
@@ -135,25 +148,40 @@ impl Parser {
     }
 
     fn parse_statement(&mut self) -> Result<Stmt, ParseError> {
-        if self.consume_if(|kind| matches!(kind, TokenKind::Eger)).is_some() {
+        if self
+            .consume_if(|kind| matches!(kind, TokenKind::Eger))
+            .is_some()
+        {
             return self.parse_if_statement();
         }
 
-        if self.consume_if(|kind| matches!(kind, TokenKind::Dongu)).is_some() {
+        if self
+            .consume_if(|kind| matches!(kind, TokenKind::Dongu))
+            .is_some()
+        {
             return self.parse_loop_statement();
         }
 
-        if self.consume_if(|kind| matches!(kind, TokenKind::Kir)).is_some() {
+        if self
+            .consume_if(|kind| matches!(kind, TokenKind::Kir))
+            .is_some()
+        {
             self.expect("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
             return Ok(Stmt::Break);
         }
 
-        if self.consume_if(|kind| matches!(kind, TokenKind::Devam)).is_some() {
+        if self
+            .consume_if(|kind| matches!(kind, TokenKind::Devam))
+            .is_some()
+        {
             self.expect("`;`", |kind| matches!(kind, TokenKind::Semicolon))?;
             return Ok(Stmt::Continue);
         }
 
-        if self.consume_if(|kind| matches!(kind, TokenKind::Don)).is_some() {
+        if self
+            .consume_if(|kind| matches!(kind, TokenKind::Don))
+            .is_some()
+        {
             return self.parse_return_statement();
         }
 
@@ -180,7 +208,10 @@ impl Parser {
         self.expect("`)`", |kind| matches!(kind, TokenKind::RParen))?;
 
         let then_branch = self.parse_block()?;
-        let else_branch = if self.consume_if(|kind| matches!(kind, TokenKind::Degilse)).is_some() {
+        let else_branch = if self
+            .consume_if(|kind| matches!(kind, TokenKind::Degilse))
+            .is_some()
+        {
             Some(self.parse_block()?)
         } else {
             None
@@ -305,7 +336,10 @@ impl Parser {
         let mut expr = self.parse_comparison()?;
 
         loop {
-            let op = if self.consume_if(|kind| matches!(kind, TokenKind::EqEq)).is_some() {
+            let op = if self
+                .consume_if(|kind| matches!(kind, TokenKind::EqEq))
+                .is_some()
+            {
                 Some(BinaryOp::Equal)
             } else if self
                 .consume_if(|kind| matches!(kind, TokenKind::NotEq))
@@ -335,7 +369,10 @@ impl Parser {
         let mut expr = self.parse_term()?;
 
         loop {
-            let op = if self.consume_if(|kind| matches!(kind, TokenKind::Less)).is_some() {
+            let op = if self
+                .consume_if(|kind| matches!(kind, TokenKind::Less))
+                .is_some()
+            {
                 Some(BinaryOp::Less)
             } else if self
                 .consume_if(|kind| matches!(kind, TokenKind::Greater))
@@ -375,7 +412,10 @@ impl Parser {
         let mut expr = self.parse_factor()?;
 
         loop {
-            let op = if self.consume_if(|kind| matches!(kind, TokenKind::Plus)).is_some() {
+            let op = if self
+                .consume_if(|kind| matches!(kind, TokenKind::Plus))
+                .is_some()
+            {
                 Some(BinaryOp::Add)
             } else if self
                 .consume_if(|kind| matches!(kind, TokenKind::Minus))
@@ -405,7 +445,10 @@ impl Parser {
         let mut expr = self.parse_primary()?;
 
         loop {
-            let op = if self.consume_if(|kind| matches!(kind, TokenKind::Star)).is_some() {
+            let op = if self
+                .consume_if(|kind| matches!(kind, TokenKind::Star))
+                .is_some()
+            {
                 Some(BinaryOp::Multiply)
             } else if self
                 .consume_if(|kind| matches!(kind, TokenKind::Slash))
@@ -448,7 +491,10 @@ impl Parser {
             TokenKind::Ident(name) => {
                 self.bump();
 
-                if self.consume_if(|kind| matches!(kind, TokenKind::LParen)).is_some() {
+                if self
+                    .consume_if(|kind| matches!(kind, TokenKind::LParen))
+                    .is_some()
+                {
                     let args = self.parse_arguments()?;
                     self.expect("`)`", |kind| matches!(kind, TokenKind::RParen))?;
                     Ok(Expr::Call { callee: name, args })
@@ -476,7 +522,10 @@ impl Parser {
         loop {
             args.push(self.parse_expression()?);
 
-            if self.consume_if(|kind| matches!(kind, TokenKind::Comma)).is_none() {
+            if self
+                .consume_if(|kind| matches!(kind, TokenKind::Comma))
+                .is_none()
+            {
                 break;
             }
         }
