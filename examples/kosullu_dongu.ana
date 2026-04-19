@@ -1,0 +1,8 @@
+Ana() {
+    x: sayı = 0;
+
+    döngü (x < 3) {
+        yazdir(x);
+        x = x + 1;
+    }
+}

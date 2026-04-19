@@ -1,0 +1,13 @@
+BuyukMu(x: sayı) -> mantık {
+    dön x > 10;
+}
+
+Ana() {
+    sonuc: sayı = 15;
+
+    eğer (BuyukMu(sonuc)) {
+        yazdir(sonuc);
+    } değilse {
+        yazdir(0);
+    }
+}

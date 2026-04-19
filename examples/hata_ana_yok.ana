@@ -1,0 +1,3 @@
+Topla(a: sayı, b: sayı) -> sayı {
+    dön a + b;
+}

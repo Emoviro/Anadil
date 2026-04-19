@@ -1,4 +1,4 @@
-use crate::ast::{BinaryOp, SourceSpan, Type};
+use crate::ast::{BinaryOp, SourceSpan, Type, UnaryOp};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypedProgram {
@@ -39,7 +39,7 @@ pub enum TypedStmtKind {
     VarDecl(TypedVarDecl),
     Assign(TypedAssignStmt),
     If(TypedIfStmt),
-    Loop(TypedLoopStmt),
+    Loop(Box<TypedLoopStmt>),
     Break,
     Continue,
     Return(Option<TypedExpr>),
@@ -107,6 +107,10 @@ pub enum TypedExprKind {
     Call {
         target: CallTarget,
         args: Vec<TypedExpr>,
+    },
+    Unary {
+        op: UnaryOp,
+        expr: Box<TypedExpr>,
     },
     Binary {
         left: Box<TypedExpr>,
