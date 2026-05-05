@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::ast::{
     AssignStmt, BinaryOp, Block, Expr, ExprKind, Function, IfStmt, LoopPart, LoopStmt, Param,
-    Program, SourceSpan, Stmt, StmtKind, Type, VarDecl,
+    Program, SourceSpan, Stmt, StmtKind, Type, UnaryOp, VarDecl,
 };
 use crate::token::{Token, TokenKind};
 
@@ -485,7 +485,7 @@ impl Parser {
     }
 
     fn parse_factor(&mut self) -> Result<Expr, ParseError> {
-        let mut expr = self.parse_primary()?;
+        let mut expr = self.parse_unary()?;
 
         loop {
             let op = if self
@@ -507,7 +507,7 @@ impl Parser {
             };
 
             let span = expr.span;
-            let right = self.parse_primary()?;
+            let right = self.parse_unary()?;
             expr = Expr::new(
                 span,
                 ExprKind::Binary {
@@ -519,6 +519,25 @@ impl Parser {
         }
 
         Ok(expr)
+    }
+
+    fn parse_unary(&mut self) -> Result<Expr, ParseError> {
+        if self
+            .consume_if(|kind| matches!(kind, TokenKind::Minus))
+            .is_some()
+        {
+            let span = self.previous_span();
+            let expr = self.parse_unary()?;
+            return Ok(Expr::new(
+                span,
+                ExprKind::Unary {
+                    op: UnaryOp::Negate,
+                    expr: Box::new(expr),
+                },
+            ));
+        }
+
+        self.parse_primary()
     }
 
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
@@ -599,6 +618,13 @@ impl Parser {
 
     fn current_span(&self) -> SourceSpan {
         self.current().span()
+    }
+
+    fn previous_span(&self) -> SourceSpan {
+        self.tokens
+            .get(self.pos.saturating_sub(1))
+            .map(Token::span)
+            .unwrap_or_else(|| self.current_span())
     }
 
     fn peek_kind(&self) -> Option<&TokenKind> {
@@ -773,6 +799,27 @@ Ana() {
                 assert!(matches!(&loop_stmt.init, Some(LoopPart::VarDecl(_))));
                 assert!(matches!(&loop_stmt.step, Some(LoopPart::Assign(_))));
                 assert_eq!(loop_stmt.body.statements.len(), 2);
+            }
+            other => panic!("beklenmeyen statement: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_unary_minus() {
+        let program = parse(
+            r#"
+Ana() {
+    x: sayı = -10;
+    yazdir(10 + -x);
+}
+"#,
+        );
+
+        let function = &program.functions[0];
+
+        match &function.body.statements[0].kind {
+            StmtKind::VarDecl(decl) => {
+                assert!(matches!(&decl.value.kind, ExprKind::Unary { .. }));
             }
             other => panic!("beklenmeyen statement: {other:?}"),
         }

@@ -1,0 +1,10 @@
+BuyukMu(x: sayı, y: sayı) -> mantık {
+    dön x > y;
+}
+
+Ana() {
+    yazdir(doğru);
+    yazdir(yanlış);
+    yazdir(BuyukMu(20, 10));
+    yazdir(BuyukMu(5, 10));
+}

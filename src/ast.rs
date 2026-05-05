@@ -154,11 +154,20 @@ pub enum ExprKind {
         callee: String,
         args: Vec<Expr>,
     },
+    Unary {
+        op: UnaryOp,
+        expr: Box<Expr>,
+    },
     Binary {
         left: Box<Expr>,
         op: BinaryOp,
         right: Box<Expr>,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnaryOp {
+    Negate,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -1,0 +1,10 @@
+Ana() {
+    x: sayı = 1;
+
+    eğer (doğru) {
+        x: sayı = 2;
+        yazdir(x);
+    }
+
+    yazdir(x);
+}

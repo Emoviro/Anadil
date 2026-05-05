@@ -544,6 +544,20 @@ impl Analyzer {
             ExprKind::Call { callee, args } => {
                 self.analyze_call_expr(expr.span, callee, args, scopes, context)
             }
+            ExprKind::Unary { op: _, expr: inner } => {
+                let inner_type = self.expect_value_expr(inner, scopes, context)?;
+                if inner_type != Type::Sayi {
+                    return Err(SemanticError::at(
+                        expr.span,
+                        format!(
+                            "`-` işlemi yalnızca `sayı` operandı kabul eder, bulunan `{}`",
+                            inner_type
+                        ),
+                    ));
+                }
+
+                Ok(ExprType::Value(Type::Sayi))
+            }
             ExprKind::Binary { left, op, right } => {
                 let left_type = self.expect_value_expr(left, scopes, context)?;
                 let right_type = self.expect_value_expr(right, scopes, context)?;
@@ -886,13 +900,13 @@ impl Analyzer {
                     Ok((
                         TypedStmt {
                             span: statement.span,
-                            kind: TypedStmtKind::Loop(TypedLoopStmt {
+                            kind: TypedStmtKind::Loop(Box::new(TypedLoopStmt {
                                 span: loop_stmt.span,
                                 init,
                                 condition,
                                 step,
                                 body: body?,
-                            }),
+                            })),
                         },
                         FlowStatus::FallsThrough,
                     ))
@@ -1117,6 +1131,32 @@ impl Analyzer {
             }
             ExprKind::Call { callee, args } => {
                 self.build_typed_call_expr(expr.span, callee, args, scopes, context)
+            }
+            ExprKind::Unary { op, expr: inner } => {
+                let inner = self.expect_typed_value_expr(inner, scopes, context)?;
+                let inner_type = match inner.ty {
+                    TypedExprType::Value(ty) => ty,
+                    TypedExprType::Void => unreachable!(),
+                };
+
+                if inner_type != Type::Sayi {
+                    return Err(SemanticError::at(
+                        expr.span,
+                        format!(
+                            "`-` işlemi yalnızca `sayı` operandı kabul eder, bulunan `{}`",
+                            inner_type
+                        ),
+                    ));
+                }
+
+                Ok(TypedExpr {
+                    span: expr.span,
+                    ty: TypedExprType::Value(Type::Sayi),
+                    kind: TypedExprKind::Unary {
+                        op: *op,
+                        expr: Box::new(inner),
+                    },
+                })
             }
             ExprKind::Binary { left, op, right } => {
                 let left = self.expect_typed_value_expr(left, scopes, context)?;
@@ -1540,5 +1580,29 @@ Ana() {
 
         let error = analyze(source).expect_err("semantic analysis should fail");
         assert!(error.contains("tüm kontrol yolları"));
+    }
+
+    #[test]
+    fn accepts_unary_minus_for_numbers() {
+        let source = r#"
+Ana() {
+    x: sayı = -10;
+    yazdir(10 + -x);
+}
+"#;
+
+        assert!(analyze(source).is_ok());
+    }
+
+    #[test]
+    fn rejects_unary_minus_for_bool() {
+        let source = r#"
+Ana() {
+    yazdir(-doğru);
+}
+"#;
+
+        let error = analyze(source).expect_err("semantic analysis should fail");
+        assert!(error.contains("yalnızca `sayı`"));
     }
 }

@@ -1,0 +1,9 @@
+Topla(a: sayı, b: sayı) -> sayı {
+    // İki sayıyı toplar.
+    dön a + b;
+}
+
+Ana() {
+    sonuc: sayı = Topla(10, 20);
+    yazdir(sonuc);
+}

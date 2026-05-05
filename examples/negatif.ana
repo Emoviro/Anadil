@@ -1,0 +1,8 @@
+// Negatif sayılar ve unary eksi örneği.
+Ana() {
+    x: sayı = -10;
+
+    yazdir(x);
+    yazdir(10 + -3);
+    yazdir(-x);
+}

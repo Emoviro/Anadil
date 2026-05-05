@@ -65,8 +65,15 @@ impl Lexer {
                     self.advance();
                 }
                 '/' => {
-                    tokens.push(self.make_token(TokenKind::Slash));
+                    let line = self.line;
+                    let column = self.column;
                     self.advance();
+
+                    if self.current() == Some('/') {
+                        self.skip_line_comment();
+                    } else {
+                        tokens.push(Token::new(TokenKind::Slash, line, column));
+                    }
                 }
                 '=' => {
                     let line = self.line;
@@ -213,6 +220,16 @@ impl Lexer {
         self.pos += 1;
         self.line += 1;
         self.column = 1;
+    }
+
+    fn skip_line_comment(&mut self) {
+        while let Some(ch) = self.current() {
+            if ch == '\n' {
+                break;
+            }
+
+            self.advance();
+        }
     }
 }
 

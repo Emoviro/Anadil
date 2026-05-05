@@ -1,0 +1,12 @@
+Ana() {
+    x: sayı = 0;
+
+    döngü {
+        eğer (x == 3) {
+            kır;
+        }
+
+        yazdir(x);
+        x = x + 1;
+    }
+}

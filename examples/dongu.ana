@@ -1,0 +1,14 @@
+Ana() {
+    // 1 değerini atla, 4 değerinde döngüden çık.
+    döngü (i: sayı = 0; i < 5; i = i + 1) {
+        eğer (i == 1) {
+            devam;
+        }
+
+        eğer (i == 4) {
+            kır;
+        }
+
+        yazdir(i);
+    }
+}

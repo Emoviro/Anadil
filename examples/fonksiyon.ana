@@ -1,0 +1,12 @@
+Kare(x: sayı) -> sayı {
+    dön x * x;
+}
+
+Topla(a: sayı, b: sayı) -> sayı {
+    dön a + b;
+}
+
+Ana() {
+    sonuc: sayı = Topla(Kare(3), Kare(4));
+    yazdir(sonuc);
+}
