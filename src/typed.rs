@@ -1,5 +1,25 @@
 use crate::ast::{BinaryOp, SourceSpan, Type};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FunctionId(pub usize);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct LocalId(pub usize);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LocalKind {
+    Param,
+    Variable,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypedLocalRef {
+    pub id: LocalId,
+    pub name: String,
+    pub ty: Type,
+    pub kind: LocalKind,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypedProgram {
     pub functions: Vec<TypedFunction>,
@@ -7,6 +27,7 @@ pub struct TypedProgram {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypedFunction {
+    pub function_id: FunctionId,
     pub span: SourceSpan,
     pub name: String,
     pub params: Vec<TypedParam>,
@@ -16,6 +37,7 @@ pub struct TypedFunction {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypedParam {
+    pub local_id: LocalId,
     pub span: SourceSpan,
     pub name: String,
     pub ty: Type,
@@ -48,6 +70,7 @@ pub enum TypedStmtKind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypedVarDecl {
+    pub local_id: LocalId,
     pub span: SourceSpan,
     pub name: String,
     pub ty: Type,
@@ -57,8 +80,7 @@ pub struct TypedVarDecl {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypedAssignStmt {
     pub span: SourceSpan,
-    pub target: String,
-    pub target_type: Type,
+    pub target: TypedLocalRef,
     pub value: TypedExpr,
 }
 
@@ -103,7 +125,7 @@ pub enum TypedExprType {
 pub enum TypedExprKind {
     Number(i64),
     Bool(bool),
-    Variable(String),
+    Variable(TypedLocalRef),
     Call {
         target: CallTarget,
         args: Vec<TypedExpr>,
@@ -117,7 +139,10 @@ pub enum TypedExprKind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CallTarget {
-    Function(String),
+    Function {
+        function_id: FunctionId,
+        name: String,
+    },
     Builtin(BuiltinFunction),
 }
 

@@ -6,9 +6,10 @@ use crate::ast::{
     StmtKind, Type, VarDecl,
 };
 use crate::typed::{
-    BuiltinFunction, CallTarget, TypedAssignStmt, TypedBlock, TypedExpr, TypedExprKind,
-    TypedExprType, TypedFunction, TypedIfStmt, TypedLoopPart, TypedLoopStmt, TypedParam,
-    TypedProgram, TypedStmt, TypedStmtKind, TypedVarDecl,
+    BuiltinFunction, CallTarget, FunctionId, LocalId, LocalKind, TypedAssignStmt, TypedBlock,
+    TypedExpr, TypedExprKind, TypedExprType, TypedFunction, TypedIfStmt, TypedLocalRef,
+    TypedLoopPart, TypedLoopStmt, TypedParam, TypedProgram, TypedStmt, TypedStmtKind,
+    TypedVarDecl,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,6 +51,7 @@ impl std::error::Error for SemanticError {}
 
 #[derive(Debug, Clone)]
 struct FunctionSignature {
+    id: FunctionId,
     params: Vec<Type>,
     return_type: Option<Type>,
 }
@@ -60,9 +62,23 @@ enum ExprType {
     Void,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FlowStatus {
+    FallsThrough,
+    Terminates,
+    Returns,
+}
+
 #[derive(Debug)]
 struct ScopeStack {
-    scopes: Vec<HashMap<String, Type>>,
+    scopes: Vec<HashMap<String, LocalSymbol>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LocalSymbol {
+    id: LocalId,
+    ty: Type,
+    kind: LocalKind,
 }
 
 impl ScopeStack {
@@ -82,7 +98,7 @@ impl ScopeStack {
         }
     }
 
-    fn declare(&mut self, name: &str, ty: Type) -> bool {
+    fn declare(&mut self, name: &str, symbol: LocalSymbol) -> bool {
         let current = self
             .scopes
             .last_mut()
@@ -91,12 +107,12 @@ impl ScopeStack {
         if current.contains_key(name) {
             false
         } else {
-            current.insert(name.to_string(), ty);
+            current.insert(name.to_string(), symbol);
             true
         }
     }
 
-    fn lookup(&self, name: &str) -> Option<Type> {
+    fn lookup(&self, name: &str) -> Option<LocalSymbol> {
         self.scopes
             .iter()
             .rev()
@@ -108,6 +124,15 @@ impl ScopeStack {
 struct FunctionContext {
     return_type: Option<Type>,
     loop_depth: usize,
+    next_local_id: usize,
+}
+
+impl FunctionContext {
+    fn allocate_local(&mut self) -> LocalId {
+        let id = LocalId(self.next_local_id);
+        self.next_local_id += 1;
+        id
+    }
 }
 
 // The analyzer validates the parsed AST and prepares it for later compiler stages.
@@ -124,7 +149,7 @@ impl Analyzer {
         analyzer.collect_function_signatures(program)?;
         analyzer.validate_entry_point()?;
 
-        for function in &program.functions {
+        for (index, function) in program.functions.iter().enumerate() {
             analyzer.analyze_function(function)?;
         }
 
@@ -141,6 +166,7 @@ impl Analyzer {
             }
 
             let signature = FunctionSignature {
+                id: FunctionId(index),
                 params: function.params.iter().map(|param| param.ty).collect(),
                 return_type: function.return_type,
             };
@@ -183,6 +209,24 @@ impl Analyzer {
         Ok(())
     }
 
+    fn combine_branch_flows(
+        &self,
+        then_flow: FlowStatus,
+        else_flow: Option<FlowStatus>,
+    ) -> FlowStatus {
+        let Some(else_flow) = else_flow else {
+            return FlowStatus::FallsThrough;
+        };
+
+        match (then_flow, else_flow) {
+            (FlowStatus::Returns, FlowStatus::Returns) => FlowStatus::Returns,
+            (FlowStatus::FallsThrough, _) | (_, FlowStatus::FallsThrough) => {
+                FlowStatus::FallsThrough
+            }
+            _ => FlowStatus::Terminates,
+        }
+    }
+
     fn analyze_function(&self, function: &Function) -> Result<(), SemanticError> {
         let mut scopes = ScopeStack::new();
         let mut context = FunctionContext {
@@ -199,9 +243,9 @@ impl Analyzer {
             }
         }
 
-        let body_returns = self.analyze_block(&function.body, &mut scopes, &mut context, false)?;
+        let body_flow = self.analyze_block(&function.body, &mut scopes, &mut context, false)?;
 
-        if function.return_type.is_some() && !body_returns {
+        if function.return_type.is_some() && body_flow != FlowStatus::Returns {
             return Err(SemanticError::at(
                 function.span,
                 "Dönüş tipi belirtilen fonksiyonda tüm kontrol yolları bir değer döndürmeli",
@@ -217,26 +261,33 @@ impl Analyzer {
         scopes: &mut ScopeStack,
         context: &mut FunctionContext,
         create_scope: bool,
-    ) -> Result<bool, SemanticError> {
+    ) -> Result<FlowStatus, SemanticError> {
         if create_scope {
             scopes.push_scope();
         }
 
-        let mut definitely_returns = false;
+        let result = (|| {
+            let mut flow = FlowStatus::FallsThrough;
 
-        for statement in &block.statements {
-            if definitely_returns {
-                break;
+            for statement in &block.statements {
+                if flow != FlowStatus::FallsThrough {
+                    return Err(SemanticError::at(
+                        statement.span,
+                        "Bu ifade önceki kontrol akışı nedeniyle erişilemez",
+                    ));
+                }
+
+                flow = self.analyze_statement(statement, scopes, context)?;
             }
 
-            definitely_returns = self.analyze_statement(statement, scopes, context)?;
-        }
+            Ok(flow)
+        })();
 
         if create_scope {
             scopes.pop_scope();
         }
 
-        Ok(definitely_returns)
+        result
     }
 
     fn analyze_statement(
@@ -244,15 +295,15 @@ impl Analyzer {
         statement: &Stmt,
         scopes: &mut ScopeStack,
         context: &mut FunctionContext,
-    ) -> Result<bool, SemanticError> {
+    ) -> Result<FlowStatus, SemanticError> {
         match &statement.kind {
             StmtKind::VarDecl(decl) => {
                 self.analyze_var_decl(decl, scopes, context)?;
-                Ok(false)
+                Ok(FlowStatus::FallsThrough)
             }
             StmtKind::Assign(assign) => {
                 self.analyze_assignment(assign, scopes, context)?;
-                Ok(false)
+                Ok(FlowStatus::FallsThrough)
             }
             StmtKind::If(if_stmt) => {
                 let condition_type = self.expect_value_expr(&if_stmt.condition, scopes, context)?;
@@ -267,16 +318,15 @@ impl Analyzer {
                     ));
                 }
 
-                let then_returns =
-                    self.analyze_block(&if_stmt.then_branch, scopes, context, true)?;
+                let then_flow = self.analyze_block(&if_stmt.then_branch, scopes, context, true)?;
 
-                let else_returns = if let Some(else_branch) = &if_stmt.else_branch {
+                let else_flow = if let Some(else_branch) = &if_stmt.else_branch {
                     self.analyze_block(else_branch, scopes, context, true)?
                 } else {
-                    false
+                    FlowStatus::FallsThrough
                 };
 
-                Ok(then_returns && else_returns)
+                Ok(self.combine_branch_flows(then_flow, Some(else_flow)))
             }
             StmtKind::Loop(loop_stmt) => {
                 scopes.push_scope();
@@ -310,7 +360,7 @@ impl Analyzer {
                     body_result?;
 
                     // Conservative rule: loops are not assumed to return on every path.
-                    Ok(false)
+                    Ok(FlowStatus::FallsThrough)
                 })();
 
                 scopes.pop_scope();
@@ -323,7 +373,7 @@ impl Analyzer {
                         "`kır` ifadesi yalnızca döngü içinde kullanılabilir",
                     ))
                 } else {
-                    Ok(false)
+                    Ok(FlowStatus::Terminates)
                 }
             }
             StmtKind::Continue => {
@@ -333,16 +383,16 @@ impl Analyzer {
                         "`devam` ifadesi yalnızca döngü içinde kullanılabilir",
                     ))
                 } else {
-                    Ok(false)
+                    Ok(FlowStatus::Terminates)
                 }
             }
             StmtKind::Return(value) => {
                 self.analyze_return(statement.span, value.as_ref(), scopes, context)?;
-                Ok(true)
+                Ok(FlowStatus::Returns)
             }
             StmtKind::Expr(expr) => {
                 self.infer_expr_type(expr, scopes, context)?;
-                Ok(false)
+                Ok(FlowStatus::FallsThrough)
             }
         }
     }
@@ -682,29 +732,36 @@ impl Analyzer {
             scopes.push_scope();
         }
 
-        let mut definitely_returns = false;
-        let mut statements = Vec::with_capacity(block.statements.len());
+        let result = (|| {
+            let mut flow = FlowStatus::FallsThrough;
+            let mut statements = Vec::with_capacity(block.statements.len());
 
-        for statement in &block.statements {
-            if definitely_returns {
-                break;
+            for statement in &block.statements {
+                if flow != FlowStatus::FallsThrough {
+                    return Err(SemanticError::at(
+                        statement.span,
+                        "Bu ifade önceki kontrol akışı nedeniyle erişilemez",
+                    ));
+                }
+
+                let (typed_stmt, stmt_flow) =
+                    self.build_typed_statement(statement, scopes, context)?;
+                flow = stmt_flow;
+                statements.push(typed_stmt);
             }
 
-            let (typed_stmt, stmt_returns) =
-                self.build_typed_statement(statement, scopes, context)?;
-            definitely_returns = stmt_returns;
-            statements.push(typed_stmt);
-        }
+            Ok(TypedBlock {
+                span: block.span,
+                statements,
+                definitely_returns: flow == FlowStatus::Returns,
+            })
+        })();
 
         if create_scope {
             scopes.pop_scope();
         }
 
-        Ok(TypedBlock {
-            span: block.span,
-            statements,
-            definitely_returns,
-        })
+        result
     }
 
     fn build_typed_statement(
@@ -712,14 +769,14 @@ impl Analyzer {
         statement: &Stmt,
         scopes: &mut ScopeStack,
         context: &mut FunctionContext,
-    ) -> Result<(TypedStmt, bool), SemanticError> {
+    ) -> Result<(TypedStmt, FlowStatus), SemanticError> {
         match &statement.kind {
             StmtKind::VarDecl(decl) => Ok((
                 TypedStmt {
                     span: statement.span,
                     kind: TypedStmtKind::VarDecl(self.build_typed_var_decl(decl, scopes, context)?),
                 },
-                false,
+                FlowStatus::FallsThrough,
             )),
             StmtKind::Assign(assign) => Ok((
                 TypedStmt {
@@ -728,7 +785,7 @@ impl Analyzer {
                         self.build_typed_assignment(assign, scopes, context)?,
                     ),
                 },
-                false,
+                FlowStatus::FallsThrough,
             )),
             StmtKind::If(if_stmt) => {
                 let condition =
@@ -756,10 +813,19 @@ impl Analyzer {
                     None
                 };
 
-                let definitely_returns = then_branch.definitely_returns
-                    && else_branch
-                        .as_ref()
-                        .is_some_and(|branch| branch.definitely_returns);
+                let then_flow = if then_branch.definitely_returns {
+                    FlowStatus::Returns
+                } else {
+                    FlowStatus::FallsThrough
+                };
+                let else_flow = else_branch.as_ref().map(|branch| {
+                    if branch.definitely_returns {
+                        FlowStatus::Returns
+                    } else {
+                        FlowStatus::FallsThrough
+                    }
+                });
+                let flow = self.combine_branch_flows(then_flow, else_flow);
 
                 Ok((
                     TypedStmt {
@@ -771,7 +837,7 @@ impl Analyzer {
                             else_branch,
                         }),
                     },
-                    definitely_returns,
+                    flow,
                 ))
             }
             StmtKind::Loop(loop_stmt) => {
@@ -828,7 +894,7 @@ impl Analyzer {
                                 body: body?,
                             }),
                         },
-                        false,
+                        FlowStatus::FallsThrough,
                     ))
                 })();
 
@@ -840,14 +906,14 @@ impl Analyzer {
                     span: statement.span,
                     kind: TypedStmtKind::Break,
                 },
-                false,
+                FlowStatus::Terminates,
             )),
             StmtKind::Continue => Ok((
                 TypedStmt {
                     span: statement.span,
                     kind: TypedStmtKind::Continue,
                 },
-                false,
+                FlowStatus::Terminates,
             )),
             StmtKind::Return(value) => Ok((
                 TypedStmt {
@@ -859,14 +925,14 @@ impl Analyzer {
                         context,
                     )?),
                 },
-                true,
+                FlowStatus::Returns,
             )),
             StmtKind::Expr(expr) => Ok((
                 TypedStmt {
                     span: statement.span,
                     kind: TypedStmtKind::Expr(self.build_typed_expr(expr, scopes, context)?),
                 },
-                false,
+                FlowStatus::FallsThrough,
             )),
         }
     }
@@ -1281,6 +1347,38 @@ Ana() {
 
         assert_eq!(var_decl.ty, Type::Sayi);
         assert_eq!(var_decl.value.ty, TypedExprType::Value(Type::Sayi));
+    }
+
+    #[test]
+    fn rejects_unreachable_statement_after_return() {
+        let source = "\
+Topla(a: say\u{131}, b: say\u{131}) -> say\u{131} {\n\
+    d\u{f6}n a + b;\n\
+    yazdir(a);\n\
+}\n\
+\n\
+Ana() {\n\
+    yazdir(1);\n\
+}\n";
+
+        let error = analyze(source).expect_err("semantic analysis should fail");
+        assert!(error.contains("ifade"));
+        assert!(error.contains("satır 3, sütun 1"));
+    }
+
+    #[test]
+    fn rejects_unreachable_statement_after_continue() {
+        let source = "\
+Ana() {\n\
+    d\u{f6}ng\u{fc} (do\u{11f}ru) {\n\
+        devam;\n\
+        yazdir(1);\n\
+    }\n\
+}\n";
+
+        let error = analyze(source).expect_err("semantic analysis should fail");
+        assert!(error.contains("ifade"));
+        assert!(error.contains("satır 4, sütun 1"));
     }
 
     #[test]
