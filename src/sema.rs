@@ -8,8 +8,7 @@ use crate::ast::{
 use crate::typed::{
     BuiltinFunction, CallTarget, FunctionId, LocalId, LocalKind, TypedAssignStmt, TypedBlock,
     TypedExpr, TypedExprKind, TypedExprType, TypedFunction, TypedIfStmt, TypedLocalRef,
-    TypedLoopPart, TypedLoopStmt, TypedParam, TypedProgram, TypedStmt, TypedStmtKind,
-    TypedVarDecl,
+    TypedLoopPart, TypedLoopStmt, TypedParam, TypedProgram, TypedStmt, TypedStmtKind, TypedVarDecl,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -141,6 +140,15 @@ pub struct Analyzer {
 }
 
 impl Analyzer {
+    fn typed_local_ref(&self, name: &str, symbol: LocalSymbol) -> TypedLocalRef {
+        TypedLocalRef {
+            id: symbol.id,
+            name: name.to_string(),
+            ty: symbol.ty,
+            kind: symbol.kind,
+        }
+    }
+
     pub fn analyze(program: &Program) -> Result<TypedProgram, SemanticError> {
         let mut analyzer = Self {
             functions: HashMap::new(),
@@ -149,7 +157,7 @@ impl Analyzer {
         analyzer.collect_function_signatures(program)?;
         analyzer.validate_entry_point()?;
 
-        for (index, function) in program.functions.iter().enumerate() {
+        for function in &program.functions {
             analyzer.analyze_function(function)?;
         }
 
@@ -157,7 +165,7 @@ impl Analyzer {
     }
 
     fn collect_function_signatures(&mut self, program: &Program) -> Result<(), SemanticError> {
-        for function in &program.functions {
+        for (index, function) in program.functions.iter().enumerate() {
             if BuiltinFunction::from_name(&function.name).is_some() {
                 return Err(SemanticError::at(
                     function.span,
@@ -232,10 +240,16 @@ impl Analyzer {
         let mut context = FunctionContext {
             return_type: function.return_type,
             loop_depth: 0,
+            next_local_id: 0,
         };
 
         for param in &function.params {
-            if !scopes.declare(&param.name, param.ty) {
+            let symbol = LocalSymbol {
+                id: context.allocate_local(),
+                ty: param.ty,
+                kind: LocalKind::Param,
+            };
+            if !scopes.declare(&param.name, symbol) {
                 return Err(SemanticError::at(
                     param.span,
                     format!("`{}` parametresi birden fazla kez tanımlanmış", param.name),
@@ -431,7 +445,12 @@ impl Analyzer {
             ));
         }
 
-        if !scopes.declare(&decl.name, decl.ty) {
+        let symbol = LocalSymbol {
+            id: context.allocate_local(),
+            ty: decl.ty,
+            kind: LocalKind::Variable,
+        };
+        if !scopes.declare(&decl.name, symbol) {
             return Err(SemanticError::at(
                 decl.span,
                 format!("`{}` aynı scope içinde yeniden tanımlanmış", decl.name),
@@ -447,7 +466,7 @@ impl Analyzer {
         scopes: &mut ScopeStack,
         context: &mut FunctionContext,
     ) -> Result<(), SemanticError> {
-        let Some(target_type) = scopes.lookup(&assign.target) else {
+        let Some(target) = scopes.lookup(&assign.target) else {
             return Err(SemanticError::at(
                 assign.span,
                 format!("Tanımsız değişkene atama yapılıyor: `{}`", assign.target),
@@ -456,12 +475,12 @@ impl Analyzer {
 
         let value_type = self.expect_value_expr(&assign.value, scopes, context)?;
 
-        if value_type != target_type {
+        if value_type != target.ty {
             return Err(SemanticError::at(
                 assign.span,
                 format!(
                     "`{}` değişkeni `{}` tipinde, ama atanan ifade `{}` tipinde",
-                    assign.target, target_type, value_type
+                    assign.target, target.ty, value_type
                 ),
             ));
         }
@@ -532,14 +551,14 @@ impl Analyzer {
             ExprKind::Number(_) => Ok(ExprType::Value(Type::Sayi)),
             ExprKind::Bool(_) => Ok(ExprType::Value(Type::Mantik)),
             ExprKind::Variable(name) => {
-                let Some(ty) = scopes.lookup(name) else {
+                let Some(symbol) = scopes.lookup(name) else {
                     return Err(SemanticError::at(
                         expr.span,
                         format!("Tanımsız değişken kullanılıyor: `{name}`"),
                     ));
                 };
 
-                Ok(ExprType::Value(ty))
+                Ok(ExprType::Value(symbol.ty))
             }
             ExprKind::Call { callee, args } => {
                 self.analyze_call_expr(expr.span, callee, args, scopes, context)
@@ -712,12 +731,22 @@ impl Analyzer {
         let mut context = FunctionContext {
             return_type: function.return_type,
             loop_depth: 0,
+            next_local_id: 0,
         };
 
         let mut params = Vec::with_capacity(function.params.len());
         for param in &function.params {
-            scopes.declare(&param.name, param.ty);
+            let local_id = context.allocate_local();
+            scopes.declare(
+                &param.name,
+                LocalSymbol {
+                    id: local_id,
+                    ty: param.ty,
+                    kind: LocalKind::Param,
+                },
+            );
             params.push(TypedParam {
+                local_id,
                 span: param.span,
                 name: param.name.clone(),
                 ty: param.ty,
@@ -725,8 +754,14 @@ impl Analyzer {
         }
 
         let body = self.build_typed_block(&function.body, &mut scopes, &mut context, false)?;
+        let function_id = self
+            .functions
+            .get(&function.name)
+            .expect("function signatures are collected before typed build")
+            .id;
 
         Ok(TypedFunction {
+            function_id,
             span: function.span,
             name: function.name.clone(),
             params,
@@ -992,9 +1027,18 @@ impl Analyzer {
             ));
         }
 
-        scopes.declare(&decl.name, decl.ty);
+        let local_id = context.allocate_local();
+        scopes.declare(
+            &decl.name,
+            LocalSymbol {
+                id: local_id,
+                ty: decl.ty,
+                kind: LocalKind::Variable,
+            },
+        );
 
         Ok(TypedVarDecl {
+            local_id,
             span: decl.span,
             name: decl.name.clone(),
             ty: decl.ty,
@@ -1008,7 +1052,7 @@ impl Analyzer {
         scopes: &mut ScopeStack,
         context: &mut FunctionContext,
     ) -> Result<TypedAssignStmt, SemanticError> {
-        let target_type = scopes.lookup(&assign.target).ok_or_else(|| {
+        let target = scopes.lookup(&assign.target).ok_or_else(|| {
             SemanticError::at(
                 assign.span,
                 format!("Tanımsız değişkene atama yapılıyor: `{}`", assign.target),
@@ -1021,20 +1065,19 @@ impl Analyzer {
             TypedExprType::Void => unreachable!(),
         };
 
-        if value_type != target_type {
+        if value_type != target.ty {
             return Err(SemanticError::at(
                 assign.span,
                 format!(
                     "`{}` değişkeni `{}` tipinde, ama atanan ifade `{}` tipinde",
-                    assign.target, target_type, value_type
+                    assign.target, target.ty, value_type
                 ),
             ));
         }
 
         Ok(TypedAssignStmt {
             span: assign.span,
-            target: assign.target.clone(),
-            target_type,
+            target: self.typed_local_ref(&assign.target, target),
             value,
         })
     }
@@ -1116,7 +1159,7 @@ impl Analyzer {
                 kind: TypedExprKind::Bool(*value),
             }),
             ExprKind::Variable(name) => {
-                let ty = scopes.lookup(name).ok_or_else(|| {
+                let symbol = scopes.lookup(name).ok_or_else(|| {
                     SemanticError::at(
                         expr.span,
                         format!("Tanımsız değişken kullanılıyor: `{name}`"),
@@ -1125,8 +1168,8 @@ impl Analyzer {
 
                 Ok(TypedExpr {
                     span: expr.span,
-                    ty: TypedExprType::Value(ty),
-                    kind: TypedExprKind::Variable(name.clone()),
+                    ty: TypedExprType::Value(symbol.ty),
+                    kind: TypedExprKind::Variable(self.typed_local_ref(name, symbol)),
                 })
             }
             ExprKind::Call { callee, args } => {
@@ -1268,7 +1311,10 @@ impl Analyzer {
                     None => TypedExprType::Void,
                 },
                 kind: TypedExprKind::Call {
-                    target: CallTarget::Function(callee.to_string()),
+                    target: CallTarget::Function {
+                        function_id: signature.id,
+                        name: callee.to_string(),
+                    },
                     args: typed_args,
                 },
             });
@@ -1349,7 +1395,13 @@ Ana() {
         let TypedExprKind::Call { target, .. } = &var_decl.value.kind else {
             panic!("variable initializer should be a typed function call");
         };
-        assert_eq!(target, &CallTarget::Function("Topla".to_string()));
+        assert_eq!(
+            target,
+            &CallTarget::Function {
+                function_id: crate::typed::FunctionId(0),
+                name: "Topla".to_string(),
+            }
+        );
 
         let TypedStmtKind::Expr(expr) = &main_function.body.statements[1].kind else {
             panic!("second statement should be a typed expression");

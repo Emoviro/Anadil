@@ -239,10 +239,10 @@ impl<'a> Interpreter<'a> {
 
     fn execute_assignment(&mut self, assign: &TypedAssignStmt) -> Result<(), RuntimeError> {
         let value = self.eval_value(&assign.value)?;
-        self.assign(&assign.target, value).ok_or_else(|| {
+        self.assign(&assign.target.name, value).ok_or_else(|| {
             RuntimeError::at(
                 assign.span,
-                format!("Degisken bulunamadi: `{}`", assign.target),
+                format!("Degisken bulunamadi: `{}`", assign.target.name),
             )
         })
     }
@@ -251,8 +251,8 @@ impl<'a> Interpreter<'a> {
         match &expr.kind {
             TypedExprKind::Number(value) => Ok(Some(Value::Number(*value))),
             TypedExprKind::Bool(value) => Ok(Some(Value::Bool(*value))),
-            TypedExprKind::Variable(name) => self.lookup(name).map(Some).ok_or_else(|| {
-                RuntimeError::at(expr.span, format!("Degisken bulunamadi: `{name}`"))
+            TypedExprKind::Variable(local) => self.lookup(&local.name).map(Some).ok_or_else(|| {
+                RuntimeError::at(expr.span, format!("Degisken bulunamadi: `{}`", local.name))
             }),
             TypedExprKind::Call { target, args } => self.eval_call(expr.span, target, args),
             TypedExprKind::Unary { op: _, expr: inner } => {
@@ -285,7 +285,7 @@ impl<'a> Interpreter<'a> {
         }
 
         match target {
-            CallTarget::Function(name) => self.call_function(name, values),
+            CallTarget::Function { name, .. } => self.call_function(name, values),
             CallTarget::Builtin(BuiltinFunction::Yazdir) => {
                 let value = values
                     .into_iter()
