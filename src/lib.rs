@@ -3,6 +3,7 @@ pub mod diagnostics;
 pub mod error;
 pub mod interpreter;
 pub mod lexer;
+pub mod native;
 pub mod parser;
 pub mod sema;
 pub mod token;
@@ -34,6 +35,11 @@ pub fn compile_source(source: &str) -> Result<typed::TypedProgram, String> {
 pub fn run_source(source: &str) -> Result<String, String> {
     let program = compile_source(source)?;
     Interpreter::run(&program).map_err(|error| format!("Calisma zamani hatasi: {error}"))
+}
+
+pub fn emit_native_asm_source(source: &str) -> Result<String, String> {
+    let program = compile_source(source)?;
+    native::emit_windows_x64_asm(&program)
 }
 
 #[cfg(test)]

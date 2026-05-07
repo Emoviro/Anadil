@@ -1,10 +1,11 @@
 use std::{
     env, fs,
     io::{self, Write},
+    path::{Path, PathBuf},
     process,
 };
 
-use anadil::{compile_source, parse_source, run_source};
+use anadil::{compile_source, emit_native_asm_source, parse_source, run_source};
 
 #[derive(Debug)]
 enum Command {
@@ -12,6 +13,9 @@ enum Command {
     Check,
     Ast,
     Typed,
+    Asm,
+    WriteAsm,
+    CompileNative,
     Help,
     Version,
     Examples,
@@ -53,7 +57,7 @@ fn main() {
         }
     };
 
-    if let Err(message) = run_command(command, &source) {
+    if let Err(message) = run_command(command, path, &source) {
         eprintln!("{message}");
         process::exit(1);
     }
@@ -93,6 +97,9 @@ fn parse_command(command: &str) -> Result<Command, String> {
         "kontrol" | "check" => Ok(Command::Check),
         "ast" => Ok(Command::Ast),
         "typed" => Ok(Command::Typed),
+        "asm" | "native-asm" => Ok(Command::Asm),
+        "asm-yaz" | "asm-write" => Ok(Command::WriteAsm),
+        "derle" | "native" | "native-compile" => Ok(Command::CompileNative),
         "yardim" | "yardım" | "help" | "-h" | "--help" => Ok(Command::Help),
         "surum" | "sürüm" | "version" | "-V" | "--version" => Ok(Command::Version),
         "ornekler" | "örnekler" | "examples" => Ok(Command::Examples),
@@ -103,7 +110,16 @@ fn parse_command(command: &str) -> Result<Command, String> {
 
 impl Command {
     fn requires_file(&self) -> bool {
-        matches!(self, Self::Run | Self::Check | Self::Ast | Self::Typed)
+        matches!(
+            self,
+            Self::Run
+                | Self::Check
+                | Self::Ast
+                | Self::Typed
+                | Self::Asm
+                | Self::WriteAsm
+                | Self::CompileNative
+        )
     }
 
     fn name(&self) -> &'static str {
@@ -112,6 +128,9 @@ impl Command {
             Self::Check => "kontrol",
             Self::Ast => "ast",
             Self::Typed => "typed",
+            Self::Asm => "asm",
+            Self::WriteAsm => "asm-yaz",
+            Self::CompileNative => "derle",
             Self::Help => "yardim",
             Self::Version => "surum",
             Self::Examples => "ornekler",
@@ -122,7 +141,7 @@ impl Command {
 
 fn usage(program: &str) -> String {
     format!(
-        "Anadil {}\n\nKullanim:\n  {program} <dosya.ana>\n  {program} calistir <dosya.ana>\n  {program} kontrol <dosya.ana>\n  {program} ast <dosya.ana>\n  {program} typed <dosya.ana>\n  {program} repl\n  {program} ornekler\n  {program} surum\n  {program} yardim",
+        "Anadil {}\n\nKullanim:\n  {program} <dosya.ana>\n  {program} calistir <dosya.ana>\n  {program} kontrol <dosya.ana>\n  {program} ast <dosya.ana>\n  {program} typed <dosya.ana>\n  {program} asm <dosya.ana>\n  {program} asm-yaz <dosya.ana>\n  {program} derle <dosya.ana>\n  {program} repl\n  {program} ornekler\n  {program} surum\n  {program} yardim",
         env!("CARGO_PKG_VERSION")
     )
 }
@@ -133,7 +152,13 @@ fn run_standalone_command(command: Command, program: &str) {
         Command::Version => println!("Anadil {}", env!("CARGO_PKG_VERSION")),
         Command::Examples => print_examples(),
         Command::Repl => run_repl(),
-        Command::Run | Command::Check | Command::Ast | Command::Typed => unreachable!(),
+        Command::Run
+        | Command::Check
+        | Command::Ast
+        | Command::Typed
+        | Command::Asm
+        | Command::WriteAsm
+        | Command::CompileNative => unreachable!(),
     }
 }
 
@@ -153,7 +178,7 @@ fn print_examples() {
     println!("  examples\\hata_ana_yok.ana    Bilerek Ana() eksik ornegi");
 }
 
-fn run_command(command: Command, source: &str) -> Result<(), String> {
+fn run_command(command: Command, path: &str, source: &str) -> Result<(), String> {
     match command {
         Command::Run => match run_source(source) {
             Ok(output) if output.is_empty() => Ok(()),
@@ -178,7 +203,198 @@ fn run_command(command: Command, source: &str) -> Result<(), String> {
             println!("{program:#?}");
             Ok(())
         }
+        Command::Asm => {
+            println!("{}", emit_native_asm_source(source)?);
+            Ok(())
+        }
+        Command::WriteAsm => {
+            let asm_path = write_native_asm(path, source)?;
+            println!("Assembly yazildi: {}", asm_path.display());
+            Ok(())
+        }
+        Command::CompileNative => {
+            let output = compile_native(path, source)?;
+            println!("Native executable yazildi: {}", output.display());
+            Ok(())
+        }
         Command::Help | Command::Version | Command::Examples | Command::Repl => unreachable!(),
+    }
+}
+
+fn write_native_asm(path: &str, source: &str) -> Result<PathBuf, String> {
+    let asm = emit_native_asm_source(source)?;
+    let asm_path = output_path(path, "asm");
+    fs::write(&asm_path, asm).map_err(|error| {
+        format!(
+            "Assembly dosyasi yazilamadi `{}`: {error}",
+            asm_path.display()
+        )
+    })?;
+    Ok(asm_path)
+}
+
+fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
+    let vcvars64 = if command_available("ml64") && command_available("link") {
+        None
+    } else {
+        Some(find_vcvars64().ok_or_else(|| {
+            "Native derleme icin Visual Studio Build Tools C++ araclari gerekli. \
+             `ml64`, `link` veya `vcvars64.bat` bulunamadi."
+                .to_string()
+        })?)
+    };
+
+    let asm_path = write_native_asm(path, source)?;
+    let obj_path = output_path(path, "obj");
+    let exe_path = output_path(path, "exe");
+
+    run_tool(
+        "ml64",
+        &[
+            "/nologo".to_string(),
+            "/c".to_string(),
+            format!("/Fo{}", obj_path.display()),
+            asm_path.display().to_string(),
+        ],
+        vcvars64.as_deref(),
+    )?;
+    run_tool(
+        "link",
+        &[
+            "/nologo".to_string(),
+            "/SUBSYSTEM:CONSOLE".to_string(),
+            "/ENTRY:main".to_string(),
+            format!("/OUT:{}", exe_path.display()),
+            obj_path.display().to_string(),
+            "msvcrt.lib".to_string(),
+            "ucrt.lib".to_string(),
+            "vcruntime.lib".to_string(),
+            "legacy_stdio_definitions.lib".to_string(),
+        ],
+        vcvars64.as_deref(),
+    )?;
+
+    Ok(exe_path)
+}
+
+fn run_tool(program: &str, args: &[String], vcvars64: Option<&Path>) -> Result<(), String> {
+    if let Some(vcvars64) = vcvars64 {
+        run_process_in_vcvars(vcvars64, program, args)
+    } else {
+        run_process(program, args)
+    }
+}
+
+fn run_process(program: &str, args: &[String]) -> Result<(), String> {
+    let output = process::Command::new(program)
+        .args(args)
+        .output()
+        .map_err(|error| format!("`{program}` calistirilamadi: {error}"))?;
+
+    if output.status.success() {
+        return Ok(());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Err(format!(
+        "`{program}` basarisiz oldu.\nstdout:\n{stdout}\nstderr:\n{stderr}"
+    ))
+}
+
+fn run_process_in_vcvars(vcvars64: &Path, program: &str, args: &[String]) -> Result<(), String> {
+    let mut script = String::new();
+    script.push_str("@echo off\r\n");
+    script.push_str("call ");
+    script.push_str(&quote_cmd_arg(&vcvars64.display().to_string()));
+    script.push_str(" >nul\r\n");
+    script.push_str(&quote_cmd_arg(program));
+    for arg in args {
+        script.push(' ');
+        script.push_str(&quote_cmd_arg(arg));
+    }
+    script.push_str("\r\nexit /b %ERRORLEVEL%\r\n");
+
+    let script_path =
+        env::temp_dir().join(format!("anadil-native-{}-{program}.bat", process::id()));
+    fs::write(&script_path, script).map_err(|error| {
+        format!(
+            "Native derleme gecici komut dosyasi yazilamadi `{}`: {error}",
+            script_path.display()
+        )
+    })?;
+
+    let result = run_process(
+        "cmd.exe",
+        &[
+            "/d".to_string(),
+            "/c".to_string(),
+            script_path.display().to_string(),
+        ],
+    );
+    let _ = fs::remove_file(script_path);
+    result
+}
+
+fn output_path(path: &str, extension: &str) -> PathBuf {
+    Path::new(path).with_extension(extension)
+}
+
+fn command_available(command: &str) -> bool {
+    let Some(paths) = env::var_os("PATH") else {
+        return false;
+    };
+
+    let candidates = command_candidates(command);
+    env::split_paths(&paths).any(|dir| {
+        candidates
+            .iter()
+            .any(|candidate| dir.join(candidate).is_file())
+    })
+}
+
+fn command_candidates(command: &str) -> Vec<String> {
+    if Path::new(command).extension().is_some() {
+        return vec![command.to_string()];
+    }
+
+    vec![
+        command.to_string(),
+        format!("{command}.exe"),
+        format!("{command}.cmd"),
+        format!("{command}.bat"),
+    ]
+}
+
+fn find_vcvars64() -> Option<PathBuf> {
+    [
+        r"C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat",
+        r"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat",
+        r"C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat",
+        r"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat",
+        r"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat",
+        r"C:\Program Files (x86)\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat",
+        r"C:\Program Files (x86)\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat",
+        r"C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat",
+    ]
+    .into_iter()
+    .map(PathBuf::from)
+    .find(|path| {
+        path.is_file()
+            && path
+                .parent()
+                .is_some_and(|parent| parent.join("vcvarsall.bat").is_file())
+    })
+}
+
+fn quote_cmd_arg(arg: &str) -> String {
+    if arg
+        .chars()
+        .any(|ch| ch.is_whitespace() || matches!(ch, '&' | '(' | ')' | '^' | '|' | '<' | '>'))
+    {
+        format!("\"{}\"", arg.replace('"', "\"\""))
+    } else {
+        arg.to_string()
     }
 }
 
