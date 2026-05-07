@@ -19,17 +19,17 @@ V1'de uc temel tip vardir:
 ```ana
 sayı
 mantık
-```
 metin
+```
 
 ## Degisken Tanimlama
 
 ```ana
 x: sayı = 10;
 durum: mantık = doğru;
+mesaj: metin = "Merhaba";
 ```
 
-mesaj: metin = "Merhaba";
 Degisken taniminda tip zorunludur.
 
 ## Atama
@@ -41,17 +41,18 @@ durum = yanlış;
 
 Atanan deger degiskenin tipiyle ayni olmalidir.
 
-"Merhaba"
-## Sayilar ve Mantik Degerleri
+## Sabit Degerler
 
 ```ana
 10
 -10
 doğru
 yanlış
+"Merhaba"
+Unary eksi sayilar icin gecerlidir:
+
 ```
 
-Unary eksi sayilar icin gecerlidir:
 
 ```ana
 x: sayı = -10;
@@ -193,3 +194,27 @@ Semantic analiz su durumlari yakalar:
 - `kir` / `devam` ifadelerinin dongu disinda kullanilmasi
 - `yazdir` sonucunun deger gibi kullanilmasi
 
+## Native Derleme
+
+Anadil, Windows x64 icin native compiler MVP'si icerir.
+
+Assembly uretmek:
+
+```powershell
+cargo run -- asm examples\topla.ana
+```
+
+Assembly dosyasini yazmak:
+
+```powershell
+cargo run -- asm-yaz examples\topla.ana
+```
+
+Executable derlemek:
+
+```powershell
+cargo run -- derle examples\topla.ana
+examples\topla.exe
+```
+
+Native derleme Visual Studio Build Tools C++ araclarini kullanir. Su anki MVP en fazla 4 fonksiyon parametresi destekler ve Windows x64 disinda hedef uretmez.

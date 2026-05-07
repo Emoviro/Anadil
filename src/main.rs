@@ -176,6 +176,9 @@ fn print_examples() {
     println!("  examples\\negatif.ana         Negatif sayilar ve unary eksi");
     println!("  examples\\hata_tip.ana        Bilerek hatali tip ornegi");
     println!("  examples\\hata_ana_yok.ana    Bilerek Ana() eksik ornegi");
+    println!();
+    println!("Native derleme:");
+    println!("  cargo run -- derle examples\\topla.ana");
 }
 
 fn run_command(command: Command, path: &str, source: &str) -> Result<(), String> {

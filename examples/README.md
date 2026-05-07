@@ -8,6 +8,15 @@ Tum ornekleri CLI uzerinden listelemek icin:
 cargo run -- ornekler
 ```
 
+Bir ornegi native executable olarak derlemek icin:
+
+```powershell
+cargo run -- derle examples\topla.ana
+examples\topla.exe
+```
+
+Native derleme Windows x64 hedefler ve Visual Studio Build Tools C++ araclarini kullanir.
+
 ## Calisan Ornekler
 
 Toplama:

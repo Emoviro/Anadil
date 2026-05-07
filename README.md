@@ -3,7 +3,7 @@
 Anadil, Turkce anahtar kelimelerle yazilan kucuk bir programlama dili denemesidir.
 V1 hedefi sade, statik tipli ve genisletilebilir bir cekirdek olusturmaktir.
 
-Proje su anda kaynak dosyayi okuyabilen, lexer/parser/semantic analiz yapan ve typed AST uzerinden programi calistiran bir interpreter icerir.
+Proje su anda kaynak dosyayi okuyabilen, lexer/parser/semantic analiz yapan, typed AST uzerinden programi calistiran bir interpreter ve Windows x64 icin native compiler MVP'si icerir.
 
 ## Durum
 
@@ -21,12 +21,11 @@ Yapilanlar:
 - `Ana()` giris noktasi
 - `yazdir` yerlesik fonksiyonu
 - `//` satir yorumlari
-- CLI komutlari: `calistir`, `kontrol`, `ast`, `typed`, `ornekler`, `surum`, `yardim`
+- CLI komutlari: `calistir`, `kontrol`, `ast`, `typed`, `asm`, `asm-yaz`, `derle`, `ornekler`, `surum`, `yardim`
 - Etkilesimli REPL komutu: `repl`
 
 Henuz yapilmayanlar:
 
-- Native codegen
 - Dizi, struct, class, modul sistemi
 - Dosya paketleme veya kurulum araci
 
@@ -61,6 +60,27 @@ Semantic analizden sonraki typed AST'yi yazdirma:
 ```powershell
 cargo run -- typed examples\topla.ana
 ```
+
+Windows x64 assembly uretme:
+
+```powershell
+cargo run -- asm examples\topla.ana
+```
+
+Assembly dosyasini yazma:
+
+```powershell
+cargo run -- asm-yaz examples\topla.ana
+```
+
+Native executable derleme:
+
+```powershell
+cargo run -- derle examples\topla.ana
+examples\topla.exe
+```
+
+Not: Native derleme Windows x64 hedefler ve Visual Studio Build Tools C++ araclarini kullanir. `derle` komutu `ml64`/`link` PATH icinde yoksa kurulu Build Tools icindeki `vcvars64.bat` dosyasini otomatik bulmaya calisir.
 
 Ornek dosyalari listeleme:
 
@@ -126,6 +146,7 @@ Proje iki parcaya ayrilmistir:
 
 - `src/lib.rs`: Dil motoru. Lexer, parser, semantic analiz, typed AST ve interpreter burada kutuphane olarak disari acilir.
 - `src/main.rs`: CLI katmani. Dosya okur, komutlari yorumlar ve `lib.rs` icindeki pipeline fonksiyonlarini cagirir.
+- `src/native.rs`: Typed AST'den Windows x64 MASM assembly ureten native compiler MVP katmani.
 
 Kutuphane tarafinda uc ana giris fonksiyonu vardir:
 
@@ -133,7 +154,34 @@ Kutuphane tarafinda uc ana giris fonksiyonu vardir:
 anadil::parse_source(source)
 anadil::compile_source(source)
 anadil::run_source(source)
+anadil::emit_native_asm_source(source)
 ```
+
+### Native Compiler MVP
+
+Native compiler hatti:
+
+```text
+.ana -> lexer -> parser -> semantic analiz -> typed AST -> Windows x64 assembly -> obj -> exe
+```
+
+Desteklenenler:
+
+- `sayi`, `mantik`, `metin`
+- Degisken tanimlama ve atama
+- Aritmetik ve karsilastirma islemleri
+- `eger` / `degilse`
+- Sonsuz, kosullu ve sayacli donguler
+- `kir`, `devam`, `don`
+- Fonksiyon tanimlama ve fonksiyon cagirma
+- `yazdir`
+
+Sinirlar:
+
+- Sadece Windows x64 hedeflenir.
+- Visual Studio Build Tools C++ araclari gerekir.
+- Native backend su an en fazla 4 fonksiyon parametresi destekler.
+- Runtime hatalari interpreter kadar ayrintili raporlanmaz.
 
 ### Komutlar
 
@@ -149,7 +197,7 @@ Testler:
 cargo test
 ```
 
-Bu komut unit testleri, CLI testlerini ve `examples/` altindaki ornek programlarin integration testlerini calistirir.
+Bu komut unit testleri, CLI testlerini, `examples/` altindaki interpreter testlerini ve Visual Studio Build Tools varsa native executable ornek testlerini calistirir.
 
 Clippy:
 
