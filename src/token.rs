@@ -5,11 +5,13 @@ use crate::ast::SourceSpan;
 pub enum TokenKind {
     // Literals
     Number(i64),
+    String(String),
     Ident(String),
 
     // Keywords
     Sayi,
     Mantik,
+    Metin,
     Eger,
     Degilse,
     Dongu,
@@ -50,9 +52,11 @@ impl TokenKind {
     pub fn describe(&self) -> String {
         match self {
             TokenKind::Number(value) => format!("sayı sabiti `{value}`"),
+            TokenKind::String(value) => format!("metin sabiti \"{value}\""),
             TokenKind::Ident(name) => format!("tanımlayıcı `{name}`"),
             TokenKind::Sayi => "`sayı`".to_string(),
             TokenKind::Mantik => "`mantık`".to_string(),
+            TokenKind::Metin => "`metin`".to_string(),
             TokenKind::Eger => "`eğer`".to_string(),
             TokenKind::Degilse => "`değilse`".to_string(),
             TokenKind::Dongu => "`döngü`".to_string(),

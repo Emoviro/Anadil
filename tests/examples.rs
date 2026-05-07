@@ -34,6 +34,14 @@ fn runs_mantik_example() {
 }
 
 #[test]
+fn runs_metin_example() {
+    assert_example_output(
+        include_str!("../examples/metin.ana"),
+        "Merhaba Anadil\nCodex\ndo\u{011f}ru",
+    );
+}
+
+#[test]
 fn runs_kosullu_dongu_example() {
     assert_example_output(include_str!("../examples/kosullu_dongu.ana"), "0\n1\n2");
 }

@@ -550,6 +550,7 @@ impl Analyzer {
         match &expr.kind {
             ExprKind::Number(_) => Ok(ExprType::Value(Type::Sayi)),
             ExprKind::Bool(_) => Ok(ExprType::Value(Type::Mantik)),
+            ExprKind::String(_) => Ok(ExprType::Value(Type::Metin)),
             ExprKind::Variable(name) => {
                 let Some(symbol) = scopes.lookup(name) else {
                     return Err(SemanticError::at(
@@ -1157,6 +1158,11 @@ impl Analyzer {
                 span: expr.span,
                 ty: TypedExprType::Value(Type::Mantik),
                 kind: TypedExprKind::Bool(*value),
+            }),
+            ExprKind::String(value) => Ok(TypedExpr {
+                span: expr.span,
+                ty: TypedExprType::Value(Type::Metin),
+                kind: TypedExprKind::String(value.clone()),
             }),
             ExprKind::Variable(name) => {
                 let symbol = scopes.lookup(name).ok_or_else(|| {

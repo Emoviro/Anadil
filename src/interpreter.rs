@@ -41,6 +41,7 @@ impl std::error::Error for RuntimeError {}
 enum Value {
     Number(i64),
     Bool(bool),
+    String(String),
 }
 
 impl Value {
@@ -49,6 +50,7 @@ impl Value {
             Value::Number(value) => value.to_string(),
             Value::Bool(true) => "do\u{011f}ru".to_string(),
             Value::Bool(false) => "yanl\u{0131}\u{015f}".to_string(),
+            Value::String(value) => value.clone(),
         }
     }
 }
@@ -251,6 +253,7 @@ impl<'a> Interpreter<'a> {
         match &expr.kind {
             TypedExprKind::Number(value) => Ok(Some(Value::Number(*value))),
             TypedExprKind::Bool(value) => Ok(Some(Value::Bool(*value))),
+            TypedExprKind::String(value) => Ok(Some(Value::String(value.clone()))),
             TypedExprKind::Variable(local) => self.lookup(&local.name).map(Some).ok_or_else(|| {
                 RuntimeError::at(expr.span, format!("Degisken bulunamadi: `{}`", local.name))
             }),
@@ -259,7 +262,7 @@ impl<'a> Interpreter<'a> {
                 let value = self.eval_value(inner)?;
                 match value {
                     Value::Number(value) => Ok(Some(Value::Number(-value))),
-                    Value::Bool(_) => Err(RuntimeError::at(
+                    Value::Bool(_) | Value::String(_) => Err(RuntimeError::at(
                         expr.span,
                         "Unary eksi icin sayi bekleniyordu",
                     )),
@@ -346,7 +349,9 @@ impl<'a> Interpreter<'a> {
     fn eval_bool(&mut self, expr: &TypedExpr) -> Result<bool, RuntimeError> {
         match self.eval_value(expr)? {
             Value::Bool(value) => Ok(value),
-            Value::Number(_) => Err(RuntimeError::at(expr.span, "Mantik degeri bekleniyordu")),
+            Value::Number(_) | Value::String(_) => {
+                Err(RuntimeError::at(expr.span, "Mantik degeri bekleniyordu"))
+            }
         }
     }
 
@@ -526,5 +531,22 @@ Ana() {
 "#;
 
         assert_eq!(run(source).expect("program should run"), "-10\n7\n10");
+    }
+
+    #[test]
+    fn runs_string_values_and_equality() {
+        let source = r#"
+Ana() {
+    mesaj: metin = "Merhaba";
+    yazdir(mesaj);
+    yazdir(mesaj == "Merhaba");
+    yazdir(mesaj != "Baska");
+}
+"#;
+
+        assert_eq!(
+            run(source).expect("program should run"),
+            "Merhaba\ndo\u{011f}ru\ndo\u{011f}ru"
+        );
     }
 }

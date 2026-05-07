@@ -125,6 +125,7 @@ pub enum TypedExprType {
 pub enum TypedExprKind {
     Number(i64),
     Bool(bool),
+    String(String),
     Variable(TypedLocalRef),
     Call {
         target: CallTarget,

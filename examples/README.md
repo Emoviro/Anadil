@@ -75,6 +75,20 @@ doğru
 yanlış
 ```
 
+Metin degerleri:
+
+```powershell
+cargo run -- calistir examples\metin.ana
+```
+
+Beklenen cikti:
+
+```text
+Merhaba Anadil
+Codex
+doğru
+```
+
 Kosullu dongu:
 
 ```powershell

@@ -46,6 +46,7 @@ pub struct Param {
 pub enum Type {
     Sayi,
     Mantik,
+    Metin,
 }
 
 impl Type {
@@ -53,6 +54,7 @@ impl Type {
         match self {
             Type::Sayi => "sayı",
             Type::Mantik => "mantık",
+            Type::Metin => "metin",
         }
     }
 }
@@ -149,6 +151,7 @@ impl Expr {
 pub enum ExprKind {
     Number(i64),
     Bool(bool),
+    String(String),
     Variable(String),
     Call {
         callee: String,

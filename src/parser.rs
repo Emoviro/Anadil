@@ -126,6 +126,10 @@ impl Parser {
                 self.bump();
                 Ok(Type::Mantik)
             }
+            TokenKind::Metin => {
+                self.bump();
+                Ok(Type::Metin)
+            }
             _ => Err(ParseError::expected(
                 "bir tip (`sayı` veya `mantık`)",
                 self.current(),
@@ -545,6 +549,10 @@ impl Parser {
             TokenKind::Number(value) => {
                 let token = self.bump();
                 Ok(Expr::new(token.span(), ExprKind::Number(value)))
+            }
+            TokenKind::String(value) => {
+                let token = self.bump();
+                Ok(Expr::new(token.span(), ExprKind::String(value)))
             }
             TokenKind::Dogru => {
                 let token = self.bump();

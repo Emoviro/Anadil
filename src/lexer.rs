@@ -27,6 +27,7 @@ impl Lexer {
                 ' ' | '\t' | '\r' => self.advance(),
                 '\n' => self.advance_newline(),
                 '0'..='9' => tokens.push(self.lex_number()?),
+                '"' => tokens.push(self.lex_string()?),
                 ch if is_ident_start(ch) => tokens.push(self.lex_ident_or_keyword()),
                 '(' => {
                     tokens.push(self.make_token(TokenKind::LParen));
@@ -137,7 +138,7 @@ impl Lexer {
                 }
                 _ => {
                     return Err(LexError::new(
-                        format!("Geçersiz karakter: {ch}"),
+                        format!("Gecersiz karakter: {ch}"),
                         self.line,
                         self.column,
                     ));
@@ -165,9 +166,68 @@ impl Lexer {
 
         let value = number
             .parse::<i64>()
-            .map_err(|_| LexError::new("Sayı çözümlenemedi", line, column))?;
+            .map_err(|_| LexError::new("Sayi cozumlenemedi", line, column))?;
 
         Ok(Token::new(TokenKind::Number(value), line, column))
+    }
+
+    fn lex_string(&mut self) -> Result<Token, LexError> {
+        let line = self.line;
+        let column = self.column;
+        let mut value = String::new();
+        self.advance();
+
+        while let Some(ch) = self.current() {
+            match ch {
+                '"' => {
+                    self.advance();
+                    return Ok(Token::new(TokenKind::String(value), line, column));
+                }
+                '\n' => {
+                    return Err(LexError::new(
+                        "Metin sabiti satir sonundan once kapatilmali",
+                        line,
+                        column,
+                    ));
+                }
+                '\\' => {
+                    self.advance();
+                    let Some(escaped) = self.current() else {
+                        return Err(LexError::new(
+                            "Metin sabiti icinde eksik kacis dizisi",
+                            line,
+                            column,
+                        ));
+                    };
+
+                    let escaped = match escaped {
+                        '"' => '"',
+                        '\\' => '\\',
+                        'n' => '\n',
+                        't' => '\t',
+                        other => {
+                            return Err(LexError::new(
+                                format!("Desteklenmeyen kacis dizisi: \\{other}"),
+                                self.line,
+                                self.column,
+                            ));
+                        }
+                    };
+                    value.push(escaped);
+                    self.advance();
+                }
+                _ => {
+                    value.push(ch);
+                    self.advance();
+                }
+            }
+        }
+
+        Err(LexError::new(
+            "Metin sabiti dosya sonundan once kapatilmali",
+            line,
+            column,
+        ))
     }
 
     fn lex_ident_or_keyword(&mut self) -> Token {
@@ -183,18 +243,18 @@ impl Lexer {
                 break;
             }
         }
-
         let kind = match ident.as_str() {
-            "sayı" => TokenKind::Sayi,
-            "mantık" => TokenKind::Mantik,
-            "eğer" => TokenKind::Eger,
-            "değilse" => TokenKind::Degilse,
-            "döngü" => TokenKind::Dongu,
-            "kır" => TokenKind::Kir,
+            "say\u{0131}" | "sayÄ±" | "sayÃ„Â±" => TokenKind::Sayi,
+            "mant\u{0131}k" | "mantÄ±k" | "mantÃ„Â±k" => TokenKind::Mantik,
+            "metin" => TokenKind::Metin,
+            "e\u{011f}er" | "eÄŸer" | "eÃ„Å¸er" => TokenKind::Eger,
+            "de\u{011f}ilse" | "deÄŸilse" | "deÃ„Å¸ilse" => TokenKind::Degilse,
+            "d\u{00f6}ng\u{00fc}" | "dÃ¶ngÃ¼" | "dÃƒÂ¶ngÃƒÂ¼" => TokenKind::Dongu,
+            "k\u{0131}r" | "kÄ±r" | "kÃ„Â±r" => TokenKind::Kir,
             "devam" => TokenKind::Devam,
-            "dön" => TokenKind::Don,
-            "doğru" => TokenKind::Dogru,
-            "yanlış" => TokenKind::Yanlis,
+            "d\u{00f6}n" | "dÃ¶n" | "dÃƒÂ¶n" => TokenKind::Don,
+            "do\u{011f}ru" | "doÄŸru" | "doÃ„Å¸ru" => TokenKind::Dogru,
+            "yanl\u{0131}\u{015f}" | "yanlÄ±ÅŸ" | "yanlÃ„Â±Ã…Å¸" => TokenKind::Yanlis,
             _ => TokenKind::Ident(ident),
         };
 

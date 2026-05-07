@@ -9,7 +9,7 @@ Proje su anda kaynak dosyayi okuyabilen, lexer/parser/semantic analiz yapan ve t
 
 Yapilanlar:
 
-- `sayı` ve `mantık` temel tipleri
+- `sayı`, `mantık` ve `metin` temel tipleri
 - Degisken tanimlama ve atama
 - Aritmetik islemler: `+`, `-`, `*`, `/`
 - Unary eksi: `-10`, `-x`, `10 + -3`
@@ -27,7 +27,6 @@ Yapilanlar:
 Henuz yapilmayanlar:
 
 - Native codegen
-- String/metin tipi
 - Dizi, struct, class, modul sistemi
 - Dosya paketleme veya kurulum araci
 

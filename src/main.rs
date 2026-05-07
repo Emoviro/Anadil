@@ -144,6 +144,7 @@ fn print_examples() {
     println!("  examples\\kosul.ana           Kosul ve mantik donen fonksiyon");
     println!("  examples\\fonksiyon.ana       Ic ice fonksiyon cagrilari");
     println!("  examples\\mantik.ana          Mantik degerleri");
+    println!("  examples\\metin.ana           Metin degerleri");
     println!("  examples\\kosullu_dongu.ana   Kosullu dongu");
     println!("  examples\\sonsuz_dongu.ana    Sonsuz dongu ve kir");
     println!("  examples\\kapsam.ana          Scope/kapsam davranisi");

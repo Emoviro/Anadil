@@ -14,12 +14,13 @@ Ana() {
 
 ## Tipler
 
-V1'de iki temel tip vardir:
+V1'de uc temel tip vardir:
 
 ```ana
 sayı
 mantık
 ```
+metin
 
 ## Degisken Tanimlama
 
@@ -28,6 +29,7 @@ x: sayı = 10;
 durum: mantık = doğru;
 ```
 
+mesaj: metin = "Merhaba";
 Degisken taniminda tip zorunludur.
 
 ## Atama
@@ -39,6 +41,7 @@ durum = yanlış;
 
 Atanan deger degiskenin tipiyle ayni olmalidir.
 
+"Merhaba"
 ## Sayilar ve Mantik Degerleri
 
 ```ana
