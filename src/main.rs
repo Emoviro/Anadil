@@ -5,9 +5,12 @@ use std::{
     process,
 };
 
-use anadil::{compile_source, emit_native_asm_source, parse_source, run_source};
+use anadil::{
+    check_source, compile_source, diagnostics::Diagnostic, emit_native_asm_source, parse_source,
+    run_source,
+};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Command {
     Run,
     Check,
@@ -24,8 +27,18 @@ enum Command {
 
 #[derive(Debug)]
 enum ParsedArgs<'a> {
-    WithFile { command: Command, path: &'a str },
+    WithFile {
+        command: Command,
+        path: &'a str,
+        output: OutputFormat,
+    },
     Standalone(Command),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OutputFormat {
+    Text,
+    Json,
 }
 
 fn main() {
@@ -45,20 +58,32 @@ fn main() {
         return;
     }
 
-    let ParsedArgs::WithFile { command, path } = parsed else {
+    let ParsedArgs::WithFile {
+        command,
+        path,
+        output,
+    } = parsed
+    else {
         unreachable!();
     };
 
     let source = match fs::read_to_string(path) {
         Ok(source) => source,
         Err(error) => {
-            eprintln!("Dosya okunamadi `{path}`: {error}");
+            let message = format!("Dosya okunamadi `{path}`: {error}");
+            if output == OutputFormat::Json {
+                println!("{}", json_result(false, &[Diagnostic::io(message)]));
+            } else {
+                eprintln!("{message}");
+            }
             process::exit(1);
         }
     };
 
-    if let Err(message) = run_command(command, path, &source) {
-        eprintln!("{message}");
+    if let Err(message) = run_command(command, path, &source, output) {
+        if !message.is_empty() {
+            eprintln!("{message}");
+        }
         process::exit(1);
     }
 }
@@ -74,6 +99,7 @@ fn parse_args(args: &[String]) -> Result<ParsedArgs<'_>, String> {
             Err(_) => Ok(ParsedArgs::WithFile {
                 command: Command::Run,
                 path: arg.as_str(),
+                output: OutputFormat::Text,
             }),
         },
         [_program, command, path] => {
@@ -82,9 +108,40 @@ fn parse_args(args: &[String]) -> Result<ParsedArgs<'_>, String> {
                 Ok(ParsedArgs::WithFile {
                     command,
                     path: path.as_str(),
+                    output: OutputFormat::Text,
                 })
             } else {
                 Err(format!("`{}` komutu dosya yolu almaz.", command.name()))
+            }
+        }
+        [_program, command, first, second] => {
+            let command = parse_command(command)?;
+            let (output, path) = parse_json_file_args(command, first, second)?;
+            Ok(ParsedArgs::WithFile {
+                command,
+                path,
+                output,
+            })
+        }
+        _ => Err("Gecersiz arguman sayisi.".to_string()),
+    }
+}
+
+fn parse_json_file_args<'a>(
+    command: Command,
+    first: &'a str,
+    second: &'a str,
+) -> Result<(OutputFormat, &'a str), String> {
+    if !command.requires_file() {
+        return Err(format!("`{}` komutu dosya yolu almaz.", command.name()));
+    }
+
+    match (first, second) {
+        ("--json", path) | (path, "--json") => {
+            if command.supports_json() {
+                Ok((OutputFormat::Json, path))
+            } else {
+                Err(format!("`{}` komutu `--json` desteklemez.", command.name()))
             }
         }
         _ => Err("Gecersiz arguman sayisi.".to_string()),
@@ -137,11 +194,15 @@ impl Command {
             Self::Repl => "repl",
         }
     }
+
+    fn supports_json(&self) -> bool {
+        matches!(self, Self::Check)
+    }
 }
 
 fn usage(program: &str) -> String {
     format!(
-        "Anadil {}\n\nKullanim:\n  {program} <dosya.ana>\n  {program} calistir <dosya.ana>\n  {program} kontrol <dosya.ana>\n  {program} ast <dosya.ana>\n  {program} typed <dosya.ana>\n  {program} asm <dosya.ana>\n  {program} asm-yaz <dosya.ana>\n  {program} derle <dosya.ana>\n  {program} repl\n  {program} ornekler\n  {program} surum\n  {program} yardim",
+        "Anadil {}\n\nKullanim:\n  {program} <dosya.ana>\n  {program} calistir <dosya.ana>\n  {program} kontrol <dosya.ana>\n  {program} kontrol --json <dosya.ana>\n  {program} ast <dosya.ana>\n  {program} typed <dosya.ana>\n  {program} asm <dosya.ana>\n  {program} asm-yaz <dosya.ana>\n  {program} derle <dosya.ana>\n  {program} repl\n  {program} ornekler\n  {program} surum\n  {program} yardim",
         env!("CARGO_PKG_VERSION")
     )
 }
@@ -182,7 +243,12 @@ fn print_examples() {
     println!("  cargo run -- derle examples\\topla.ana");
 }
 
-fn run_command(command: Command, path: &str, source: &str) -> Result<(), String> {
+fn run_command(
+    command: Command,
+    path: &str,
+    source: &str,
+    output: OutputFormat,
+) -> Result<(), String> {
     match command {
         Command::Run => match run_source(source) {
             Ok(output) if output.is_empty() => Ok(()),
@@ -193,9 +259,22 @@ fn run_command(command: Command, path: &str, source: &str) -> Result<(), String>
             Err(message) => Err(message),
         },
         Command::Check => {
-            compile_source(source)?;
-            println!("Tamam: program gecerli.");
-            Ok(())
+            if output == OutputFormat::Json {
+                match check_source(source) {
+                    Ok(()) => {
+                        println!("{}", json_result(true, &[]));
+                        Ok(())
+                    }
+                    Err(diagnostic) => {
+                        println!("{}", json_result(false, &[diagnostic]));
+                        Err(String::new())
+                    }
+                }
+            } else {
+                compile_source(source)?;
+                println!("Tamam: program gecerli.");
+                Ok(())
+            }
         }
         Command::Ast => {
             let program = parse_source(source)?;
@@ -223,6 +302,49 @@ fn run_command(command: Command, path: &str, source: &str) -> Result<(), String>
         }
         Command::Help | Command::Version | Command::Examples | Command::Repl => unreachable!(),
     }
+}
+
+fn json_result(ok: bool, diagnostics: &[Diagnostic]) -> String {
+    let diagnostics = diagnostics
+        .iter()
+        .map(json_diagnostic)
+        .collect::<Vec<_>>()
+        .join(",");
+    format!("{{\"ok\":{ok},\"diagnostics\":[{diagnostics}]}}")
+}
+
+fn json_diagnostic(diagnostic: &Diagnostic) -> String {
+    let (line, column) = match diagnostic.span {
+        Some(span) => (span.line.to_string(), span.column.to_string()),
+        None => ("null".to_string(), "null".to_string()),
+    };
+
+    format!(
+        "{{\"severity\":\"{}\",\"stage\":\"{}\",\"message\":\"{}\",\"line\":{},\"column\":{}}}",
+        diagnostic.severity.as_str(),
+        diagnostic.stage.as_str(),
+        json_escape(&diagnostic.message),
+        line,
+        column
+    )
+}
+
+fn json_escape(value: &str) -> String {
+    let mut escaped = String::new();
+    for ch in value.chars() {
+        match ch {
+            '"' => escaped.push_str("\\\""),
+            '\\' => escaped.push_str("\\\\"),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            '\u{08}' => escaped.push_str("\\b"),
+            '\u{0c}' => escaped.push_str("\\f"),
+            ch if ch <= '\u{1f}' => escaped.push_str(&format!("\\u{:04x}", ch as u32)),
+            ch => escaped.push(ch),
+        }
+    }
+    escaped
 }
 
 fn write_native_asm(path: &str, source: &str) -> Result<PathBuf, String> {
@@ -578,13 +700,18 @@ mod tests {
     #[test]
     fn accepts_legacy_run_form() {
         let args = vec!["anadil".to_string(), "examples/topla.ana".to_string()];
-        let ParsedArgs::WithFile { command, path } = parse_args(&args).expect("args should parse")
+        let ParsedArgs::WithFile {
+            command,
+            path,
+            output,
+        } = parse_args(&args).expect("args should parse")
         else {
             panic!("expected file command");
         };
 
         assert!(matches!(command, Command::Run));
         assert_eq!(path, "examples/topla.ana");
+        assert_eq!(output, super::OutputFormat::Text);
     }
 
     #[test]
@@ -594,13 +721,53 @@ mod tests {
             "kontrol".to_string(),
             "examples/topla.ana".to_string(),
         ];
-        let ParsedArgs::WithFile { command, path } = parse_args(&args).expect("args should parse")
+        let ParsedArgs::WithFile {
+            command,
+            path,
+            output,
+        } = parse_args(&args).expect("args should parse")
         else {
             panic!("expected file command");
         };
 
         assert!(matches!(command, Command::Check));
         assert_eq!(path, "examples/topla.ana");
+        assert_eq!(output, super::OutputFormat::Text);
+    }
+
+    #[test]
+    fn accepts_json_check_form() {
+        let args = vec![
+            "anadil".to_string(),
+            "kontrol".to_string(),
+            "--json".to_string(),
+            "examples/topla.ana".to_string(),
+        ];
+        let ParsedArgs::WithFile {
+            command,
+            path,
+            output,
+        } = parse_args(&args).expect("args should parse")
+        else {
+            panic!("expected file command");
+        };
+
+        assert!(matches!(command, Command::Check));
+        assert_eq!(path, "examples/topla.ana");
+        assert_eq!(output, super::OutputFormat::Json);
+    }
+
+    #[test]
+    fn rejects_json_for_non_check_commands() {
+        let args = vec![
+            "anadil".to_string(),
+            "calistir".to_string(),
+            "--json".to_string(),
+            "examples/topla.ana".to_string(),
+        ];
+
+        let error = parse_args(&args).expect_err("args should fail");
+        assert!(error.contains("desteklemez"));
     }
 
     #[test]

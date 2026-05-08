@@ -9,7 +9,7 @@ pub mod sema;
 pub mod token;
 pub mod typed;
 
-use diagnostics::{format_lex_error, format_parse_error, format_semantic_error};
+use diagnostics::{format_lex_error, format_parse_error, format_semantic_error, Diagnostic};
 use interpreter::Interpreter;
 use lexer::Lexer;
 use parser::Parser;
@@ -30,6 +30,22 @@ pub fn parse_source(source: &str) -> Result<ast::Program, String> {
 pub fn compile_source(source: &str) -> Result<typed::TypedProgram, String> {
     let program = parse_source(source)?;
     Analyzer::analyze(&program).map_err(|error| format_semantic_error(source, &error))
+}
+
+pub fn check_source(source: &str) -> Result<(), Diagnostic> {
+    let mut lexer = Lexer::new(source);
+    let tokens = lexer
+        .tokenize()
+        .map_err(|error| Diagnostic::from_lex_error(&error))?;
+
+    let mut parser = Parser::new(tokens);
+    let program = parser
+        .parse_program()
+        .map_err(|error| Diagnostic::from_parse_error(&error))?;
+
+    Analyzer::analyze(&program)
+        .map(|_| ())
+        .map_err(|error| Diagnostic::from_semantic_error(&error))
 }
 
 pub fn run_source(source: &str) -> Result<String, String> {

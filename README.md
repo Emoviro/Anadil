@@ -49,6 +49,24 @@ Program gecerli mi kontrol etme:
 cargo run -- kontrol examples\topla.ana
 ```
 
+IDE veya arac entegrasyonu icin JSON diagnostic ciktisi:
+
+```powershell
+cargo run -- kontrol --json examples\hata_tip.ana
+```
+
+Basarili cikti:
+
+```json
+{"ok":true,"diagnostics":[]}
+```
+
+Hatali cikti:
+
+```json
+{"ok":false,"diagnostics":[{"severity":"error","stage":"semantic","message":"...","line":2,"column":1}]}
+```
+
 Parse edilmis AST'yi yazdirma:
 
 ```powershell
@@ -184,6 +202,7 @@ Sinirlar:
 - Runtime hatalari interpreter kadar ayrintili raporlanmaz.
 - Sifira bolme native executable icinde kontrollu hata ve `exit(1)` ile raporlanir.
 - CLI compile-time hatalari satir/sutun ve caret bilgisiyle basilir; bu cikti mini IDE tarafindan diagnostics paneline baglanabilecek durumdadir.
+- `kontrol --json` IDE icin makine okunabilir diagnostic protokolu saglar.
 
 ### Komutlar
 

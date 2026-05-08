@@ -28,6 +28,24 @@ Ilgili dosyalar:
 
 ## CLI Komutlari
 
+Programi insan okunur diagnostic ile kontrol etmek:
+
+```powershell
+cargo run -- kontrol examples\topla.ana
+```
+
+Programi IDE entegrasyonu icin JSON diagnostic ile kontrol etmek:
+
+```powershell
+cargo run -- kontrol --json examples\hata_tip.ana
+```
+
+JSON protokolu:
+
+```json
+{"ok":false,"diagnostics":[{"severity":"error","stage":"semantic","message":"...","line":2,"column":1}]}
+```
+
 Assembly'yi ekrana basmak:
 
 ```powershell
@@ -190,7 +208,7 @@ Native MVP sifira bolme icin interpreter'a benzer kontrollu hata davranisi ureti
 Sifira bolme hatasi
 ```
 
-Bu durumda executable `exit(1)` ile biter. Kaynak satir/sutun bilgisi su an native executable icine gomulmez; IDE entegrasyonu icin compile-time lexer/parser/semantic hatalari CLI tarafinda caret'li diagnostic olarak kalir.
+Bu durumda executable `exit(1)` ile biter. Kaynak satir/sutun bilgisi su an native executable icine gomulmez; IDE entegrasyonu icin compile-time lexer/parser/semantic hatalari CLI tarafinda caret'li diagnostic ve `kontrol --json` ile structured diagnostic olarak kalir.
 
 ## Memory Management
 

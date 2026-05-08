@@ -3,6 +3,84 @@ use crate::error::LexError;
 use crate::parser::ParseError;
 use crate::sema::SemanticError;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Diagnostic {
+    pub severity: DiagnosticSeverity,
+    pub stage: DiagnosticStage,
+    pub message: String,
+    pub span: Option<SourceSpan>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiagnosticSeverity {
+    Error,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiagnosticStage {
+    Io,
+    Lexer,
+    Parser,
+    Semantic,
+}
+
+impl Diagnostic {
+    pub fn io(message: impl Into<String>) -> Self {
+        Self {
+            severity: DiagnosticSeverity::Error,
+            stage: DiagnosticStage::Io,
+            message: message.into(),
+            span: None,
+        }
+    }
+
+    pub fn from_lex_error(error: &LexError) -> Self {
+        Self {
+            severity: DiagnosticSeverity::Error,
+            stage: DiagnosticStage::Lexer,
+            message: error.message.clone(),
+            span: Some(SourceSpan::new(error.line, error.column)),
+        }
+    }
+
+    pub fn from_parse_error(error: &ParseError) -> Self {
+        Self {
+            severity: DiagnosticSeverity::Error,
+            stage: DiagnosticStage::Parser,
+            message: error.message.clone(),
+            span: Some(error.span),
+        }
+    }
+
+    pub fn from_semantic_error(error: &SemanticError) -> Self {
+        Self {
+            severity: DiagnosticSeverity::Error,
+            stage: DiagnosticStage::Semantic,
+            message: error.message.clone(),
+            span: error.span,
+        }
+    }
+}
+
+impl DiagnosticSeverity {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Error => "error",
+        }
+    }
+}
+
+impl DiagnosticStage {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Io => "io",
+            Self::Lexer => "lexer",
+            Self::Parser => "parser",
+            Self::Semantic => "semantic",
+        }
+    }
+}
+
 pub fn format_lex_error(source: &str, error: &LexError) -> String {
     format_diagnostic(
         source,
