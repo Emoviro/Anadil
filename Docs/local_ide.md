@@ -39,6 +39,7 @@ Ctrl+O  Dosya ac
 Ctrl+S  Kaydet
 F5      Calistir
 Ctrl+B  EXE Derle
+Ctrl+Shift+F5  EXE Calistir
 ```
 
 `Ac` ve `Farkli Kaydet`, native dosya secme/kaydetme penceresi acar. Kaydedilmemis degisiklik varsa pencere basliginda ve aktif dosya adinda `*` gorunur.
@@ -51,6 +52,7 @@ Proje akisi:
 - `Yeni`, editoru yeni bir `adsiz.ana` taslagina cevirir.
 - Kaydedilmemis degisiklik varken dosya degistirme veya yeni dosya acma onay ister.
 - `EXE Derle`, build oncesi aktif dosyayi kaydeder ve executable'i kaynak dosyanin yanina uretir.
+- `EXE Calistir`, son uretilen executable'i calistirir ve stdout/stderr/exit code bilgisini `Build` sekmesine yazar.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri bulunur.
 
 ## Ortak Ozellikler

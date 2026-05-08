@@ -122,6 +122,13 @@ impl AnadilIde {
                     if ui.button("EXE Derle").on_hover_text("Ctrl+B").clicked() {
                         self.build();
                     }
+                    if ui
+                        .add_enabled(self.build_exe.is_some(), egui::Button::new("EXE Calistir"))
+                        .on_hover_text("Ctrl+Shift+F5")
+                        .clicked()
+                    {
+                        self.run_built_exe();
+                    }
 
                     ui.separator();
                     let dirty = if self.is_dirty() {
@@ -417,6 +424,45 @@ impl AnadilIde {
         }
     }
 
+    fn run_built_exe(&mut self) {
+        let Some(exe) = self.build_exe.clone() else {
+            self.build_output = "Once EXE Derle ile native executable uret.".to_string();
+            self.status = "Calistirilacak EXE yok".to_string();
+            self.selected_tab = Tab::Build;
+            return;
+        };
+
+        let exe_path = PathBuf::from(&exe);
+        let mut command = Command::new(&exe_path);
+        if let Some(parent) = exe_path.parent() {
+            command.current_dir(parent);
+        }
+
+        match command.output() {
+            Ok(output) => {
+                self.build_output = format_exe_run_output(&exe_path, &output);
+                if output.status.success() {
+                    self.status = "EXE calistirildi".to_string();
+                    self.diagnostics.clear();
+                } else {
+                    let code = exit_code_label(&output.status);
+                    self.status = "EXE hata ile bitti".to_string();
+                    self.diagnostics = vec![Diagnostic::native(format!(
+                        "Native executable basarisiz bitti: {code}"
+                    ))];
+                }
+                self.selected_tab = Tab::Build;
+            }
+            Err(error) => {
+                let message = format!("Native executable calistirilamadi `{}`: {error}", exe);
+                self.build_output = message.clone();
+                self.diagnostics = vec![Diagnostic::native(message)];
+                self.status = "EXE calistirilamadi".to_string();
+                self.selected_tab = Tab::Diagnostics;
+            }
+        }
+    }
+
     fn prepare_build_source_path(&mut self) -> Option<PathBuf> {
         if self.current_path_is_placeholder() || self.is_dirty() {
             self.status = "Build icin once kaydediliyor".to_string();
@@ -592,6 +638,14 @@ impl AnadilIde {
         if context.input_mut(|input| input.consume_key(egui::Modifiers::CTRL, egui::Key::B)) {
             self.build();
         }
+        if context.input_mut(|input| {
+            input.consume_key(
+                egui::Modifiers::CTRL | egui::Modifiers::SHIFT,
+                egui::Key::F5,
+            )
+        }) {
+            self.run_built_exe();
+        }
     }
 
     fn is_dirty(&self) -> bool {
@@ -724,6 +778,28 @@ fn run_native_build(path: &Path) -> Result<String, String> {
     }
 
     extract_json_string(&stdout, "exe").ok_or_else(|| stdout.trim().to_string())
+}
+
+fn format_exe_run_output(path: &Path, output: &std::process::Output) -> String {
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = stdout.trim_end();
+    let stderr = stderr.trim_end();
+
+    format!(
+        "Native executable calistirildi:\n{}\n\nExit: {}\n\nstdout:\n{}\n\nstderr:\n{}",
+        path.display(),
+        exit_code_label(&output.status),
+        if stdout.is_empty() { "(bos)" } else { stdout },
+        if stderr.is_empty() { "(bos)" } else { stderr },
+    )
+}
+
+fn exit_code_label(status: &std::process::ExitStatus) -> String {
+    status
+        .code()
+        .map(|code| code.to_string())
+        .unwrap_or_else(|| "process signal ile sonlandi".to_string())
 }
 
 fn extract_json_string(json: &str, key: &str) -> Option<String> {

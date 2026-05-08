@@ -208,6 +208,7 @@ Ctrl+O  Dosya ac
 Ctrl+S  Kaydet
 F5      Calistir
 Ctrl+B  EXE Derle
+Ctrl+Shift+F5  EXE Calistir
 ```
 
 `Ac` ve `Farkli Kaydet` native Windows dosya penceresi acar. Kaydedilmemis degisiklik varsa pencere basliginda ve dosya adinda `*` gorunur.
@@ -220,6 +221,7 @@ Native IDE proje akisi:
 - `Yeni` yeni bir `adsiz.ana` taslagi acar; kaydetmek icin `Kaydet` veya `Farkli Kaydet` kullanilir.
 - Kaydedilmemis degisiklik varken baska dosya acmaya calisilirsa IDE onay ister.
 - `EXE Derle`, gerekiyorsa aktif dosyayi kaydeder ve `.exe` dosyasini aktif `.ana` dosyasinin yanina uretir.
+- `EXE Calistir`, son uretilen native executable'i calistirir ve stdout/stderr/exit code bilgisini `Build` sekmesinde gosterir.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri vardir.
 
 ## Ornek
