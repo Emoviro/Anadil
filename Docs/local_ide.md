@@ -60,6 +60,7 @@ Proje akisi:
 - Native executable, Explorer'dan cift tiklaninca terminal penceresi kapanmadan once Enter bekler.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri bulunur.
 - `Diagnostics` sekmesindeki satir/sutun bilgili hata kartlarina tiklaninca editor ilgili konuma odaklanir.
+- Native editor VS Code benzeri koyu tema, satir numarasi gutter'i ve aktif diagnostic satiri vurgusu kullanir.
 
 ## Ortak Ozellikler
 

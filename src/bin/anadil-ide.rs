@@ -72,6 +72,7 @@ struct AnadilIde {
     rename_file_name: String,
     selected_diagnostic: Option<usize>,
     pending_editor_jump: Option<(usize, usize)>,
+    pending_editor_scroll_line: Option<usize>,
 }
 
 impl Default for AnadilIde {
@@ -95,6 +96,7 @@ impl Default for AnadilIde {
             rename_file_name: "adsiz.ana".to_string(),
             selected_diagnostic: None,
             pending_editor_jump: None,
+            pending_editor_scroll_line: None,
         }
     }
 }
@@ -115,11 +117,16 @@ impl eframe::App for AnadilIde {
 impl AnadilIde {
     fn top_bar(&mut self, ui: &mut egui::Ui) {
         egui::Panel::top("top_bar")
-            .exact_size(52.0)
+            .exact_size(46.0)
             .show_inside(ui, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.add_space(4.0);
-                    ui.label(RichText::new("Anadil IDE").strong().size(20.0));
+                    ui.label(
+                        RichText::new("Anadil IDE")
+                            .strong()
+                            .size(18.0)
+                            .color(Color32::from_rgb(220, 224, 229)),
+                    );
                     ui.separator();
 
                     if ui
@@ -194,10 +201,10 @@ impl AnadilIde {
     fn left_panel(&mut self, ui: &mut egui::Ui) {
         egui::Panel::left("left_panel")
             .resizable(true)
-            .default_size(285.0)
-            .size_range(230.0..=430.0)
+            .default_size(305.0)
+            .size_range(250.0..=450.0)
             .show_inside(ui, |ui| {
-                ui.heading("Proje");
+                ui.heading(RichText::new("Proje").color(Color32::from_rgb(204, 210, 218)));
                 ui.horizontal(|ui| {
                     if ui.button("Klasor Ac").clicked() {
                         self.open_folder_dialog();
@@ -318,7 +325,11 @@ impl AnadilIde {
     fn editor_panel(&mut self, ui: &mut egui::Ui) {
         egui::CentralPanel::default().show_inside(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(RichText::new(self.display_path()).strong());
+                ui.label(
+                    RichText::new(self.display_path())
+                        .strong()
+                        .color(Color32::from_rgb(220, 224, 229)),
+                );
                 if let Some(exe) = &self.build_exe {
                     ui.separator();
                     ui.label(
@@ -340,14 +351,29 @@ impl AnadilIde {
                 };
 
             let editor_id = ui.make_persistent_id("source_editor");
-            let output = TextEdit::multiline(&mut self.source)
-                .id(editor_id)
-                .font(FontId::new(15.0, FontFamily::Monospace))
-                .desired_width(f32::INFINITY)
-                .desired_rows(26)
-                .lock_focus(true)
-                .layouter(&mut layouter)
-                .show(ui);
+            let line_count = editor_line_count(&self.source);
+            let active_line = self.active_diagnostic_line();
+            let scroll_line = self.pending_editor_scroll_line.take();
+
+            let output = ScrollArea::vertical()
+                .id_salt("source_editor_scroll")
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    ui.horizontal_top(|ui| {
+                        self.line_numbers_ui(ui, line_count, active_line, scroll_line);
+                        ui.add_space(6.0);
+                        TextEdit::multiline(&mut self.source)
+                            .id(editor_id)
+                            .font(FontId::new(15.0, FontFamily::Monospace))
+                            .desired_width(f32::INFINITY)
+                            .desired_rows(line_count.max(26))
+                            .lock_focus(true)
+                            .layouter(&mut layouter)
+                            .show(ui)
+                    })
+                    .inner
+                })
+                .inner;
 
             if output.response.changed() {
                 self.build_exe = None;
@@ -375,6 +401,52 @@ impl AnadilIde {
         ui.ctx()
             .memory_mut(|memory| memory.request_focus(editor_id));
         self.status = format!("Diagnostic konumu: satir {line}, sutun {column}");
+    }
+
+    fn line_numbers_ui(
+        &self,
+        ui: &mut egui::Ui,
+        line_count: usize,
+        active_line: Option<usize>,
+        scroll_line: Option<usize>,
+    ) {
+        let digits = line_count.to_string().len().max(2);
+        let width = (digits as f32 * 8.0) + 18.0;
+
+        egui::Frame::new()
+            .fill(Color32::from_rgb(30, 30, 30))
+            .inner_margin(egui::Margin::symmetric(6, 4))
+            .show(ui, |ui| {
+                ui.set_min_width(width);
+                for line in 1..=line_count {
+                    let selected = active_line == Some(line);
+                    let color = if selected {
+                        Color32::from_rgb(220, 224, 229)
+                    } else {
+                        Color32::from_rgb(110, 116, 126)
+                    };
+                    let fill = if selected {
+                        Color32::from_rgb(55, 65, 81)
+                    } else {
+                        Color32::TRANSPARENT
+                    };
+
+                    let response = egui::Frame::new().fill(fill).show(ui, |ui| {
+                        ui.set_min_width(width);
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            ui.label(
+                                RichText::new(line.to_string())
+                                    .font(FontId::new(15.0, FontFamily::Monospace))
+                                    .color(color),
+                            );
+                        });
+                    });
+
+                    if scroll_line == Some(line) {
+                        response.response.scroll_to_me(Some(egui::Align::Center));
+                    }
+                }
+            });
     }
 
     fn bottom_panel(&mut self, ui: &mut egui::Ui) {
@@ -501,6 +573,14 @@ impl AnadilIde {
 
         self.selected_diagnostic = Some(index);
         self.pending_editor_jump = Some((span.line, span.column));
+        self.pending_editor_scroll_line = Some(span.line);
+    }
+
+    fn active_diagnostic_line(&self) -> Option<usize> {
+        self.selected_diagnostic
+            .and_then(|index| self.diagnostics.get(index))
+            .and_then(|diagnostic| diagnostic.span)
+            .map(|span| span.line)
     }
 
     fn check(&mut self) {
@@ -1081,11 +1161,17 @@ impl AnadilIde {
 fn configure_fonts(context: &egui::Context) {
     let mut style = (*context.global_style()).clone();
     style.visuals = egui::Visuals::dark();
-    style.visuals.panel_fill = Color32::from_rgb(22, 25, 23);
-    style.visuals.window_fill = Color32::from_rgb(25, 29, 27);
-    style.visuals.widgets.inactive.bg_fill = Color32::from_rgb(32, 38, 34);
-    style.visuals.widgets.hovered.bg_fill = Color32::from_rgb(43, 54, 47);
-    style.visuals.widgets.active.bg_fill = Color32::from_rgb(38, 74, 47);
+    style.visuals.panel_fill = Color32::from_rgb(37, 37, 38);
+    style.visuals.window_fill = Color32::from_rgb(30, 30, 30);
+    style.visuals.extreme_bg_color = Color32::from_rgb(30, 30, 30);
+    style.visuals.faint_bg_color = Color32::from_rgb(45, 45, 48);
+    style.visuals.selection.bg_fill = Color32::from_rgb(38, 79, 120);
+    style.visuals.hyperlink_color = Color32::from_rgb(86, 156, 214);
+    style.visuals.widgets.inactive.bg_fill = Color32::from_rgb(45, 45, 48);
+    style.visuals.widgets.hovered.bg_fill = Color32::from_rgb(62, 62, 66);
+    style.visuals.widgets.active.bg_fill = Color32::from_rgb(38, 79, 120);
+    style.visuals.widgets.noninteractive.bg_fill = Color32::from_rgb(37, 37, 38);
+    style.spacing.item_spacing = egui::vec2(6.0, 5.0);
     context.set_global_style(style);
 }
 
@@ -1163,6 +1249,10 @@ fn ensure_ana_extension(name: &str) -> String {
     } else {
         format!("{name}.ana")
     }
+}
+
+fn editor_line_count(source: &str) -> usize {
+    source.split('\n').count().max(1)
 }
 
 fn char_index_for_line_column(source: &str, line: usize, column: usize) -> usize {
@@ -1514,7 +1604,9 @@ Ana() {
 
 #[cfg(test)]
 mod tests {
-    use super::{char_index_for_line_column, project_child_path, sibling_file_path};
+    use super::{
+        char_index_for_line_column, editor_line_count, project_child_path, sibling_file_path,
+    };
     use std::path::Path;
 
     #[test]
@@ -1551,5 +1643,12 @@ mod tests {
             char_index_for_line_column(source, 3, 99),
             source.chars().count()
         );
+    }
+
+    #[test]
+    fn counts_editor_lines_like_a_text_editor() {
+        assert_eq!(editor_line_count(""), 1);
+        assert_eq!(editor_line_count("a\nb"), 2);
+        assert_eq!(editor_line_count("a\n"), 2);
     }
 }
