@@ -227,6 +227,7 @@ Native IDE proje akisi:
 - `Karsilastir`, ayni kaynak kodu interpreter ve native executable olarak calistirir; stdout farklarini `Build` sekmesinde gosterir.
 - Native executable, Explorer'dan cift tiklaninca terminal penceresi kapanmadan once Enter bekler.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri vardir.
+- `Diagnostics` sekmesindeki satir/sutun bilgili hata kartlarina tiklaninca editor ilgili konuma odaklanir.
 
 ## Ornek
 

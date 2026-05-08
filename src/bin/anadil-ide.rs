@@ -6,7 +6,8 @@ use std::{
 
 use anadil::{check_source, diagnostics::Diagnostic, run_source_diagnostic};
 use eframe::egui::{
-    self, text::LayoutJob, Color32, FontFamily, FontId, RichText, ScrollArea, TextEdit, TextFormat,
+    self, text::LayoutJob, text_edit::TextEditState, Color32, FontFamily, FontId, RichText,
+    ScrollArea, TextEdit, TextFormat,
 };
 
 fn main() -> eframe::Result {
@@ -69,6 +70,8 @@ struct AnadilIde {
     run_mode: RunMode,
     new_file_name: String,
     rename_file_name: String,
+    selected_diagnostic: Option<usize>,
+    pending_editor_jump: Option<(usize, usize)>,
 }
 
 impl Default for AnadilIde {
@@ -90,6 +93,8 @@ impl Default for AnadilIde {
             run_mode: RunMode::Interpret,
             new_file_name: "yeni.ana".to_string(),
             rename_file_name: "adsiz.ana".to_string(),
+            selected_diagnostic: None,
+            pending_editor_jump: None,
         }
     }
 }
@@ -324,6 +329,7 @@ impl AnadilIde {
             });
 
             ui.add_space(6.0);
+            self.apply_pending_editor_jump(ui);
 
             let diagnostics = self.diagnostics.clone();
             let mut layouter =
@@ -333,22 +339,42 @@ impl AnadilIde {
                     ui.fonts_mut(|fonts| fonts.layout_job(job))
                 };
 
-            let response = ui.add(
-                TextEdit::multiline(&mut self.source)
-                    .font(FontId::new(15.0, FontFamily::Monospace))
-                    .desired_width(f32::INFINITY)
-                    .desired_rows(26)
-                    .lock_focus(true)
-                    .layouter(&mut layouter),
-            );
+            let editor_id = ui.make_persistent_id("source_editor");
+            let output = TextEdit::multiline(&mut self.source)
+                .id(editor_id)
+                .font(FontId::new(15.0, FontFamily::Monospace))
+                .desired_width(f32::INFINITY)
+                .desired_rows(26)
+                .lock_focus(true)
+                .layouter(&mut layouter)
+                .show(ui);
 
-            if response.changed() {
+            if output.response.changed() {
                 self.build_exe = None;
                 self.build_output = "Build sonucu guncel degil.".to_string();
                 self.status = "Degisiklik var".to_string();
                 self.check_silent();
             }
         });
+    }
+
+    fn apply_pending_editor_jump(&mut self, ui: &mut egui::Ui) {
+        let Some((line, column)) = self.pending_editor_jump.take() else {
+            return;
+        };
+
+        let editor_id = ui.make_persistent_id("source_editor");
+        let char_index = char_index_for_line_column(&self.source, line, column);
+        let mut state = TextEditState::load(ui.ctx(), editor_id).unwrap_or_default();
+        state
+            .cursor
+            .set_char_range(Some(egui::text::CCursorRange::one(
+                egui::text::CCursor::new(char_index),
+            )));
+        state.store(ui.ctx(), editor_id);
+        ui.ctx()
+            .memory_mut(|memory| memory.request_focus(editor_id));
+        self.status = format!("Diagnostic konumu: satir {line}, sutun {column}");
     }
 
     fn bottom_panel(&mut self, ui: &mut egui::Ui) {
@@ -417,13 +443,20 @@ impl AnadilIde {
         }
 
         ScrollArea::vertical().show(ui, |ui| {
-            for diagnostic in &self.diagnostics {
+            let diagnostics = self.diagnostics.clone();
+            for (index, diagnostic) in diagnostics.iter().enumerate() {
                 let place = diagnostic
                     .span
                     .map(|span| format!("satir {}, sutun {}", span.line, span.column))
                     .unwrap_or_else(|| "konum yok".to_string());
 
-                ui.group(|ui| {
+                let fill = if self.selected_diagnostic == Some(index) {
+                    Color32::from_rgb(42, 55, 47)
+                } else {
+                    Color32::from_rgb(31, 36, 33)
+                };
+
+                let card = egui::Frame::group(ui.style()).fill(fill).show(ui, |ui| {
                     ui.label(
                         RichText::new(format!(
                             "{} / {}",
@@ -435,9 +468,39 @@ impl AnadilIde {
                     );
                     ui.label(RichText::new(place).color(Color32::from_rgb(171, 186, 174)));
                     ui.label(&diagnostic.message);
+                    if diagnostic.span.is_some() {
+                        ui.label(
+                            RichText::new("Tikla: editor konumuna git")
+                                .small()
+                                .color(Color32::from_rgb(135, 214, 150)),
+                        );
+                    }
                 });
+
+                let response = card.response.interact(egui::Sense::click());
+                if diagnostic.span.is_some() {
+                    response.clone().on_hover_text("Editor konumuna git");
+                }
+
+                if response.clicked() {
+                    self.jump_to_diagnostic(index);
+                }
             }
         });
+    }
+
+    fn jump_to_diagnostic(&mut self, index: usize) {
+        let Some(diagnostic) = self.diagnostics.get(index) else {
+            return;
+        };
+
+        let Some(span) = diagnostic.span else {
+            self.status = "Bu diagnostic icin kaynak konumu yok".to_string();
+            return;
+        };
+
+        self.selected_diagnostic = Some(index);
+        self.pending_editor_jump = Some((span.line, span.column));
     }
 
     fn check(&mut self) {
@@ -455,6 +518,7 @@ impl AnadilIde {
             Ok(()) => Vec::new(),
             Err(diagnostic) => vec![diagnostic],
         };
+        self.selected_diagnostic = None;
     }
 
     fn run(&mut self) {
@@ -1101,6 +1165,28 @@ fn ensure_ana_extension(name: &str) -> String {
     }
 }
 
+fn char_index_for_line_column(source: &str, line: usize, column: usize) -> usize {
+    let target_line = line.max(1);
+    let target_column = column.max(1);
+    let mut char_index = 0;
+
+    for (line_index, line_text) in source.split_inclusive('\n').enumerate() {
+        let line_number = line_index + 1;
+        let line_without_newline = line_text.trim_end_matches(['\r', '\n']);
+
+        if line_number == target_line {
+            let column_offset = target_column
+                .saturating_sub(1)
+                .min(line_without_newline.chars().count());
+            return char_index + column_offset;
+        }
+
+        char_index += line_text.chars().count();
+    }
+
+    source.chars().count()
+}
+
 fn list_examples() -> Vec<PathBuf> {
     let mut examples = fs::read_dir("examples")
         .ok()
@@ -1428,7 +1514,7 @@ Ana() {
 
 #[cfg(test)]
 mod tests {
-    use super::{project_child_path, sibling_file_path};
+    use super::{char_index_for_line_column, project_child_path, sibling_file_path};
     use std::path::Path;
 
     #[test]
@@ -1454,5 +1540,16 @@ mod tests {
 
         assert!(sibling_file_path(&current, "alt/yeni.ana").is_err());
         assert!(sibling_file_path(&current, "").is_err());
+    }
+
+    #[test]
+    fn converts_diagnostic_line_column_to_char_index() {
+        let source = "ilk\nüğç\nson";
+        assert_eq!(char_index_for_line_column(source, 1, 1), 0);
+        assert_eq!(char_index_for_line_column(source, 2, 2), 5);
+        assert_eq!(
+            char_index_for_line_column(source, 3, 99),
+            source.chars().count()
+        );
     }
 }

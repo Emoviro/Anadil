@@ -59,6 +59,7 @@ Proje akisi:
 - `Karsilastir`, interpreter ve native executable stdout sonuclarini ayni panelde karsilastirir.
 - Native executable, Explorer'dan cift tiklaninca terminal penceresi kapanmadan once Enter bekler.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri bulunur.
+- `Diagnostics` sekmesindeki satir/sutun bilgili hata kartlarina tiklaninca editor ilgili konuma odaklanir.
 
 ## Ortak Ozellikler
 
