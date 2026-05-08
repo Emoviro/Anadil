@@ -35,6 +35,23 @@ enum Tab {
     Build,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RunMode {
+    Interpret,
+    Compile,
+    Compare,
+}
+
+impl RunMode {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Interpret => "Interpret et",
+            Self::Compile => "Compile et",
+            Self::Compare => "Karsilastir",
+        }
+    }
+}
+
 #[derive(Debug)]
 struct AnadilIde {
     source: String,
@@ -49,6 +66,7 @@ struct AnadilIde {
     examples: Vec<PathBuf>,
     selected_tab: Tab,
     build_exe: Option<String>,
+    run_mode: RunMode,
 }
 
 impl Default for AnadilIde {
@@ -67,6 +85,7 @@ impl Default for AnadilIde {
             examples: list_examples(),
             selected_tab: Tab::Output,
             build_exe: None,
+            run_mode: RunMode::Interpret,
         }
     }
 }
@@ -116,11 +135,30 @@ impl AnadilIde {
                     if ui.button("Kontrol").clicked() {
                         self.check();
                     }
-                    if ui.button("Calistir").on_hover_text("F5").clicked() {
-                        self.run();
-                    }
-                    if ui.button("EXE Derle").on_hover_text("Ctrl+B").clicked() {
-                        self.build();
+
+                    egui::ComboBox::from_id_salt("run_mode")
+                        .selected_text(self.run_mode.label())
+                        .width(118.0)
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(
+                                &mut self.run_mode,
+                                RunMode::Interpret,
+                                RunMode::Interpret.label(),
+                            );
+                            ui.selectable_value(
+                                &mut self.run_mode,
+                                RunMode::Compile,
+                                RunMode::Compile.label(),
+                            );
+                            ui.selectable_value(
+                                &mut self.run_mode,
+                                RunMode::Compare,
+                                RunMode::Compare.label(),
+                            );
+                        });
+
+                    if ui.button("Yap").on_hover_text("F5").clicked() {
+                        self.run_selected_mode();
                     }
                     if ui
                         .add_enabled(self.build_exe.is_some(), egui::Button::new("EXE Calistir"))
@@ -128,13 +166,6 @@ impl AnadilIde {
                         .clicked()
                     {
                         self.run_built_exe();
-                    }
-                    if ui
-                        .button("Karsilastir")
-                        .on_hover_text("Interpreter ve native ciktilarini karsilastir")
-                        .clicked()
-                    {
-                        self.compare_interpreter_and_native();
                     }
 
                     ui.separator();
@@ -400,6 +431,14 @@ impl AnadilIde {
                 self.status = "Calisma zamani hatasi".to_string();
                 self.selected_tab = Tab::Diagnostics;
             }
+        }
+    }
+
+    fn run_selected_mode(&mut self) {
+        match self.run_mode {
+            RunMode::Interpret => self.run(),
+            RunMode::Compile => self.build(),
+            RunMode::Compare => self.compare_interpreter_and_native(),
         }
     }
 
@@ -701,9 +740,10 @@ impl AnadilIde {
             self.save_current_path();
         }
         if context.input_mut(|input| input.consume_key(egui::Modifiers::NONE, egui::Key::F5)) {
-            self.run();
+            self.run_selected_mode();
         }
         if context.input_mut(|input| input.consume_key(egui::Modifiers::CTRL, egui::Key::B)) {
+            self.run_mode = RunMode::Compile;
             self.build();
         }
         if context.input_mut(|input| {

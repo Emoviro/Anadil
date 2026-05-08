@@ -93,7 +93,7 @@ cargo run -- derle examples\topla.ana
 examples\topla.exe
 ```
 
-`derle` komutu once assembly uretir, sonra `ml64` ile object file ve `link` ile executable olusturur. `ml64` ve `link` PATH icinde yoksa Visual Studio Build Tools altindaki `vcvars64.bat` dosyasini otomatik bulmaya calisir.
+`derle` komutu once assembly uretir, sonra `ml64` ile object file ve `link` ile executable olusturur. `ml64` ve `link` PATH icinde yoksa Visual Studio Build Tools altindaki `vcvars64.bat` dosyasini otomatik bulmaya calisir. Uretilen executable program sonunda `getchar` ile Enter bekler; bu, dosyaya Explorer'dan cift tiklandiginda terminal penceresinin hemen kapanmamasini saglar.
 
 ## Hedef Platform
 
@@ -236,7 +236,7 @@ Native MVP sifira bolme icin interpreter'a benzer kontrollu hata davranisi ureti
 Sifira bolme hatasi
 ```
 
-Bu durumda executable `exit(1)` ile biter. Kaynak satir/sutun bilgisi su an native executable icine gomulmez; IDE entegrasyonu icin compile-time lexer/parser/semantic hatalari CLI tarafinda caret'li diagnostic ve `kontrol --json` ile structured diagnostic olarak kalir.
+Bu durumda executable Enter bekledikten sonra `exit(1)` ile biter. Kaynak satir/sutun bilgisi su an native executable icine gomulmez; IDE entegrasyonu icin compile-time lexer/parser/semantic hatalari CLI tarafinda caret'li diagnostic ve `kontrol --json` ile structured diagnostic olarak kalir.
 
 ## Memory Management
 

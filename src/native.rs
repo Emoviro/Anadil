@@ -55,6 +55,7 @@ impl<'a> NativeEmitter<'a> {
         out.push_str("option casemap:none\n\n");
         out.push_str("extrn printf:proc\n");
         out.push_str("extrn strcmp:proc\n");
+        out.push_str("extrn getchar:proc\n");
         out.push_str("extrn exit:proc\n");
         out.push_str("includelib msvcrt.lib\n\n");
         out.push_str(".data\n");
@@ -68,6 +69,7 @@ impl<'a> NativeEmitter<'a> {
         out.push_str("main PROC\n");
         out.push_str("    sub rsp, 40\n");
         out.push_str("    call anadil_fn_Ana\n");
+        out.push_str("    call getchar\n");
         out.push_str("    xor eax, eax\n");
         out.push_str("    add rsp, 40\n");
         out.push_str("    ret\n");
@@ -328,6 +330,9 @@ impl<'a> NativeEmitter<'a> {
                 let printf_area_size = self.emit_reserve_call_area(0, out);
                 out.push_str("    call printf\n");
                 self.emit_release_call_area(printf_area_size, out);
+                let wait_area_size = self.emit_reserve_call_area(0, out);
+                out.push_str("    call getchar\n");
+                self.emit_release_call_area(wait_area_size, out);
                 out.push_str("    mov ecx, 1\n");
                 let exit_area_size = self.emit_reserve_call_area(0, out);
                 out.push_str("    call exit\n");
@@ -710,5 +715,6 @@ Ana() {
         assert!(asm.contains("anadil_fn_Topla PROC"));
         assert!(asm.contains("call anadil_fn_Topla"));
         assert!(asm.contains("call printf"));
+        assert!(asm.contains("call getchar"));
     }
 }

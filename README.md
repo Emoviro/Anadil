@@ -206,7 +206,7 @@ Native IDE kisayollari:
 ```text
 Ctrl+O  Dosya ac
 Ctrl+S  Kaydet
-F5      Calistir
+F5      Secili modu calistir
 Ctrl+B  EXE Derle
 Ctrl+Shift+F5  EXE Calistir
 ```
@@ -220,9 +220,11 @@ Native IDE proje akisi:
 - Listedeki dosyaya tiklaninca editor aktif dosyayi acar.
 - `Yeni` yeni bir `adsiz.ana` taslagi acar; kaydetmek icin `Kaydet` veya `Farkli Kaydet` kullanilir.
 - Kaydedilmemis degisiklik varken baska dosya acmaya calisilirsa IDE onay ister.
+- Ust bardaki mod seciciden `Interpret et`, `Compile et` veya `Karsilastir` secilir; `Yap` veya `F5` secili modu calistirir.
 - `EXE Derle`, gerekiyorsa aktif dosyayi kaydeder ve `.exe` dosyasini aktif `.ana` dosyasinin yanina uretir.
 - `EXE Calistir`, son uretilen native executable'i calistirir ve stdout/stderr/exit code bilgisini `Build` sekmesinde gosterir.
 - `Karsilastir`, ayni kaynak kodu interpreter ve native executable olarak calistirir; stdout farklarini `Build` sekmesinde gosterir.
+- Native executable, Explorer'dan cift tiklaninca terminal penceresi kapanmadan once Enter bekler.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri vardir.
 
 ## Ornek
@@ -288,6 +290,7 @@ Sinirlar:
 - Ilk 4 fonksiyon parametresi register ile, sonraki parametreler stack uzerinden tasinir.
 - Runtime hatalari interpreter kadar ayrintili raporlanmaz.
 - Sifira bolme native executable icinde kontrollu hata ve `exit(1)` ile raporlanir.
+- Native executable program sonunda ve runtime hata cikisinda terminalin kapanmamasi icin Enter bekler.
 - CLI compile-time hatalari satir/sutun ve caret bilgisiyle basilir; bu cikti mini IDE tarafindan diagnostics paneline baglanabilecek durumdadir.
 - `kontrol --json` IDE icin makine okunabilir diagnostic protokolu saglar.
 - `calistir --json` IDE icin interpreter output ve diagnostic protokolu saglar.
