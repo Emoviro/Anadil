@@ -32,6 +32,7 @@ fn main() -> eframe::Result {
 enum Tab {
     Output,
     Diagnostics,
+    Build,
 }
 
 #[derive(Debug)]
@@ -39,8 +40,11 @@ struct AnadilIde {
     source: String,
     saved_source: String,
     current_path: String,
+    project_root: Option<PathBuf>,
+    project_files: Vec<PathBuf>,
     status: String,
     output: String,
+    build_output: String,
     diagnostics: Vec<Diagnostic>,
     examples: Vec<PathBuf>,
     selected_tab: Tab,
@@ -54,8 +58,11 @@ impl Default for AnadilIde {
             saved_source: source.clone(),
             source,
             current_path: "adsiz.ana".to_string(),
+            project_root: None,
+            project_files: Vec::new(),
             status: "Hazir".to_string(),
             output: "Henüz calistirma yok.".to_string(),
+            build_output: "Henuz build yok.".to_string(),
             diagnostics: Vec::new(),
             examples: list_examples(),
             selected_tab: Tab::Output,
@@ -100,6 +107,9 @@ impl AnadilIde {
                     if ui.button("Farkli Kaydet").clicked() {
                         self.save_as_dialog();
                     }
+                    if ui.button("Klasor Ac").clicked() {
+                        self.open_folder_dialog();
+                    }
 
                     ui.separator();
 
@@ -130,9 +140,56 @@ impl AnadilIde {
     fn left_panel(&mut self, ui: &mut egui::Ui) {
         egui::Panel::left("left_panel")
             .resizable(true)
-            .default_size(255.0)
-            .size_range(210.0..=360.0)
+            .default_size(285.0)
+            .size_range(230.0..=430.0)
             .show_inside(ui, |ui| {
+                ui.heading("Proje");
+                ui.horizontal(|ui| {
+                    if ui.button("Klasor Ac").clicked() {
+                        self.open_folder_dialog();
+                    }
+                    if ui.button("Yeni").clicked() {
+                        self.new_file();
+                    }
+                    if ui
+                        .add_enabled(self.project_root.is_some(), egui::Button::new("Yenile"))
+                        .clicked()
+                    {
+                        self.refresh_project_files();
+                    }
+                });
+
+                ui.add_space(4.0);
+                ui.label(RichText::new(self.project_root_label()).small());
+                ui.add_space(6.0);
+
+                ScrollArea::vertical()
+                    .id_salt("project_files")
+                    .max_height(230.0)
+                    .show(ui, |ui| {
+                        if self.project_root.is_none() {
+                            ui.label(
+                                RichText::new("Bir proje klasoru ac.")
+                                    .color(Color32::from_rgb(171, 186, 174)),
+                            );
+                        } else if self.project_files.is_empty() {
+                            ui.label(
+                                RichText::new("Bu klasorde .ana dosyasi yok.")
+                                    .color(Color32::from_rgb(171, 186, 174)),
+                            );
+                        }
+
+                        let files = self.project_files.clone();
+                        for path in files {
+                            let name = self.relative_project_path(&path);
+                            let selected = self.current_path == path.display().to_string();
+                            if ui.selectable_label(selected, name).clicked() {
+                                self.open_path_with_guard(&path);
+                            }
+                        }
+                    });
+
+                ui.separator();
                 ui.heading("Dosya");
                 ui.label("Aktif yol");
                 ui.add(
@@ -157,7 +214,7 @@ impl AnadilIde {
                             .unwrap_or("ornek.ana");
                         let selected = self.current_path == path.display().to_string();
                         if ui.selectable_label(selected, name).clicked() {
-                            self.load_path(&path);
+                            self.open_path_with_guard(&path);
                         }
                     }
                 });
@@ -198,6 +255,7 @@ impl AnadilIde {
 
             if response.changed() {
                 self.build_exe = None;
+                self.build_output = "Build sonucu guncel degil.".to_string();
                 self.status = "Degisiklik var".to_string();
                 self.check_silent();
             }
@@ -223,6 +281,12 @@ impl AnadilIde {
                     {
                         self.selected_tab = Tab::Diagnostics;
                     }
+                    if ui
+                        .selectable_label(self.selected_tab == Tab::Build, "Build")
+                        .clicked()
+                    {
+                        self.selected_tab = Tab::Build;
+                    }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.label(format!("{} diagnostic", self.diagnostics.len()));
                     });
@@ -242,6 +306,17 @@ impl AnadilIde {
                         });
                     }
                     Tab::Diagnostics => self.diagnostics_ui(ui),
+                    Tab::Build => {
+                        ScrollArea::vertical().show(ui, |ui| {
+                            ui.add(
+                                TextEdit::multiline(&mut self.build_output)
+                                    .font(FontId::new(13.5, FontFamily::Monospace))
+                                    .desired_width(f32::INFINITY)
+                                    .desired_rows(8)
+                                    .interactive(false),
+                            );
+                        });
+                    }
                 }
             });
     }
@@ -325,11 +400,12 @@ impl AnadilIde {
         match write_ide_source(&self.source).and_then(|path| run_native_build(&path)) {
             Ok(exe) => {
                 self.build_exe = Some(exe.clone());
-                self.output = format!("Native executable uretildi:\n{exe}");
+                self.build_output = format!("Native executable uretildi:\n{exe}");
                 self.status = "EXE derlendi".to_string();
-                self.selected_tab = Tab::Output;
+                self.selected_tab = Tab::Build;
             }
             Err(message) => {
+                self.build_output = message.clone();
                 self.diagnostics = vec![Diagnostic::native(message)];
                 self.status = "Native build hatasi".to_string();
                 self.selected_tab = Tab::Diagnostics;
@@ -339,7 +415,13 @@ impl AnadilIde {
 
     fn open_current_path(&mut self) {
         let path = PathBuf::from(self.current_path.trim());
-        self.load_path(&path);
+        self.open_path_with_guard(&path);
+    }
+
+    fn open_path_with_guard(&mut self, path: &Path) {
+        if self.confirm_discard_unsaved() {
+            self.load_path(path);
+        }
     }
 
     fn load_path(&mut self, path: &Path) {
@@ -351,6 +433,7 @@ impl AnadilIde {
                 self.output = "Dosya acildi.".to_string();
                 self.status = "Dosya acildi".to_string();
                 self.build_exe = None;
+                self.build_output = "Henuz build yok.".to_string();
                 self.check_silent();
             }
             Err(error) => {
@@ -376,6 +459,7 @@ impl AnadilIde {
                 self.saved_source = self.source.clone();
                 self.status = "Kaydedildi".to_string();
                 self.output = format!("Kaydedildi:\n{}", path.display());
+                self.refresh_project_files();
             }
             Err(error) => {
                 self.diagnostics = vec![Diagnostic::io(format!(
@@ -389,25 +473,88 @@ impl AnadilIde {
     }
 
     fn open_file_dialog(&mut self) {
-        if let Some(path) = rfd::FileDialog::new()
+        if !self.confirm_discard_unsaved() {
+            return;
+        }
+
+        let mut dialog = rfd::FileDialog::new()
             .add_filter("Anadil kaynak", &["ana"])
             .add_filter("Metin", &["txt"])
-            .set_directory(".")
-            .pick_file()
-        {
+            .set_directory(".");
+
+        if let Some(root) = &self.project_root {
+            dialog = dialog.set_directory(root);
+        }
+
+        if let Some(path) = dialog.pick_file() {
             self.load_path(&path);
         }
     }
 
     fn save_as_dialog(&mut self) {
-        if let Some(path) = rfd::FileDialog::new()
+        let mut dialog = rfd::FileDialog::new()
             .add_filter("Anadil kaynak", &["ana"])
-            .set_file_name(default_save_name(&self.current_path))
-            .save_file()
-        {
+            .set_file_name(default_save_name(&self.current_path));
+
+        if let Some(root) = &self.project_root {
+            dialog = dialog.set_directory(root);
+        }
+
+        if let Some(path) = dialog.save_file() {
             self.current_path = path.display().to_string();
             self.save_current_path();
         }
+    }
+
+    fn open_folder_dialog(&mut self) {
+        if let Some(path) = rfd::FileDialog::new().set_directory(".").pick_folder() {
+            self.project_root = Some(path.clone());
+            self.refresh_project_files();
+            self.status = "Proje acildi".to_string();
+            self.output = format!("Proje klasoru acildi:\n{}", path.display());
+        }
+    }
+
+    fn refresh_project_files(&mut self) {
+        if let Some(root) = &self.project_root {
+            self.project_files = list_project_files(root);
+        }
+    }
+
+    fn new_file(&mut self) {
+        if !self.confirm_discard_unsaved() {
+            return;
+        }
+
+        let source = starter_source();
+        self.source = source;
+        self.saved_source.clear();
+        self.current_path = self
+            .project_root
+            .as_ref()
+            .map(|root| root.join("adsiz.ana").display().to_string())
+            .unwrap_or_else(|| "adsiz.ana".to_string());
+        self.output = "Yeni dosya olusturuldu.".to_string();
+        self.build_output = "Henuz build yok.".to_string();
+        self.status = "Yeni dosya".to_string();
+        self.build_exe = None;
+        self.check_silent();
+    }
+
+    fn confirm_discard_unsaved(&self) -> bool {
+        if !self.is_dirty() {
+            return true;
+        }
+
+        matches!(
+            rfd::MessageDialog::new()
+                .set_level(rfd::MessageLevel::Warning)
+                .set_title("Kaydedilmemis degisiklik")
+                .set_description("Kaydedilmemis degisiklikler var. Kaydetmeden devam edilsin mi?")
+                .set_buttons(rfd::MessageButtons::YesNo)
+                .show(),
+            rfd::MessageDialogResult::Yes
+        )
     }
 
     fn handle_shortcuts(&mut self, context: &egui::Context) {
@@ -449,6 +596,22 @@ impl AnadilIde {
             format!("Anadil IDE - {}", self.current_path)
         }
     }
+
+    fn project_root_label(&self) -> String {
+        self.project_root
+            .as_ref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "Proje klasoru acilmadi.".to_string())
+    }
+
+    fn relative_project_path(&self, path: &Path) -> String {
+        self.project_root
+            .as_ref()
+            .and_then(|root| path.strip_prefix(root).ok())
+            .unwrap_or(path)
+            .display()
+            .to_string()
+    }
 }
 
 fn configure_fonts(context: &egui::Context) {
@@ -485,6 +648,35 @@ fn list_examples() -> Vec<PathBuf> {
 
     examples.sort_by(|left, right| left.file_name().cmp(&right.file_name()));
     examples
+}
+
+fn list_project_files(root: &Path) -> Vec<PathBuf> {
+    let mut files = Vec::new();
+    collect_project_files(root, &mut files);
+    files.sort_by_key(|path| path.display().to_string());
+    files
+}
+
+fn collect_project_files(dir: &Path, files: &mut Vec<PathBuf>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        if path.is_dir() {
+            let name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("");
+            if matches!(name, ".git" | "target") {
+                continue;
+            }
+            collect_project_files(&path, files);
+        } else if path.extension().is_some_and(|extension| extension == "ana") {
+            files.push(path);
+        }
+    }
 }
 
 fn write_ide_source(source: &str) -> Result<PathBuf, String> {

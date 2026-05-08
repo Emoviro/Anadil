@@ -212,6 +212,15 @@ Ctrl+B  EXE Derle
 
 `Ac` ve `Farkli Kaydet` native Windows dosya penceresi acar. Kaydedilmemis degisiklik varsa pencere basliginda ve dosya adinda `*` gorunur.
 
+Native IDE proje akisi:
+
+- `Klasor Ac` ile bir proje klasoru secilir.
+- Sol panelde klasor altindaki `.ana` dosyalari listelenir; `target` ve `.git` atlanir.
+- Listedeki dosyaya tiklaninca editor aktif dosyayi acar.
+- `Yeni` yeni bir `adsiz.ana` taslagi acar; kaydetmek icin `Kaydet` veya `Farkli Kaydet` kullanilir.
+- Kaydedilmemis degisiklik varken baska dosya acmaya calisilirsa IDE onay ister.
+- Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri vardir.
+
 ## Ornek
 
 ```ana

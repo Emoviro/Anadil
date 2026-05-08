@@ -43,9 +43,19 @@ Ctrl+B  EXE Derle
 
 `Ac` ve `Farkli Kaydet`, native dosya secme/kaydetme penceresi acar. Kaydedilmemis degisiklik varsa pencere basliginda ve aktif dosya adinda `*` gorunur.
 
+Proje akisi:
+
+- `Klasor Ac`, bir proje klasoru secer ve sol panelde `.ana` dosyalarini gosterir.
+- Proje listesi alt klasorleri recursive tarar; `.git` ve `target` klasorlerini atlar.
+- `Yenile`, proje dosya listesini yeniden okur.
+- `Yeni`, editoru yeni bir `adsiz.ana` taslagina cevirir.
+- Kaydedilmemis degisiklik varken dosya degistirme veya yeni dosya acma onay ister.
+- Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri bulunur.
+
 ## Ortak Ozellikler
 
 - Ornek `.ana` dosyalarini sol panelden yukleme
+- Native IDE'de proje klasoru acma ve `.ana` dosyalarini sol explorer'dan secme
 - Yerel `.ana` dosyasi acma
 - Dosya kaydetme
 - Kaydedilmemis degisiklik gostergesi
@@ -53,7 +63,7 @@ Ctrl+B  EXE Derle
 - Web IDE'de satir numaralari, cursor konumu, canli diagnostics ve uzun dosyalar icin sona gitme dugmesi
 - Native IDE'de dogrudan compiler API ile `Kontrol`, `Calistir` ve `EXE Derle`
 - Web IDE'de `Kontrol`, `Calistir` ve `EXE Derle` mevcut JSON API endpoint'lerini kullanir
-- Alt panelde output ve diagnostics gorunumu
+- Alt panelde output, diagnostics ve build gorunumu
 
 ## Web IDE API
 
@@ -71,6 +81,7 @@ GET  /api/example?name=<ornek.ana>
 
 ## Sinirlar
 
-- Su an tek dosyali editor modeli vardir.
+- Web IDE su an tek dosyali editor modeliyle calisir.
+- Native IDE proje explorer sunar, ancak henuz rename/delete islemleri yoktur.
 - Browser destekliyorsa File System Access API ile dogrudan kaydeder; destek yoksa indirme fallback'i kullanir.
 - Debugger ve autocomplete henuz yoktur.
