@@ -178,13 +178,28 @@ Fonksiyon kaydedildi.
 
 Not: REPL cok satirli girisi destekler ve fonksiyon tanimlarini oturum boyunca saklar. Degiskenler satirlar arasinda saklanmaz.
 
-Lokal IDE:
+Lokal web IDE:
 
 ```powershell
 cargo run -- ide
 ```
 
 Komut yerel web IDE baslatir ve adresi terminale yazar. IDE icinde ornek dosyalar yuklenebilir, `.ana` dosyasi acilip kaydedilebilir, syntax highlighting ve canli diagnostics kullanilabilir, `Kontrol`, `Calistir` ve `EXE Derle` butonlariyla mevcut compiler protokolu calistirilabilir.
+
+Native executable IDE:
+
+```powershell
+cargo run --bin anadil-ide
+```
+
+Release `.exe` uretmek:
+
+```powershell
+cargo build --release --bin anadil-ide
+target\release\anadil-ide.exe
+```
+
+Native IDE browser veya localhost kullanmaz. Compiler API'lerini dogrudan cagirir; `EXE Derle` icin mevcut `anadil derle --json` protokolunu kullanir.
 
 ## Ornek
 
@@ -210,6 +225,7 @@ Proje iki parcaya ayrilmistir:
 - `src/main.rs`: CLI katmani. Dosya okur, komutlari yorumlar ve `lib.rs` icindeki pipeline fonksiyonlarini cagirir.
 - `src/native.rs`: Typed AST'den Windows x64 MASM assembly ureten native compiler MVP katmani.
 - `src/ide.rs`: `ide` komutuyla calisan lokal web IDE server'i ve arayuzu.
+- `src/bin/anadil-ide.rs`: Native executable IDE.
 
 Kutuphane tarafinda uc ana giris fonksiyonu vardir:
 

@@ -1,8 +1,11 @@
 # Anadil Local IDE
 
-Anadil local IDE, `anadil ide` komutuyla calisan hafif bir yerel web arayuzudur.
+Anadil iki local IDE yolu tasir:
 
-## Calistirma
+- `anadil ide`: hafif yerel web arayuzu
+- `anadil-ide.exe`: native executable GUI
+
+## Web IDE
 
 ```powershell
 cargo run -- ide
@@ -14,23 +17,36 @@ Komut bos bir port bulur ve terminale su formatta adres yazar:
 Anadil IDE hazir: http://127.0.0.1:5817
 ```
 
-## Ozellikler
+## Native IDE
+
+```powershell
+cargo run --bin anadil-ide
+```
+
+Release executable:
+
+```powershell
+cargo build --release --bin anadil-ide
+target\release\anadil-ide.exe
+```
+
+Native IDE `eframe/egui` ile yazilir. Browser, localhost veya HTML/CSS gerektirmez.
+
+## Ortak Ozellikler
 
 - Ornek `.ana` dosyalarini sol panelden yukleme
 - Yerel `.ana` dosyasi acma
 - Dosya kaydetme
 - Syntax highlighting
-- Kod editoru, satir numaralari, cursor konumu ve uzun dosyalar icin sona gitme dugmesi
-- Yazmayi biraktiktan sonra otomatik diagnostic kontrolu
-- Hata satirlarini gutter ve editor yuzeyinde isaretleme
-- `Kontrol` butonu: `/api/check` uzerinden compiler diagnostic
-- `Calistir` butonu: `/api/run` uzerinden interpreter output
-- `EXE Derle` butonu: `/api/build` uzerinden native build sonucu
+- Kod editoru ve syntax highlighting
+- Web IDE'de satir numaralari, cursor konumu, canli diagnostics ve uzun dosyalar icin sona gitme dugmesi
+- Native IDE'de dogrudan compiler API ile `Kontrol`, `Calistir` ve `EXE Derle`
+- Web IDE'de `Kontrol`, `Calistir` ve `EXE Derle` mevcut JSON API endpoint'lerini kullanir
 - Alt panelde output ve diagnostics gorunumu
 
-## API
+## Web IDE API
 
-IDE server'i mevcut compiler protokolunu kullanir ve tarayici tarafina JSON dondurur:
+Web IDE server'i mevcut compiler protokolunu kullanir ve tarayici tarafina JSON dondurur:
 
 ```text
 POST /api/check
