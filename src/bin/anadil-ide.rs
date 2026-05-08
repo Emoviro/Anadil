@@ -1,6 +1,6 @@
 use std::{
     fs,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
     process::Command,
 };
 
@@ -67,6 +67,8 @@ struct AnadilIde {
     selected_tab: Tab,
     build_exe: Option<String>,
     run_mode: RunMode,
+    new_file_name: String,
+    rename_file_name: String,
 }
 
 impl Default for AnadilIde {
@@ -86,6 +88,8 @@ impl Default for AnadilIde {
             selected_tab: Tab::Output,
             build_exe: None,
             run_mode: RunMode::Interpret,
+            new_file_name: "yeni.ana".to_string(),
+            rename_file_name: "adsiz.ana".to_string(),
         }
     }
 }
@@ -208,6 +212,23 @@ impl AnadilIde {
                 ui.label(RichText::new(self.project_root_label()).small());
                 ui.add_space(6.0);
 
+                ui.label("Yeni dosya");
+                ui.horizontal(|ui| {
+                    ui.add(
+                        TextEdit::singleline(&mut self.new_file_name)
+                            .desired_width(f32::INFINITY)
+                            .hint_text("yeni.ana"),
+                    );
+                    if ui
+                        .add_enabled(self.project_root.is_some(), egui::Button::new("Olustur"))
+                        .clicked()
+                    {
+                        self.create_project_file();
+                    }
+                });
+
+                ui.add_space(6.0);
+
                 ScrollArea::vertical()
                     .id_salt("project_files")
                     .max_height(230.0)
@@ -245,6 +266,29 @@ impl AnadilIde {
                 if ui.button("Bu yoldan ac").clicked() {
                     self.open_current_path();
                 }
+
+                ui.add_space(8.0);
+                ui.label("Aktif dosya yeni adi");
+                ui.add(
+                    TextEdit::singleline(&mut self.rename_file_name)
+                        .desired_width(f32::INFINITY)
+                        .hint_text("ornek.ana"),
+                );
+                ui.horizontal(|ui| {
+                    let has_real_file = !self.current_path_is_placeholder();
+                    if ui
+                        .add_enabled(has_real_file, egui::Button::new("Yeniden Adlandir"))
+                        .clicked()
+                    {
+                        self.rename_current_file();
+                    }
+                    if ui
+                        .add_enabled(has_real_file, egui::Button::new("Sil"))
+                        .clicked()
+                    {
+                        self.delete_current_file();
+                    }
+                });
 
                 ui.add_space(12.0);
                 ui.heading("Ornekler");
@@ -602,6 +646,11 @@ impl AnadilIde {
                 self.source = source;
                 self.saved_source = self.source.clone();
                 self.current_path = path.display().to_string();
+                self.rename_file_name = path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("adsiz.ana")
+                    .to_string();
                 self.output = "Dosya acildi.".to_string();
                 self.status = "Dosya acildi".to_string();
                 self.build_exe = None;
@@ -675,6 +724,11 @@ impl AnadilIde {
 
         if let Some(path) = dialog.save_file() {
             self.current_path = path.display().to_string();
+            self.rename_file_name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("adsiz.ana")
+                .to_string();
             return self.save_current_path();
         }
 
@@ -709,11 +763,173 @@ impl AnadilIde {
             .as_ref()
             .map(|root| root.join("adsiz.ana").display().to_string())
             .unwrap_or_else(|| "adsiz.ana".to_string());
+        self.rename_file_name = "adsiz.ana".to_string();
         self.output = "Yeni dosya olusturuldu.".to_string();
         self.build_output = "Henuz build yok.".to_string();
         self.status = "Yeni dosya".to_string();
         self.build_exe = None;
         self.check_silent();
+    }
+
+    fn create_project_file(&mut self) {
+        if !self.confirm_discard_unsaved() {
+            return;
+        }
+
+        let Some(root) = self.project_root.clone() else {
+            self.report_io_error("Yeni dosya icin once proje klasoru ac.");
+            return;
+        };
+
+        let path = match project_child_path(&root, &self.new_file_name) {
+            Ok(path) => path,
+            Err(message) => {
+                self.report_io_error(message);
+                return;
+            }
+        };
+
+        if path.exists() {
+            self.report_io_error(format!("Dosya zaten var `{}`", path.display()));
+            return;
+        }
+
+        if let Some(parent) = path.parent() {
+            if let Err(error) = fs::create_dir_all(parent) {
+                self.report_io_error(format!(
+                    "Klasor olusturulamadi `{}`: {error}",
+                    parent.display()
+                ));
+                return;
+            }
+        }
+
+        let source = starter_source();
+        match fs::write(&path, source) {
+            Ok(()) => {
+                self.refresh_project_files();
+                self.load_path(&path);
+                self.status = "Dosya olusturuldu".to_string();
+            }
+            Err(error) => {
+                self.report_io_error(format!(
+                    "Dosya olusturulamadi `{}`: {error}",
+                    path.display()
+                ));
+            }
+        }
+    }
+
+    fn rename_current_file(&mut self) {
+        if self.current_path_is_placeholder() {
+            self.report_io_error("Yeniden adlandirmak icin once dosyayi kaydet.");
+            return;
+        }
+
+        if self.is_dirty() && !self.save_current_path() {
+            return;
+        }
+
+        let current = PathBuf::from(self.current_path.trim());
+        let target = match sibling_file_path(&current, &self.rename_file_name) {
+            Ok(path) => path,
+            Err(message) => {
+                self.report_io_error(message);
+                return;
+            }
+        };
+
+        if target == current {
+            self.status = "Dosya adi degismedi".to_string();
+            return;
+        }
+
+        if target.exists() {
+            self.report_io_error(format!("Hedef dosya zaten var `{}`", target.display()));
+            return;
+        }
+
+        match fs::rename(&current, &target) {
+            Ok(()) => {
+                self.current_path = target.display().to_string();
+                self.rename_file_name = target
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("adsiz.ana")
+                    .to_string();
+                self.build_exe = None;
+                self.build_output = "Henuz build yok.".to_string();
+                self.refresh_project_files();
+                self.status = "Dosya yeniden adlandirildi".to_string();
+                self.output = format!(
+                    "Yeniden adlandirildi:\n{} -> {}",
+                    current.display(),
+                    target.display()
+                );
+            }
+            Err(error) => {
+                self.report_io_error(format!(
+                    "Dosya yeniden adlandirilamadi `{}` -> `{}`: {error}",
+                    current.display(),
+                    target.display()
+                ));
+            }
+        }
+    }
+
+    fn delete_current_file(&mut self) {
+        if self.current_path_is_placeholder() {
+            self.report_io_error("Silmek icin kayitli bir dosya sec.");
+            return;
+        }
+
+        let path = PathBuf::from(self.current_path.trim());
+        let confirmed = matches!(
+            rfd::MessageDialog::new()
+                .set_level(rfd::MessageLevel::Warning)
+                .set_title("Dosya silinsin mi?")
+                .set_description(format!("Bu dosya silinecek:\n{}", path.display()))
+                .set_buttons(rfd::MessageButtons::YesNo)
+                .show(),
+            rfd::MessageDialogResult::Yes
+        );
+
+        if !confirmed {
+            return;
+        }
+
+        match fs::remove_file(&path) {
+            Ok(()) => {
+                self.refresh_project_files();
+                self.reset_to_new_buffer();
+                self.status = "Dosya silindi".to_string();
+                self.output = format!("Silindi:\n{}", path.display());
+            }
+            Err(error) => {
+                self.report_io_error(format!("Dosya silinemedi `{}`: {error}", path.display()));
+            }
+        }
+    }
+
+    fn reset_to_new_buffer(&mut self) {
+        let source = starter_source();
+        self.saved_source = source.clone();
+        self.source = source;
+        self.current_path = self
+            .project_root
+            .as_ref()
+            .map(|root| root.join("adsiz.ana").display().to_string())
+            .unwrap_or_else(|| "adsiz.ana".to_string());
+        self.rename_file_name = "adsiz.ana".to_string();
+        self.build_exe = None;
+        self.build_output = "Henuz build yok.".to_string();
+        self.check_silent();
+    }
+
+    fn report_io_error(&mut self, message: impl Into<String>) {
+        self.diagnostics = vec![Diagnostic::io(message)];
+        self.status = "Dosya islemi hatasi".to_string();
+        self.selected_tab = Tab::Diagnostics;
     }
 
     fn confirm_discard_unsaved(&self) -> bool {
@@ -818,6 +1034,70 @@ fn default_save_name(path: &str) -> &str {
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("adsiz.ana")
+    }
+}
+
+fn project_child_path(root: &Path, name: &str) -> Result<PathBuf, String> {
+    let relative = safe_relative_path(name)?;
+    Ok(root.join(relative))
+}
+
+fn safe_relative_path(name: &str) -> Result<PathBuf, String> {
+    let name = ensure_ana_extension(name.trim());
+    if name.is_empty() {
+        return Err("Dosya adi bos olamaz.".to_string());
+    }
+
+    let path = PathBuf::from(name);
+    if path.is_absolute() {
+        return Err("Dosya adi proje klasoru icinde goreli olmalidir.".to_string());
+    }
+
+    let mut safe = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Normal(part) => safe.push(part),
+            Component::CurDir => {}
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+                return Err("Dosya adi proje klasoru disina cikamaz.".to_string());
+            }
+        }
+    }
+
+    if safe.as_os_str().is_empty() {
+        Err("Dosya adi bos olamaz.".to_string())
+    } else {
+        Ok(safe)
+    }
+}
+
+fn sibling_file_path(current: &Path, name: &str) -> Result<PathBuf, String> {
+    let name = ensure_ana_extension(name.trim());
+    if name.is_empty() {
+        return Err("Yeni dosya adi bos olamaz.".to_string());
+    }
+
+    let path = Path::new(&name);
+    if path.components().count() != 1 || path.file_name().is_none() {
+        return Err("Yeniden adlandirma icin sadece dosya adi yaz.".to_string());
+    }
+
+    let parent = current
+        .parent()
+        .ok_or_else(|| "Aktif dosyanin klasoru bulunamadi.".to_string())?;
+    Ok(parent.join(path))
+}
+
+fn ensure_ana_extension(name: &str) -> String {
+    if name.is_empty() {
+        return String::new();
+    }
+
+    let path = Path::new(name);
+    if path.extension().is_some() {
+        name.to_string()
+    } else {
+        format!("{name}.ana")
     }
 }
 
@@ -1144,4 +1424,35 @@ Ana() {
 }
 "
     .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{project_child_path, sibling_file_path};
+    use std::path::Path;
+
+    #[test]
+    fn project_child_path_adds_extension_and_stays_in_project() {
+        let root = Path::new("proje");
+        assert_eq!(
+            project_child_path(root, "src/program").expect("path should be valid"),
+            root.join("src").join("program.ana")
+        );
+
+        assert!(project_child_path(root, "../disari.ana").is_err());
+        assert!(project_child_path(root, r"C:\disari.ana").is_err());
+        assert!(project_child_path(root, "").is_err());
+    }
+
+    #[test]
+    fn sibling_file_path_only_accepts_file_name() {
+        let current = Path::new("proje").join("src").join("eski.ana");
+        assert_eq!(
+            sibling_file_path(&current, "yeni").expect("file name should be valid"),
+            Path::new("proje").join("src").join("yeni.ana")
+        );
+
+        assert!(sibling_file_path(&current, "alt/yeni.ana").is_err());
+        assert!(sibling_file_path(&current, "").is_err());
+    }
 }

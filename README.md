@@ -218,7 +218,8 @@ Native IDE proje akisi:
 - `Klasor Ac` ile bir proje klasoru secilir.
 - Sol panelde klasor altindaki `.ana` dosyalari listelenir; `target` ve `.git` atlanir.
 - Listedeki dosyaya tiklaninca editor aktif dosyayi acar.
-- `Yeni` yeni bir `adsiz.ana` taslagi acar; kaydetmek icin `Kaydet` veya `Farkli Kaydet` kullanilir.
+- `Yeni` yeni bir `adsiz.ana` taslagi acar; sol paneldeki `Olustur` proje icinde adli dosya olusturur.
+- Aktif dosya sol panelden yeniden adlandirilabilir veya onay penceresiyle silinebilir.
 - Kaydedilmemis degisiklik varken baska dosya acmaya calisilirsa IDE onay ister.
 - Ust bardaki mod seciciden `Interpret et`, `Compile et` veya `Karsilastir` secilir; `Yap` veya `F5` secili modu calistirir.
 - `EXE Derle`, gerekiyorsa aktif dosyayi kaydeder ve `.exe` dosyasini aktif `.ana` dosyasinin yanina uretir.

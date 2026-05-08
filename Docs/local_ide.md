@@ -50,6 +50,8 @@ Proje akisi:
 - Proje listesi alt klasorleri recursive tarar; `.git` ve `target` klasorlerini atlar.
 - `Yenile`, proje dosya listesini yeniden okur.
 - `Yeni`, editoru yeni bir `adsiz.ana` taslagina cevirir.
+- `Olustur`, proje klasoru icinde yazilan adda `.ana` dosyasi olusturur.
+- `Yeniden Adlandir` ve `Sil`, aktif dosya uzerinde calisir; silme islemi onay ister.
 - Kaydedilmemis degisiklik varken dosya degistirme veya yeni dosya acma onay ister.
 - Ust bardaki mod secici `Interpret et`, `Compile et` ve `Karsilastir` modlarini tasir; `Yap` veya `F5` secili modu calistirir.
 - `EXE Derle`, build oncesi aktif dosyayi kaydeder ve executable'i kaynak dosyanin yanina uretir.
@@ -88,6 +90,6 @@ GET  /api/example?name=<ornek.ana>
 ## Sinirlar
 
 - Web IDE su an tek dosyali editor modeliyle calisir.
-- Native IDE proje explorer sunar, ancak henuz rename/delete islemleri yoktur.
+- Native IDE proje explorer, dosya olusturma, yeniden adlandirma ve silme islemlerini sunar.
 - Browser destekliyorsa File System Access API ile dogrudan kaydeder; destek yoksa indirme fallback'i kullanir.
 - Debugger ve autocomplete henuz yoktur.
