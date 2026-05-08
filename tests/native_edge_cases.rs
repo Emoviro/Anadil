@@ -72,41 +72,32 @@ Ana() {\n\
 }
 
 #[test]
-fn native_rejects_more_than_four_function_parameters() {
-    let Some(anadil_bin) = anadil_binary() else {
-        eprintln!("native edge case skipped: anadil binary path is not available");
-        return;
-    };
-
-    let source = "\
+fn native_five_parameter_function_matches_interpreter() {
+    assert_native_output(
+        "five_params",
+        "\
 Besli(a: say\u{0131}, b: say\u{0131}, c: say\u{0131}, d: say\u{0131}, e: say\u{0131}) -> say\u{0131} {\n\
     d\u{00f6}n a + b + c + d + e;\n\
 }\n\
 \n\
 Ana() {\n\
     yazdir(Besli(1, 2, 3, 4, 5));\n\
-}\n";
-
-    let output = compile_source_with_native(&anadil_bin, "five_params", source);
-
-    if !output.status.success() && native_toolchain_missing(&output) {
-        eprintln!("native edge case skipped: Visual Studio native toolchain is not available");
-        return;
-    }
-
-    assert!(
-        !output.status.success(),
-        "native compile should reject more than 4 parameters"
+}\n",
     );
+}
 
-    let text = format!(
-        "{}\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        text.contains("en fazla 4"),
-        "expected 4-parameter limit error, got:\n{text}"
+#[test]
+fn native_seven_parameter_function_matches_interpreter() {
+    assert_native_output(
+        "seven_params",
+        "\
+Topla7(a: say\u{0131}, b: say\u{0131}, c: say\u{0131}, d: say\u{0131}, e: say\u{0131}, f: say\u{0131}, g: say\u{0131}) -> say\u{0131} {\n\
+    d\u{00f6}n a + b + c + d + e + f + g;\n\
+}\n\
+\n\
+Ana() {\n\
+    yazdir(Topla7(1, 2, 3, 4, 5, 6, 7));\n\
+}\n",
     );
 }
 

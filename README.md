@@ -180,7 +180,7 @@ Sinirlar:
 
 - Sadece Windows x64 hedeflenir.
 - Visual Studio Build Tools C++ araclari gerekir.
-- Native backend su an en fazla 4 fonksiyon parametresi destekler.
+- Ilk 4 fonksiyon parametresi register ile, sonraki parametreler stack uzerinden tasinir.
 - Runtime hatalari interpreter kadar ayrintili raporlanmaz.
 
 ### Komutlar

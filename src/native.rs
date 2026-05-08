@@ -84,7 +84,10 @@ impl<'a> NativeEmitter<'a> {
     }
 
     fn emit_function(&mut self, function: &TypedFunction, out: &mut String) -> Result<(), String> {
-        let frame_size = align_to(local_count(function) * 8 + 32, 16);
+        let frame_size = align_to(
+            local_count(function) * 8 + 32 + max_outgoing_stack_args(function) * 8,
+            16,
+        );
         let return_label = self.fresh_label("return");
         self.current_return_label = return_label.clone();
 
@@ -94,22 +97,19 @@ impl<'a> NativeEmitter<'a> {
         out.push_str(&format!("    sub rsp, {frame_size}\n"));
 
         for (index, param) in function.params.iter().enumerate() {
-            let reg = match index {
-                0 => "rcx",
-                1 => "rdx",
-                2 => "r8",
-                3 => "r9",
-                _ => {
-                    return Err(format!(
-                        "`{}` fonksiyonu native MVP icin en fazla 4 parametre alabilir",
-                        function.name
-                    ));
-                }
-            };
-            out.push_str(&format!(
-                "    mov QWORD PTR [rbp-{}], {reg}\n",
-                local_offset(param.local_id)
-            ));
+            if let Some(reg) = param_register(index) {
+                out.push_str(&format!(
+                    "    mov QWORD PTR [rbp-{}], {reg}\n",
+                    local_offset(param.local_id)
+                ));
+            } else {
+                let stack_offset = stack_param_offset(index);
+                out.push_str(&format!("    mov rax, QWORD PTR [rbp+{stack_offset}]\n"));
+                out.push_str(&format!(
+                    "    mov QWORD PTR [rbp-{}], rax\n",
+                    local_offset(param.local_id)
+                ));
+            }
         }
 
         self.emit_block(&function.body, out)?;
@@ -350,26 +350,21 @@ impl<'a> NativeEmitter<'a> {
                 self.emit_yazdir(arg, out)
             }
             CallTarget::Function { function_id, name } => {
-                if args.len() > 4 {
-                    return Err(format!(
-                        "`{name}` cagrisi native MVP icin en fazla 4 arguman alabilir"
-                    ));
-                }
-
                 for arg in args.iter().rev() {
                     self.emit_expr(arg, out)?;
                     out.push_str("    push rax\n");
                 }
 
+                let stack_arg_pop_offset = outgoing_stack_arg_pop_offset(args.len());
                 for (index, _) in args.iter().enumerate() {
-                    let reg = match index {
-                        0 => "rcx",
-                        1 => "rdx",
-                        2 => "r8",
-                        3 => "r9",
-                        _ => unreachable!(),
-                    };
-                    out.push_str(&format!("    pop {reg}\n"));
+                    if let Some(reg) = param_register(index) {
+                        out.push_str(&format!("    pop {reg}\n"));
+                    } else {
+                        out.push_str("    pop rax\n");
+                        out.push_str(&format!(
+                            "    mov QWORD PTR [rsp+{stack_arg_pop_offset}], rax\n"
+                        ));
+                    }
                 }
 
                 let function = self
@@ -469,6 +464,92 @@ fn collect_loop_part_local_count(part: &TypedLoopPart, max_id: &mut usize) {
     if let TypedLoopPart::VarDecl(decl) = part {
         *max_id = (*max_id).max(decl.local_id.0 + 1);
     }
+}
+
+fn max_outgoing_stack_args(function: &TypedFunction) -> usize {
+    let mut max_args = 0usize;
+    collect_block_outgoing_stack_args(&function.body, &mut max_args);
+    max_args.saturating_sub(4)
+}
+
+fn collect_block_outgoing_stack_args(block: &TypedBlock, max_args: &mut usize) {
+    for statement in &block.statements {
+        match &statement.kind {
+            TypedStmtKind::VarDecl(decl) => collect_expr_outgoing_stack_args(&decl.value, max_args),
+            TypedStmtKind::Assign(assign) => {
+                collect_expr_outgoing_stack_args(&assign.value, max_args);
+            }
+            TypedStmtKind::If(if_stmt) => {
+                collect_expr_outgoing_stack_args(&if_stmt.condition, max_args);
+                collect_block_outgoing_stack_args(&if_stmt.then_branch, max_args);
+                if let Some(else_branch) = &if_stmt.else_branch {
+                    collect_block_outgoing_stack_args(else_branch, max_args);
+                }
+            }
+            TypedStmtKind::Loop(loop_stmt) => {
+                if let Some(init) = &loop_stmt.init {
+                    collect_loop_part_outgoing_stack_args(init, max_args);
+                }
+                if let Some(condition) = &loop_stmt.condition {
+                    collect_expr_outgoing_stack_args(condition, max_args);
+                }
+                if let Some(step) = &loop_stmt.step {
+                    collect_loop_part_outgoing_stack_args(step, max_args);
+                }
+                collect_block_outgoing_stack_args(&loop_stmt.body, max_args);
+            }
+            TypedStmtKind::Return(Some(expr)) | TypedStmtKind::Expr(expr) => {
+                collect_expr_outgoing_stack_args(expr, max_args);
+            }
+            TypedStmtKind::Break | TypedStmtKind::Continue | TypedStmtKind::Return(None) => {}
+        }
+    }
+}
+
+fn collect_loop_part_outgoing_stack_args(part: &TypedLoopPart, max_args: &mut usize) {
+    match part {
+        TypedLoopPart::VarDecl(decl) => collect_expr_outgoing_stack_args(&decl.value, max_args),
+        TypedLoopPart::Assign(assign) => collect_expr_outgoing_stack_args(&assign.value, max_args),
+        TypedLoopPart::Expr(expr) => collect_expr_outgoing_stack_args(expr, max_args),
+    }
+}
+
+fn collect_expr_outgoing_stack_args(expr: &TypedExpr, max_args: &mut usize) {
+    match &expr.kind {
+        TypedExprKind::Call { args, .. } => {
+            *max_args = (*max_args).max(args.len());
+            for arg in args {
+                collect_expr_outgoing_stack_args(arg, max_args);
+            }
+        }
+        TypedExprKind::Unary { expr, .. } => collect_expr_outgoing_stack_args(expr, max_args),
+        TypedExprKind::Binary { left, right, .. } => {
+            collect_expr_outgoing_stack_args(left, max_args);
+            collect_expr_outgoing_stack_args(right, max_args);
+        }
+        TypedExprKind::Number(_)
+        | TypedExprKind::Bool(_)
+        | TypedExprKind::String(_)
+        | TypedExprKind::Variable(_) => {}
+    }
+}
+
+fn param_register(index: usize) -> Option<&'static str> {
+    match index {
+        0 => Some("rcx"),
+        1 => Some("rdx"),
+        2 => Some("r8"),
+        3 => Some("r9"),
+        _ => None,
+    }
+}
+
+fn stack_param_offset(index: usize) -> usize {
+    48 + (index - 4) * 8
+}
+
+fn outgoing_stack_arg_pop_offset(arg_count: usize) -> usize {
+    32 + arg_count.saturating_sub(5) * 8
 }
 
 fn align_to(value: usize, align: usize) -> usize {

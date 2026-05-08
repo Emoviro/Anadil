@@ -96,7 +96,7 @@ Ilk 4 parametre register ile tasinir:
 4. parametre -> r9
 ```
 
-Su anki MVP en fazla 4 fonksiyon parametresi destekler. Daha fazla parametre icin stack argument destegi henuz yoktur.
+5. parametreden sonrasi caller tarafindan stack argument alanina yazilir. Callee, fonksiyon girisinde bu stack argument'lari kendi local slot'larina kopyalar.
 
 Fonksiyon donus degeri `rax` register'i ile tasinir.
 
@@ -118,7 +118,7 @@ LocalId(1) -> [rbp-16]
 LocalId(2) -> [rbp-24]
 ```
 
-Frame size, local sayisina gore hesaplanir ve 16 byte hizalamaya yuvarlanir. Windows x64 icin gerekli shadow space de frame icinde ayrilir.
+Frame size, local sayisina ve fonksiyon icindeki en genis call'un stack argument ihtiyacina gore hesaplanir. Sonuc 16 byte hizalamaya yuvarlanir. Windows x64 icin gerekli shadow space de frame icinde ayrilir.
 
 ## Deger Temsili
 
@@ -227,8 +227,6 @@ Visual Studio native toolchain bulunamazsa native integration testi kendini skip
 ## Bilinen Sinirlar
 
 - Sadece Windows x64 hedeflenir.
-- En fazla 4 fonksiyon parametresi desteklenir.
-- Stack argument destegi yoktur.
 - Heap allocation yoktur.
 - Garbage collector yoktur.
 - String literal disinda runtime metin uretimi yoktur.
@@ -242,7 +240,6 @@ Visual Studio native toolchain bulunamazsa native integration testi kendini skip
 Kisa vadeli hedefler:
 
 - Native backend edge case testlerini artirmak.
-- 4'ten fazla parametre icin stack argument destegi eklemek.
 - Sifira bolme icin runtime kontrolu eklemek.
 - Native derleme komutunu daha temiz hata mesajlariyla zenginlestirmek.
 - IDE entegrasyonu icin compiler API'lerini netlestirmek.
