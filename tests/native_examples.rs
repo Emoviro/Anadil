@@ -15,6 +15,7 @@ const EXAMPLES: &[&str] = &[
     "dongu",
     "sonsuz_dongu",
     "kapsam",
+    "native_mvp",
 ];
 
 #[test]

@@ -23,6 +23,8 @@ Ilgili dosyalar:
 - `src/lib.rs`: `emit_native_asm_source` API'sini disari acar.
 - `src/main.rs`: `asm`, `asm-yaz` ve `derle` CLI komutlarini calistirir.
 - `tests/native_examples.rs`: Ornek programlari native executable olarak derler ve interpreter ciktisiyla karsilastirir.
+- `tests/native_edge_cases.rs`: Fonksiyon cagrisi, stack arguman, nested call, karsilastirma ve runtime hata edge case'lerini native/interpreter davranisiyla karsilastirir.
+- `tests/cli_diagnostics.rs`: CLI hata ciktisinin IDE tarafindan okunabilir satir/sutun ve caret bilgisi tasidigini kontrol eder.
 
 ## CLI Komutlari
 
@@ -96,9 +98,11 @@ Ilk 4 parametre register ile tasinir:
 4. parametre -> r9
 ```
 
-5. parametreden sonrasi caller tarafindan stack argument alanina yazilir. Callee, fonksiyon girisinde bu stack argument'lari kendi local slot'larina kopyalar.
+5. parametreden sonrasi caller tarafindan call alanindaki stack argument bolgesine yazilir. Callee, fonksiyon girisinde bu stack argument'lari kendi local slot'larina kopyalar.
 
 Fonksiyon donus degeri `rax` register'i ile tasinir.
+
+Argumanlar interpreter ile ayni yan etki sirasi icin soldan saga degerlendirilir. Backend, ic ice fonksiyon cagrilarinda gecici degerleri korumak icin her call oncesinde Windows x64 shadow space ve stack arguman alanini gecici olarak ayirir.
 
 ## Stack Frame
 
@@ -118,7 +122,7 @@ LocalId(1) -> [rbp-16]
 LocalId(2) -> [rbp-24]
 ```
 
-Frame size, local sayisina ve fonksiyon icindeki en genis call'un stack argument ihtiyacina gore hesaplanir. Sonuc 16 byte hizalamaya yuvarlanir. Windows x64 icin gerekli shadow space de frame icinde ayrilir.
+Frame size, local sayisina ve fonksiyon icindeki en genis call'un arguman scratch ihtiyacina gore hesaplanir. Sonuc 16 byte hizalamaya yuvarlanir. Windows x64 icin gerekli shadow space her call oncesinde ayrilir.
 
 ## Deger Temsili
 
@@ -178,6 +182,16 @@ strcmp(a, b) == 0 -> esit
 strcmp(a, b) != 0 -> esit degil
 ```
 
+## Runtime Hatalari
+
+Native MVP sifira bolme icin interpreter'a benzer kontrollu hata davranisi uretir:
+
+```text
+Sifira bolme hatasi
+```
+
+Bu durumda executable `exit(1)` ile biter. Kaynak satir/sutun bilgisi su an native executable icine gomulmez; IDE entegrasyonu icin compile-time lexer/parser/semantic hatalari CLI tarafinda caret'li diagnostic olarak kalir.
+
 ## Memory Management
 
 Su an native backend'de heap allocation yoktur.
@@ -221,6 +235,7 @@ Test edilen ornekler:
 - `dongu`
 - `sonsuz_dongu`
 - `kapsam`
+- `native_mvp`
 
 Visual Studio native toolchain bulunamazsa native integration testi kendini skip eder.
 
@@ -231,7 +246,6 @@ Visual Studio native toolchain bulunamazsa native integration testi kendini skip
 - Garbage collector yoktur.
 - String literal disinda runtime metin uretimi yoktur.
 - Native runtime hatalari interpreter kadar ayrintili raporlanmaz.
-- Sifira bolme native tarafta su an OS/CPU seviyesinde hata davranisina kalir.
 - Optimizasyon yoktur.
 - Debug info uretilmez.
 
@@ -239,8 +253,6 @@ Visual Studio native toolchain bulunamazsa native integration testi kendini skip
 
 Kisa vadeli hedefler:
 
-- Native backend edge case testlerini artirmak.
-- Sifira bolme icin runtime kontrolu eklemek.
 - Native derleme komutunu daha temiz hata mesajlariyla zenginlestirmek.
 - IDE entegrasyonu icin compiler API'lerini netlestirmek.
 

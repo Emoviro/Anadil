@@ -1,0 +1,29 @@
+Topla5(a: sayı, b: sayı, c: sayı, d: sayı, e: sayı) -> sayı {
+    dön a + b + c + d + e;
+}
+
+PozitifMi(x: sayı) -> mantık {
+    eğer (x > 0) {
+        dön doğru;
+    } değilse {
+        dön yanlış;
+    }
+}
+
+Ana() {
+    toplam: sayı = 0;
+
+    döngü (i: sayı = 0; i < 5; i = i + 1) {
+        eğer (i == 3) {
+            devam;
+        }
+
+        toplam = toplam + i;
+    }
+
+    mesaj: metin = "native";
+    yazdir(toplam);
+    yazdir(Topla5(1, 2, 3, 4, 5));
+    yazdir(PozitifMi(toplam));
+    yazdir(mesaj);
+}

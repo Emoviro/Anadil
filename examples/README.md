@@ -153,6 +153,21 @@ Beklenen cikti:
 10
 ```
 
+Native MVP demo programi:
+
+```powershell
+cargo run -- calistir examples\native_mvp.ana
+```
+
+Beklenen cikti:
+
+```text
+7
+15
+doÄŸru
+native
+```
+
 ## Hatali Ornekler
 
 Tip hatasi:

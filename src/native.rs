@@ -16,6 +16,9 @@ struct NativeEmitter<'a> {
     string_literals: Vec<(String, String)>,
     label_index: usize,
     current_return_label: String,
+    current_local_count: usize,
+    current_max_call_args: usize,
+    temp_stack_depth: usize,
     loop_stack: Vec<LoopLabels>,
 }
 
@@ -39,6 +42,9 @@ impl<'a> NativeEmitter<'a> {
             string_literals: Vec::new(),
             label_index: 0,
             current_return_label: String::new(),
+            current_local_count: 0,
+            current_max_call_args: 0,
+            temp_stack_depth: 0,
             loop_stack: Vec::new(),
         }
     }
@@ -49,10 +55,13 @@ impl<'a> NativeEmitter<'a> {
         out.push_str("option casemap:none\n\n");
         out.push_str("extrn printf:proc\n");
         out.push_str("extrn strcmp:proc\n");
+        out.push_str("extrn exit:proc\n");
         out.push_str("includelib msvcrt.lib\n\n");
         out.push_str(".data\n");
         out.push_str("fmt_sayi db \"%lld\", 10, 0\n");
         out.push_str("fmt_metin db \"%s\", 10, 0\n");
+        out.push_str("fmt_runtime_error db \"%s\", 10, 0\n");
+        out.push_str("error_div_zero db \"Sifira bolme hatasi\", 0\n");
         out.push_str("text_dogru db 100, 111, 196, 159, 114, 117, 0\n");
         out.push_str("text_yanlis db 121, 97, 110, 108, 196, 177, 197, 159, 0\n\n");
         out.push_str(".code\n");
@@ -84,12 +93,14 @@ impl<'a> NativeEmitter<'a> {
     }
 
     fn emit_function(&mut self, function: &TypedFunction, out: &mut String) -> Result<(), String> {
-        let frame_size = align_to(
-            local_count(function) * 8 + 32 + max_outgoing_stack_args(function) * 8,
-            16,
-        );
+        let local_count = local_count(function);
+        let max_call_args = max_call_args(function);
+        let frame_size = align_to((local_count + max_call_args) * 8, 16);
         let return_label = self.fresh_label("return");
         self.current_return_label = return_label.clone();
+        self.current_local_count = local_count;
+        self.current_max_call_args = max_call_args;
+        self.temp_stack_depth = 0;
 
         out.push_str(&format!("{} PROC\n", function_label(function)));
         out.push_str("    push rbp\n");
@@ -119,6 +130,7 @@ impl<'a> NativeEmitter<'a> {
         out.push_str("    pop rbp\n");
         out.push_str("    ret\n");
         out.push_str(&format!("{} ENDP\n\n", function_label(function)));
+        self.temp_stack_depth = 0;
         Ok(())
     }
 
@@ -280,10 +292,13 @@ impl<'a> NativeEmitter<'a> {
     ) -> Result<(), String> {
         if is_string_equality(left, op, right) {
             self.emit_expr(left, out)?;
-            out.push_str("    mov rcx, rax\n");
+            self.emit_push_rax(out);
             self.emit_expr(right, out)?;
             out.push_str("    mov rdx, rax\n");
+            self.emit_pop_into("rcx", out);
+            let call_area_size = self.emit_reserve_call_area(0, out);
             out.push_str("    call strcmp\n");
+            self.emit_release_call_area(call_area_size, out);
             out.push_str("    cmp eax, 0\n");
             out.push_str(match op {
                 BinaryOp::Equal => "    sete al\n",
@@ -295,16 +310,29 @@ impl<'a> NativeEmitter<'a> {
         }
 
         self.emit_expr(left, out)?;
-        out.push_str("    push rax\n");
+        self.emit_push_rax(out);
         self.emit_expr(right, out)?;
         out.push_str("    mov r10, rax\n");
-        out.push_str("    pop rax\n");
+        self.emit_pop_into("rax", out);
 
         match op {
             BinaryOp::Add => out.push_str("    add rax, r10\n"),
             BinaryOp::Subtract => out.push_str("    sub rax, r10\n"),
             BinaryOp::Multiply => out.push_str("    imul rax, r10\n"),
             BinaryOp::Divide => {
+                let ok_label = self.fresh_label("div_ok");
+                out.push_str("    cmp r10, 0\n");
+                out.push_str(&format!("    jne {ok_label}\n"));
+                out.push_str("    lea rcx, fmt_runtime_error\n");
+                out.push_str("    lea rdx, error_div_zero\n");
+                let printf_area_size = self.emit_reserve_call_area(0, out);
+                out.push_str("    call printf\n");
+                self.emit_release_call_area(printf_area_size, out);
+                out.push_str("    mov ecx, 1\n");
+                let exit_area_size = self.emit_reserve_call_area(0, out);
+                out.push_str("    call exit\n");
+                self.emit_release_call_area(exit_area_size, out);
+                out.push_str(&format!("{ok_label}:\n"));
                 out.push_str("    cqo\n");
                 out.push_str("    idiv r10\n");
             }
@@ -350,31 +378,90 @@ impl<'a> NativeEmitter<'a> {
                 self.emit_yazdir(arg, out)
             }
             CallTarget::Function { function_id, name } => {
-                for arg in args.iter().rev() {
+                if args.len() > self.current_max_call_args {
+                    return Err(format!(
+                        "native codegen call scratch alani yetersiz: `{name}` {} arguman",
+                        args.len()
+                    ));
+                }
+
+                for arg in args {
                     self.emit_expr(arg, out)?;
-                    out.push_str("    push rax\n");
+                    self.emit_push_rax(out);
                 }
 
-                let stack_arg_pop_offset = outgoing_stack_arg_pop_offset(args.len());
-                for (index, _) in args.iter().enumerate() {
-                    if let Some(reg) = param_register(index) {
-                        out.push_str(&format!("    pop {reg}\n"));
-                    } else {
-                        out.push_str("    pop rax\n");
-                        out.push_str(&format!(
-                            "    mov QWORD PTR [rsp+{stack_arg_pop_offset}], rax\n"
-                        ));
-                    }
+                for index in (0..args.len()).rev() {
+                    self.emit_pop_into("rax", out);
+                    out.push_str(&format!(
+                        "    mov QWORD PTR [rbp-{}], rax\n",
+                        call_arg_offset(self.current_local_count, index)
+                    ));
                 }
 
-                let function = self
-                    .functions
-                    .get(function_id)
-                    .ok_or_else(|| format!("Fonksiyon bulunamadi: `{name}`"))?;
-                out.push_str(&format!("    call {}\n", function_label(function)));
-                Ok(())
+                let stack_arg_count = args.len().saturating_sub(4);
+                let call_area_size = self.emit_reserve_call_area(stack_arg_count, out);
+
+                for index in 0..args.len().min(4) {
+                    let reg = param_register(index).expect("first four args use registers");
+                    out.push_str(&format!(
+                        "    mov {reg}, QWORD PTR [rbp-{}]\n",
+                        call_arg_offset(self.current_local_count, index)
+                    ));
+                }
+
+                for index in 4..args.len() {
+                    out.push_str(&format!(
+                        "    mov rax, QWORD PTR [rbp-{}]\n",
+                        call_arg_offset(self.current_local_count, index)
+                    ));
+                    out.push_str(&format!(
+                        "    mov QWORD PTR [rsp+{}], rax\n",
+                        32 + (index - 4) * 8
+                    ));
+                }
+
+                let call_result = (|| {
+                    let function = self
+                        .functions
+                        .get(function_id)
+                        .ok_or_else(|| format!("Fonksiyon bulunamadi: `{name}`"))?;
+                    out.push_str(&format!("    call {}\n", function_label(function)));
+                    Ok(())
+                })();
+                self.emit_release_call_area(call_area_size, out);
+                call_result
             }
         }
+    }
+
+    fn emit_push_rax(&mut self, out: &mut String) {
+        out.push_str("    push rax\n");
+        self.temp_stack_depth += 1;
+    }
+
+    fn emit_pop_into(&mut self, register: &str, out: &mut String) {
+        out.push_str(&format!("    pop {register}\n"));
+        self.temp_stack_depth = self
+            .temp_stack_depth
+            .checked_sub(1)
+            .expect("native temp stack pop without push");
+    }
+
+    fn emit_reserve_call_area(&self, stack_arg_count: usize, out: &mut String) -> usize {
+        let raw_size = 32 + stack_arg_count * 8;
+        let align_padding = if (self.temp_stack_depth + stack_arg_count).is_multiple_of(2) {
+            0
+        } else {
+            8
+        };
+        let call_area_size = raw_size + align_padding;
+
+        out.push_str(&format!("    sub rsp, {call_area_size}\n"));
+        call_area_size
+    }
+
+    fn emit_release_call_area(&self, call_area_size: usize, out: &mut String) {
+        out.push_str(&format!("    add rsp, {call_area_size}\n"));
     }
 
     fn emit_yazdir(&mut self, arg: &TypedExpr, out: &mut String) -> Result<(), String> {
@@ -401,7 +488,9 @@ impl<'a> NativeEmitter<'a> {
                 out.push_str("    mov rdx, rax\n");
             }
         }
+        let call_area_size = self.emit_reserve_call_area(0, out);
         out.push_str("    call printf\n");
+        self.emit_release_call_area(call_area_size, out);
         Ok(())
     }
 
@@ -425,6 +514,10 @@ fn function_label(function: &TypedFunction) -> String {
 
 fn local_offset(id: LocalId) -> usize {
     (id.0 + 1) * 8
+}
+
+fn call_arg_offset(local_count: usize, index: usize) -> usize {
+    (local_count + index + 1) * 8
 }
 
 fn local_count(function: &TypedFunction) -> usize {
@@ -466,66 +559,66 @@ fn collect_loop_part_local_count(part: &TypedLoopPart, max_id: &mut usize) {
     }
 }
 
-fn max_outgoing_stack_args(function: &TypedFunction) -> usize {
+fn max_call_args(function: &TypedFunction) -> usize {
     let mut max_args = 0usize;
-    collect_block_outgoing_stack_args(&function.body, &mut max_args);
-    max_args.saturating_sub(4)
+    collect_block_call_args(&function.body, &mut max_args);
+    max_args
 }
 
-fn collect_block_outgoing_stack_args(block: &TypedBlock, max_args: &mut usize) {
+fn collect_block_call_args(block: &TypedBlock, max_args: &mut usize) {
     for statement in &block.statements {
         match &statement.kind {
-            TypedStmtKind::VarDecl(decl) => collect_expr_outgoing_stack_args(&decl.value, max_args),
+            TypedStmtKind::VarDecl(decl) => collect_expr_call_args(&decl.value, max_args),
             TypedStmtKind::Assign(assign) => {
-                collect_expr_outgoing_stack_args(&assign.value, max_args);
+                collect_expr_call_args(&assign.value, max_args);
             }
             TypedStmtKind::If(if_stmt) => {
-                collect_expr_outgoing_stack_args(&if_stmt.condition, max_args);
-                collect_block_outgoing_stack_args(&if_stmt.then_branch, max_args);
+                collect_expr_call_args(&if_stmt.condition, max_args);
+                collect_block_call_args(&if_stmt.then_branch, max_args);
                 if let Some(else_branch) = &if_stmt.else_branch {
-                    collect_block_outgoing_stack_args(else_branch, max_args);
+                    collect_block_call_args(else_branch, max_args);
                 }
             }
             TypedStmtKind::Loop(loop_stmt) => {
                 if let Some(init) = &loop_stmt.init {
-                    collect_loop_part_outgoing_stack_args(init, max_args);
+                    collect_loop_part_call_args(init, max_args);
                 }
                 if let Some(condition) = &loop_stmt.condition {
-                    collect_expr_outgoing_stack_args(condition, max_args);
+                    collect_expr_call_args(condition, max_args);
                 }
                 if let Some(step) = &loop_stmt.step {
-                    collect_loop_part_outgoing_stack_args(step, max_args);
+                    collect_loop_part_call_args(step, max_args);
                 }
-                collect_block_outgoing_stack_args(&loop_stmt.body, max_args);
+                collect_block_call_args(&loop_stmt.body, max_args);
             }
             TypedStmtKind::Return(Some(expr)) | TypedStmtKind::Expr(expr) => {
-                collect_expr_outgoing_stack_args(expr, max_args);
+                collect_expr_call_args(expr, max_args);
             }
             TypedStmtKind::Break | TypedStmtKind::Continue | TypedStmtKind::Return(None) => {}
         }
     }
 }
 
-fn collect_loop_part_outgoing_stack_args(part: &TypedLoopPart, max_args: &mut usize) {
+fn collect_loop_part_call_args(part: &TypedLoopPart, max_args: &mut usize) {
     match part {
-        TypedLoopPart::VarDecl(decl) => collect_expr_outgoing_stack_args(&decl.value, max_args),
-        TypedLoopPart::Assign(assign) => collect_expr_outgoing_stack_args(&assign.value, max_args),
-        TypedLoopPart::Expr(expr) => collect_expr_outgoing_stack_args(expr, max_args),
+        TypedLoopPart::VarDecl(decl) => collect_expr_call_args(&decl.value, max_args),
+        TypedLoopPart::Assign(assign) => collect_expr_call_args(&assign.value, max_args),
+        TypedLoopPart::Expr(expr) => collect_expr_call_args(expr, max_args),
     }
 }
 
-fn collect_expr_outgoing_stack_args(expr: &TypedExpr, max_args: &mut usize) {
+fn collect_expr_call_args(expr: &TypedExpr, max_args: &mut usize) {
     match &expr.kind {
         TypedExprKind::Call { args, .. } => {
             *max_args = (*max_args).max(args.len());
             for arg in args {
-                collect_expr_outgoing_stack_args(arg, max_args);
+                collect_expr_call_args(arg, max_args);
             }
         }
-        TypedExprKind::Unary { expr, .. } => collect_expr_outgoing_stack_args(expr, max_args),
+        TypedExprKind::Unary { expr, .. } => collect_expr_call_args(expr, max_args),
         TypedExprKind::Binary { left, right, .. } => {
-            collect_expr_outgoing_stack_args(left, max_args);
-            collect_expr_outgoing_stack_args(right, max_args);
+            collect_expr_call_args(left, max_args);
+            collect_expr_call_args(right, max_args);
         }
         TypedExprKind::Number(_)
         | TypedExprKind::Bool(_)
@@ -546,10 +639,6 @@ fn param_register(index: usize) -> Option<&'static str> {
 
 fn stack_param_offset(index: usize) -> usize {
     48 + (index - 4) * 8
-}
-
-fn outgoing_stack_arg_pop_offset(arg_count: usize) -> usize {
-    32 + arg_count.saturating_sub(5) * 8
 }
 
 fn align_to(value: usize, align: usize) -> usize {

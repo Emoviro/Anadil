@@ -62,6 +62,14 @@ fn runs_negatif_example() {
 }
 
 #[test]
+fn runs_native_mvp_example() {
+    assert_example_output(
+        include_str!("../examples/native_mvp.ana"),
+        "7\n15\ndo\u{011f}ru\nnative",
+    );
+}
+
+#[test]
 fn rejects_hata_tip_example() {
     let error = compile_source(include_str!("../examples/hata_tip.ana"))
         .expect_err("type error example should fail");

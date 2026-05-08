@@ -174,6 +174,7 @@ fn print_examples() {
     println!("  examples\\sonsuz_dongu.ana    Sonsuz dongu ve kir");
     println!("  examples\\kapsam.ana          Scope/kapsam davranisi");
     println!("  examples\\negatif.ana         Negatif sayilar ve unary eksi");
+    println!("  examples\\native_mvp.ana      Native MVP demo programi");
     println!("  examples\\hata_tip.ana        Bilerek hatali tip ornegi");
     println!("  examples\\hata_ana_yok.ana    Bilerek Ana() eksik ornegi");
     println!();

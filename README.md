@@ -182,6 +182,8 @@ Sinirlar:
 - Visual Studio Build Tools C++ araclari gerekir.
 - Ilk 4 fonksiyon parametresi register ile, sonraki parametreler stack uzerinden tasinir.
 - Runtime hatalari interpreter kadar ayrintili raporlanmaz.
+- Sifira bolme native executable icinde kontrollu hata ve `exit(1)` ile raporlanir.
+- CLI compile-time hatalari satir/sutun ve caret bilgisiyle basilir; bu cikti mini IDE tarafindan diagnostics paneline baglanabilecek durumdadir.
 
 ### Komutlar
 

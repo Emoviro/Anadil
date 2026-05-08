@@ -101,6 +101,90 @@ Ana() {\n\
     );
 }
 
+#[test]
+fn native_nested_calls_preserve_arguments_and_order() {
+    assert_native_output(
+        "nested_calls_preserve_args",
+        "\
+Etiket(x: say\u{0131}) -> say\u{0131} {\n\
+    yazdir(x);\n\
+    d\u{00f6}n x;\n\
+}\n\
+\n\
+Topla3(a: say\u{0131}, b: say\u{0131}, c: say\u{0131}) -> say\u{0131} {\n\
+    d\u{00f6}n a * 100 + b * 10 + c;\n\
+}\n\
+\n\
+Ana() {\n\
+    yazdir(Topla3(Etiket(1), Etiket(2), Etiket(3)));\n\
+    yazdir(10 + Etiket(4));\n\
+}\n",
+    );
+}
+
+#[test]
+fn native_numeric_comparisons_match_interpreter() {
+    assert_native_output(
+        "numeric_comparisons",
+        "\
+Ana() {\n\
+    yazdir(1 < 2);\n\
+    yazdir(2 < 1);\n\
+    yazdir(2 <= 2);\n\
+    yazdir(3 > 2);\n\
+    yazdir(2 >= 3);\n\
+    yazdir(4 == 4);\n\
+    yazdir(4 != 5);\n\
+}\n",
+    );
+}
+
+#[test]
+fn native_division_by_zero_reports_runtime_error() {
+    let Some(anadil_bin) = anadil_binary() else {
+        eprintln!("native edge case skipped: anadil binary path is not available");
+        return;
+    };
+
+    let source = "\
+Ana() {\n\
+    yazdir(10 / 0);\n\
+}\n";
+
+    let interpreter_error = run_source(source).expect_err("interpreter should reject zero divide");
+    assert!(interpreter_error.contains("Sifira bolme"));
+
+    let compile_output = compile_source_with_native(&anadil_bin, "division_by_zero", source);
+    if !compile_output.status.success() && native_toolchain_missing(&compile_output) {
+        eprintln!("native edge case skipped: Visual Studio native toolchain is not available");
+        return;
+    }
+
+    assert!(
+        compile_output.status.success(),
+        "native compile failed for division_by_zero\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile_output.stdout),
+        String::from_utf8_lossy(&compile_output.stderr)
+    );
+
+    let exe_path = edge_case_path("division_by_zero").with_extension("exe");
+    let run_output = Command::new(&exe_path)
+        .output()
+        .expect("native executable should run");
+
+    assert!(
+        !run_output.status.success(),
+        "native executable should fail for division_by_zero"
+    );
+
+    let combined_output = format!(
+        "{}{}",
+        String::from_utf8_lossy(&run_output.stdout),
+        String::from_utf8_lossy(&run_output.stderr)
+    );
+    assert!(combined_output.contains("Sifira bolme"));
+}
+
 fn assert_native_output(name: &str, source: &str) {
     let Some(anadil_bin) = anadil_binary() else {
         eprintln!("native edge case skipped: anadil binary path is not available");
