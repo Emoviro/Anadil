@@ -6,3 +6,4 @@ resolver = "2"
 
 [dependencies]
 eframe = "0.34.1"
+rfd = "0.17.2"

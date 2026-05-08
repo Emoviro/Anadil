@@ -201,6 +201,17 @@ target\release\anadil-ide.exe
 
 Native IDE browser veya localhost kullanmaz. Compiler API'lerini dogrudan cagirir; `EXE Derle` icin mevcut `anadil derle --json` protokolunu kullanir.
 
+Native IDE kisayollari:
+
+```text
+Ctrl+O  Dosya ac
+Ctrl+S  Kaydet
+F5      Calistir
+Ctrl+B  EXE Derle
+```
+
+`Ac` ve `Farkli Kaydet` native Windows dosya penceresi acar. Kaydedilmemis degisiklik varsa pencere basliginda ve dosya adinda `*` gorunur.
+
 ## Ornek
 
 ```ana

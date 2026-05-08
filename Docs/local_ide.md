@@ -32,12 +32,23 @@ target\release\anadil-ide.exe
 
 Native IDE `eframe/egui` ile yazilir. Browser, localhost veya HTML/CSS gerektirmez.
 
+Kisayollar:
+
+```text
+Ctrl+O  Dosya ac
+Ctrl+S  Kaydet
+F5      Calistir
+Ctrl+B  EXE Derle
+```
+
+`Ac` ve `Farkli Kaydet`, native dosya secme/kaydetme penceresi acar. Kaydedilmemis degisiklik varsa pencere basliginda ve aktif dosya adinda `*` gorunur.
+
 ## Ortak Ozellikler
 
 - Ornek `.ana` dosyalarini sol panelden yukleme
 - Yerel `.ana` dosyasi acma
 - Dosya kaydetme
-- Syntax highlighting
+- Kaydedilmemis degisiklik gostergesi
 - Kod editoru ve syntax highlighting
 - Web IDE'de satir numaralari, cursor konumu, canli diagnostics ve uzun dosyalar icin sona gitme dugmesi
 - Native IDE'de dogrudan compiler API ile `Kontrol`, `Calistir` ve `EXE Derle`
