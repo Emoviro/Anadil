@@ -208,4 +208,5 @@ cargo clippy --all-targets --all-features -- -D warnings
 ## Dokumantasyon
 
 - Guncel dil referansi: [Docs/dil_referansi.md](Docs/dil_referansi.md)
+- Native compiler notlari: [Docs/native_compiler.md](Docs/native_compiler.md)
 - Ornek programlar: [examples/README.md](examples/README.md)

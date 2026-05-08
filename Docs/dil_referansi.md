@@ -218,3 +218,5 @@ examples\topla.exe
 ```
 
 Native derleme Visual Studio Build Tools C++ araclarini kullanir. Su anki MVP en fazla 4 fonksiyon parametresi destekler ve Windows x64 disinda hedef uretmez.
+
+Daha teknik ayrinti icin: [native_compiler.md](native_compiler.md)
