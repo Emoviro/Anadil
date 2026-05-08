@@ -129,6 +129,13 @@ impl AnadilIde {
                     {
                         self.run_built_exe();
                     }
+                    if ui
+                        .button("Karsilastir")
+                        .on_hover_text("Interpreter ve native ciktilarini karsilastir")
+                        .clicked()
+                    {
+                        self.compare_interpreter_and_native();
+                    }
 
                     ui.separator();
                     let dirty = if self.is_dirty() {
@@ -433,12 +440,7 @@ impl AnadilIde {
         };
 
         let exe_path = PathBuf::from(&exe);
-        let mut command = Command::new(&exe_path);
-        if let Some(parent) = exe_path.parent() {
-            command.current_dir(parent);
-        }
-
-        match command.output() {
+        match run_executable(&exe_path) {
             Ok(output) => {
                 self.build_output = format_exe_run_output(&exe_path, &output);
                 if output.status.success() {
@@ -458,6 +460,72 @@ impl AnadilIde {
                 self.build_output = message.clone();
                 self.diagnostics = vec![Diagnostic::native(message)];
                 self.status = "EXE calistirilamadi".to_string();
+                self.selected_tab = Tab::Diagnostics;
+            }
+        }
+    }
+
+    fn compare_interpreter_and_native(&mut self) {
+        let interpreter_output = match run_source_diagnostic(&self.source) {
+            Ok(output) => output,
+            Err(diagnostic) => {
+                self.output.clear();
+                self.diagnostics = vec![diagnostic];
+                self.status = "Interpreter hatasi".to_string();
+                self.selected_tab = Tab::Diagnostics;
+                return;
+            }
+        };
+
+        if self.build_exe.is_none() || self.is_dirty() {
+            self.build();
+        }
+
+        let Some(exe) = self.build_exe.clone() else {
+            if self.selected_tab != Tab::Diagnostics {
+                self.status = "Karsilastirma iptal edildi".to_string();
+                self.selected_tab = Tab::Build;
+            }
+            return;
+        };
+
+        let exe_path = PathBuf::from(&exe);
+        match run_executable(&exe_path) {
+            Ok(native_output) => {
+                let native_stdout = String::from_utf8_lossy(&native_output.stdout);
+                let native_stderr = String::from_utf8_lossy(&native_output.stderr);
+                let interpreter_text = interpreter_output.trim_end();
+                let native_text = native_stdout.trim_end();
+
+                self.build_output = format_comparison_output(
+                    interpreter_text,
+                    native_text,
+                    native_stderr.trim_end(),
+                    &native_output.status,
+                );
+                self.selected_tab = Tab::Build;
+
+                if native_output.status.success() && interpreter_text == native_text {
+                    self.status = "Interpreter/native ayni".to_string();
+                    self.diagnostics.clear();
+                } else {
+                    let message = if native_output.status.success() {
+                        "Interpreter ve native ciktilari farkli".to_string()
+                    } else {
+                        format!(
+                            "Native executable basarisiz bitti: {}",
+                            exit_code_label(&native_output.status)
+                        )
+                    };
+                    self.status = "Karsilastirma fark buldu".to_string();
+                    self.diagnostics = vec![Diagnostic::native(message)];
+                }
+            }
+            Err(error) => {
+                let message = format!("Native executable calistirilamadi `{}`: {error}", exe);
+                self.build_output = message.clone();
+                self.diagnostics = vec![Diagnostic::native(message)];
+                self.status = "Karsilastirma calisamadi".to_string();
                 self.selected_tab = Tab::Diagnostics;
             }
         }
@@ -780,6 +848,14 @@ fn run_native_build(path: &Path) -> Result<String, String> {
     extract_json_string(&stdout, "exe").ok_or_else(|| stdout.trim().to_string())
 }
 
+fn run_executable(path: &Path) -> Result<std::process::Output, std::io::Error> {
+    let mut command = Command::new(path);
+    if let Some(parent) = path.parent() {
+        command.current_dir(parent);
+    }
+    command.output()
+}
+
 fn format_exe_run_output(path: &Path, output: &std::process::Output) -> String {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -790,9 +866,38 @@ fn format_exe_run_output(path: &Path, output: &std::process::Output) -> String {
         "Native executable calistirildi:\n{}\n\nExit: {}\n\nstdout:\n{}\n\nstderr:\n{}",
         path.display(),
         exit_code_label(&output.status),
-        if stdout.is_empty() { "(bos)" } else { stdout },
-        if stderr.is_empty() { "(bos)" } else { stderr },
+        empty_label(stdout),
+        empty_label(stderr),
     )
+}
+
+fn format_comparison_output(
+    interpreter: &str,
+    native: &str,
+    stderr: &str,
+    status: &std::process::ExitStatus,
+) -> String {
+    let result = if status.success() && interpreter == native {
+        "AYNI"
+    } else {
+        "FARKLI"
+    };
+
+    format!(
+        "Interpreter/native karsilastirma: {result}\n\nExit: {}\n\nInterpreter stdout:\n{}\n\nNative stdout:\n{}\n\nNative stderr:\n{}",
+        exit_code_label(status),
+        empty_label(interpreter),
+        empty_label(native),
+        empty_label(stderr),
+    )
+}
+
+fn empty_label(text: &str) -> &str {
+    if text.is_empty() {
+        "(bos)"
+    } else {
+        text
+    }
 }
 
 fn exit_code_label(status: &std::process::ExitStatus) -> String {

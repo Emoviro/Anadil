@@ -53,6 +53,7 @@ Proje akisi:
 - Kaydedilmemis degisiklik varken dosya degistirme veya yeni dosya acma onay ister.
 - `EXE Derle`, build oncesi aktif dosyayi kaydeder ve executable'i kaynak dosyanin yanina uretir.
 - `EXE Calistir`, son uretilen executable'i calistirir ve stdout/stderr/exit code bilgisini `Build` sekmesine yazar.
+- `Karsilastir`, interpreter ve native executable stdout sonuclarini ayni panelde karsilastirir.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri bulunur.
 
 ## Ortak Ozellikler

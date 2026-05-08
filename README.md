@@ -222,6 +222,7 @@ Native IDE proje akisi:
 - Kaydedilmemis degisiklik varken baska dosya acmaya calisilirsa IDE onay ister.
 - `EXE Derle`, gerekiyorsa aktif dosyayi kaydeder ve `.exe` dosyasini aktif `.ana` dosyasinin yanina uretir.
 - `EXE Calistir`, son uretilen native executable'i calistirir ve stdout/stderr/exit code bilgisini `Build` sekmesinde gosterir.
+- `Karsilastir`, ayni kaynak kodu interpreter ve native executable olarak calistirir; stdout farklarini `Build` sekmesinde gosterir.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri vardir.
 
 ## Ornek
