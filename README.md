@@ -219,6 +219,7 @@ Native IDE proje akisi:
 - Listedeki dosyaya tiklaninca editor aktif dosyayi acar.
 - `Yeni` yeni bir `adsiz.ana` taslagi acar; kaydetmek icin `Kaydet` veya `Farkli Kaydet` kullanilir.
 - Kaydedilmemis degisiklik varken baska dosya acmaya calisilirsa IDE onay ister.
+- `EXE Derle`, gerekiyorsa aktif dosyayi kaydeder ve `.exe` dosyasini aktif `.ana` dosyasinin yanina uretir.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri vardir.
 
 ## Ornek

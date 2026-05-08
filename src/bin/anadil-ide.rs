@@ -397,7 +397,11 @@ impl AnadilIde {
             return;
         }
 
-        match write_ide_source(&self.source).and_then(|path| run_native_build(&path)) {
+        let Some(path) = self.prepare_build_source_path() else {
+            return;
+        };
+
+        match run_native_build(&path) {
             Ok(exe) => {
                 self.build_exe = Some(exe.clone());
                 self.build_output = format!("Native executable uretildi:\n{exe}");
@@ -411,6 +415,21 @@ impl AnadilIde {
                 self.selected_tab = Tab::Diagnostics;
             }
         }
+    }
+
+    fn prepare_build_source_path(&mut self) -> Option<PathBuf> {
+        if self.current_path_is_placeholder() || self.is_dirty() {
+            self.status = "Build icin once kaydediliyor".to_string();
+            if !self.save_current_path() {
+                self.status = "Build iptal edildi".to_string();
+                self.build_output =
+                    "Build icin dosya kaydedilemedi veya islem iptal edildi.".to_string();
+                self.selected_tab = Tab::Build;
+                return None;
+            }
+        }
+
+        Some(PathBuf::from(self.current_path.trim()))
     }
 
     fn open_current_path(&mut self) {
@@ -447,10 +466,9 @@ impl AnadilIde {
         }
     }
 
-    fn save_current_path(&mut self) {
+    fn save_current_path(&mut self) -> bool {
         if self.current_path_is_placeholder() {
-            self.save_as_dialog();
-            return;
+            return self.save_as_dialog();
         }
 
         let path = PathBuf::from(self.current_path.trim());
@@ -460,6 +478,7 @@ impl AnadilIde {
                 self.status = "Kaydedildi".to_string();
                 self.output = format!("Kaydedildi:\n{}", path.display());
                 self.refresh_project_files();
+                true
             }
             Err(error) => {
                 self.diagnostics = vec![Diagnostic::io(format!(
@@ -468,6 +487,7 @@ impl AnadilIde {
                 ))];
                 self.status = "Kaydedilemedi".to_string();
                 self.selected_tab = Tab::Diagnostics;
+                false
             }
         }
     }
@@ -491,7 +511,7 @@ impl AnadilIde {
         }
     }
 
-    fn save_as_dialog(&mut self) {
+    fn save_as_dialog(&mut self) -> bool {
         let mut dialog = rfd::FileDialog::new()
             .add_filter("Anadil kaynak", &["ana"])
             .set_file_name(default_save_name(&self.current_path));
@@ -502,8 +522,10 @@ impl AnadilIde {
 
         if let Some(path) = dialog.save_file() {
             self.current_path = path.display().to_string();
-            self.save_current_path();
+            return self.save_current_path();
         }
+
+        false
     }
 
     fn open_folder_dialog(&mut self) {
@@ -677,25 +699,6 @@ fn collect_project_files(dir: &Path, files: &mut Vec<PathBuf>) {
             files.push(path);
         }
     }
-}
-
-fn write_ide_source(source: &str) -> Result<PathBuf, String> {
-    let dir = PathBuf::from("target").join("ide-native");
-    fs::create_dir_all(&dir).map_err(|error| {
-        format!(
-            "IDE build klasoru olusturulamadi `{}`: {error}",
-            dir.display()
-        )
-    })?;
-
-    let path = dir.join("current.ana");
-    fs::write(&path, source).map_err(|error| {
-        format!(
-            "IDE kaynak dosyasi yazilamadi `{}`: {error}",
-            path.display()
-        )
-    })?;
-    Ok(path)
 }
 
 fn run_native_build(path: &Path) -> Result<String, String> {

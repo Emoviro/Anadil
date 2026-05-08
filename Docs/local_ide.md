@@ -50,6 +50,7 @@ Proje akisi:
 - `Yenile`, proje dosya listesini yeniden okur.
 - `Yeni`, editoru yeni bir `adsiz.ana` taslagina cevirir.
 - Kaydedilmemis degisiklik varken dosya degistirme veya yeni dosya acma onay ister.
+- `EXE Derle`, build oncesi aktif dosyayi kaydeder ve executable'i kaynak dosyanin yanina uretir.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri bulunur.
 
 ## Ortak Ozellikler
