@@ -46,6 +46,20 @@ JSON protokolu:
 {"ok":false,"diagnostics":[{"severity":"error","stage":"semantic","message":"...","line":2,"column":1}]}
 ```
 
+Programi IDE entegrasyonu icin JSON output ile calistirmak:
+
+```powershell
+cargo run -- calistir --json examples\topla.ana
+```
+
+JSON protokolu:
+
+```json
+{"ok":true,"output":"30","diagnostics":[]}
+```
+
+Runtime hatalari ayni diagnostic listesine `runtime` stage'iyle duser.
+
 Assembly'yi ekrana basmak:
 
 ```powershell

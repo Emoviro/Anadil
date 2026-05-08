@@ -33,6 +33,15 @@ pub fn compile_source(source: &str) -> Result<typed::TypedProgram, String> {
 }
 
 pub fn check_source(source: &str) -> Result<(), Diagnostic> {
+    compile_source_diagnostic(source).map(|_| ())
+}
+
+pub fn run_source_diagnostic(source: &str) -> Result<String, Diagnostic> {
+    let program = compile_source_diagnostic(source)?;
+    Interpreter::run(&program).map_err(|error| Diagnostic::from_runtime_error(&error))
+}
+
+fn compile_source_diagnostic(source: &str) -> Result<typed::TypedProgram, Diagnostic> {
     let mut lexer = Lexer::new(source);
     let tokens = lexer
         .tokenize()
@@ -43,9 +52,7 @@ pub fn check_source(source: &str) -> Result<(), Diagnostic> {
         .parse_program()
         .map_err(|error| Diagnostic::from_parse_error(&error))?;
 
-    Analyzer::analyze(&program)
-        .map(|_| ())
-        .map_err(|error| Diagnostic::from_semantic_error(&error))
+    Analyzer::analyze(&program).map_err(|error| Diagnostic::from_semantic_error(&error))
 }
 
 pub fn run_source(source: &str) -> Result<String, String> {

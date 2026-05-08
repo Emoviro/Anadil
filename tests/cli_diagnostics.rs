@@ -110,6 +110,79 @@ Ana() {\n\
     assert!(stdout.contains("\\\"x\\\"") || stdout.contains("`x`"));
 }
 
+#[test]
+fn run_json_reports_output() {
+    let Some(anadil_bin) = anadil_binary() else {
+        eprintln!("cli diagnostic test skipped: anadil binary path is not available");
+        return;
+    };
+
+    let source_path = write_fixture(
+        "run_valid.ana",
+        "\
+Ana() {\n\
+    yazdir(10);\n\
+    yazdir(20);\n\
+}\n",
+    );
+
+    let output = Command::new(anadil_bin)
+        .arg("calistir")
+        .arg("--json")
+        .arg(&source_path)
+        .output()
+        .expect("run command should run");
+
+    assert!(output.status.success(), "json run command should pass");
+    assert!(
+        output.stderr.is_empty(),
+        "json run success should not write stderr"
+    );
+
+    let stdout = normalize_stdout(&output.stdout);
+    assert_eq!(
+        stdout,
+        "{\"ok\":true,\"output\":\"10\\n20\",\"diagnostics\":[]}"
+    );
+}
+
+#[test]
+fn run_json_reports_runtime_error() {
+    let Some(anadil_bin) = anadil_binary() else {
+        eprintln!("cli diagnostic test skipped: anadil binary path is not available");
+        return;
+    };
+
+    let source_path = write_fixture(
+        "run_division_by_zero.ana",
+        "\
+Ana() {\n\
+    yazdir(10 / 0);\n\
+}\n",
+    );
+
+    let output = Command::new(anadil_bin)
+        .arg("calistir")
+        .arg("--json")
+        .arg(&source_path)
+        .output()
+        .expect("run command should run");
+
+    assert!(!output.status.success(), "json run command should fail");
+    assert!(
+        output.stderr.is_empty(),
+        "json run failure should not write stderr"
+    );
+
+    let stdout = normalize_stdout(&output.stdout);
+    assert!(stdout.contains("\"ok\":false"));
+    assert!(stdout.contains("\"output\":\"\""));
+    assert!(stdout.contains("\"severity\":\"error\""));
+    assert!(stdout.contains("\"stage\":\"runtime\""));
+    assert!(stdout.contains("\"message\":\"Sifira bolme hatasi\""));
+    assert!(stdout.contains("\"line\":2"));
+}
+
 fn write_fixture(name: &str, source: &str) -> PathBuf {
     let source_path = PathBuf::from("target").join("cli_diagnostics").join(name);
     let parent = source_path

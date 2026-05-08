@@ -7,7 +7,7 @@ use std::{
 
 use anadil::{
     check_source, compile_source, diagnostics::Diagnostic, emit_native_asm_source, parse_source,
-    run_source,
+    run_source, run_source_diagnostic,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -72,7 +72,12 @@ fn main() {
         Err(error) => {
             let message = format!("Dosya okunamadi `{path}`: {error}");
             if output == OutputFormat::Json {
-                println!("{}", json_result(false, &[Diagnostic::io(message)]));
+                let diagnostic = Diagnostic::io(message);
+                if matches!(command, Command::Run) {
+                    println!("{}", json_run_result(false, "", &[diagnostic]));
+                } else {
+                    println!("{}", json_result(false, &[diagnostic]));
+                }
             } else {
                 eprintln!("{message}");
             }
@@ -196,13 +201,13 @@ impl Command {
     }
 
     fn supports_json(&self) -> bool {
-        matches!(self, Self::Check)
+        matches!(self, Self::Run | Self::Check)
     }
 }
 
 fn usage(program: &str) -> String {
     format!(
-        "Anadil {}\n\nKullanim:\n  {program} <dosya.ana>\n  {program} calistir <dosya.ana>\n  {program} kontrol <dosya.ana>\n  {program} kontrol --json <dosya.ana>\n  {program} ast <dosya.ana>\n  {program} typed <dosya.ana>\n  {program} asm <dosya.ana>\n  {program} asm-yaz <dosya.ana>\n  {program} derle <dosya.ana>\n  {program} repl\n  {program} ornekler\n  {program} surum\n  {program} yardim",
+        "Anadil {}\n\nKullanim:\n  {program} <dosya.ana>\n  {program} calistir <dosya.ana>\n  {program} calistir --json <dosya.ana>\n  {program} kontrol <dosya.ana>\n  {program} kontrol --json <dosya.ana>\n  {program} ast <dosya.ana>\n  {program} typed <dosya.ana>\n  {program} asm <dosya.ana>\n  {program} asm-yaz <dosya.ana>\n  {program} derle <dosya.ana>\n  {program} repl\n  {program} ornekler\n  {program} surum\n  {program} yardim",
         env!("CARGO_PKG_VERSION")
     )
 }
@@ -250,14 +255,29 @@ fn run_command(
     output: OutputFormat,
 ) -> Result<(), String> {
     match command {
-        Command::Run => match run_source(source) {
-            Ok(output) if output.is_empty() => Ok(()),
-            Ok(output) => {
-                println!("{output}");
-                Ok(())
+        Command::Run => {
+            if output == OutputFormat::Json {
+                match run_source_diagnostic(source) {
+                    Ok(program_output) => {
+                        println!("{}", json_run_result(true, &program_output, &[]));
+                        Ok(())
+                    }
+                    Err(diagnostic) => {
+                        println!("{}", json_run_result(false, "", &[diagnostic]));
+                        Err(String::new())
+                    }
+                }
+            } else {
+                match run_source(source) {
+                    Ok(output) if output.is_empty() => Ok(()),
+                    Ok(output) => {
+                        println!("{output}");
+                        Ok(())
+                    }
+                    Err(message) => Err(message),
+                }
             }
-            Err(message) => Err(message),
-        },
+        }
         Command::Check => {
             if output == OutputFormat::Json {
                 match check_source(source) {
@@ -311,6 +331,18 @@ fn json_result(ok: bool, diagnostics: &[Diagnostic]) -> String {
         .collect::<Vec<_>>()
         .join(",");
     format!("{{\"ok\":{ok},\"diagnostics\":[{diagnostics}]}}")
+}
+
+fn json_run_result(ok: bool, output: &str, diagnostics: &[Diagnostic]) -> String {
+    let diagnostics = diagnostics
+        .iter()
+        .map(json_diagnostic)
+        .collect::<Vec<_>>()
+        .join(",");
+    format!(
+        "{{\"ok\":{ok},\"output\":\"{}\",\"diagnostics\":[{diagnostics}]}}",
+        json_escape(output)
+    )
 }
 
 fn json_diagnostic(diagnostic: &Diagnostic) -> String {
@@ -758,10 +790,32 @@ mod tests {
     }
 
     #[test]
-    fn rejects_json_for_non_check_commands() {
+    fn accepts_json_run_form() {
         let args = vec![
             "anadil".to_string(),
             "calistir".to_string(),
+            "--json".to_string(),
+            "examples/topla.ana".to_string(),
+        ];
+        let ParsedArgs::WithFile {
+            command,
+            path,
+            output,
+        } = parse_args(&args).expect("args should parse")
+        else {
+            panic!("expected file command");
+        };
+
+        assert!(matches!(command, Command::Run));
+        assert_eq!(path, "examples/topla.ana");
+        assert_eq!(output, super::OutputFormat::Json);
+    }
+
+    #[test]
+    fn rejects_json_for_unsupported_commands() {
+        let args = vec![
+            "anadil".to_string(),
+            "ast".to_string(),
             "--json".to_string(),
             "examples/topla.ana".to_string(),
         ];

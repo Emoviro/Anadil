@@ -43,6 +43,24 @@ Acik komutla calistirma:
 cargo run -- calistir examples\topla.ana
 ```
 
+IDE veya arac entegrasyonu icin JSON calistirma ciktisi:
+
+```powershell
+cargo run -- calistir --json examples\topla.ana
+```
+
+Basarili cikti:
+
+```json
+{"ok":true,"output":"30","diagnostics":[]}
+```
+
+Runtime hatasi:
+
+```json
+{"ok":false,"output":"","diagnostics":[{"severity":"error","stage":"runtime","message":"Sifira bolme hatasi","line":2,"column":12}]}
+```
+
 Program gecerli mi kontrol etme:
 
 ```powershell
@@ -171,7 +189,9 @@ Kutuphane tarafinda uc ana giris fonksiyonu vardir:
 ```rust
 anadil::parse_source(source)
 anadil::compile_source(source)
+anadil::check_source(source)
 anadil::run_source(source)
+anadil::run_source_diagnostic(source)
 anadil::emit_native_asm_source(source)
 ```
 
@@ -203,6 +223,7 @@ Sinirlar:
 - Sifira bolme native executable icinde kontrollu hata ve `exit(1)` ile raporlanir.
 - CLI compile-time hatalari satir/sutun ve caret bilgisiyle basilir; bu cikti mini IDE tarafindan diagnostics paneline baglanabilecek durumdadir.
 - `kontrol --json` IDE icin makine okunabilir diagnostic protokolu saglar.
+- `calistir --json` IDE icin interpreter output ve diagnostic protokolu saglar.
 
 ### Komutlar
 

@@ -1,5 +1,6 @@
 use crate::ast::SourceSpan;
 use crate::error::LexError;
+use crate::interpreter::RuntimeError;
 use crate::parser::ParseError;
 use crate::sema::SemanticError;
 
@@ -21,6 +22,7 @@ pub enum DiagnosticStage {
     Io,
     Lexer,
     Parser,
+    Runtime,
     Semantic,
 }
 
@@ -60,6 +62,15 @@ impl Diagnostic {
             span: error.span,
         }
     }
+
+    pub fn from_runtime_error(error: &RuntimeError) -> Self {
+        Self {
+            severity: DiagnosticSeverity::Error,
+            stage: DiagnosticStage::Runtime,
+            message: error.message.clone(),
+            span: error.span,
+        }
+    }
 }
 
 impl DiagnosticSeverity {
@@ -76,6 +87,7 @@ impl DiagnosticStage {
             Self::Io => "io",
             Self::Lexer => "lexer",
             Self::Parser => "parser",
+            Self::Runtime => "runtime",
             Self::Semantic => "semantic",
         }
     }
