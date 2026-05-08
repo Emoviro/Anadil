@@ -60,6 +60,20 @@ JSON protokolu:
 
 Runtime hatalari ayni diagnostic listesine `runtime` stage'iyle duser.
 
+Native executable'i IDE entegrasyonu icin JSON build sonucu ile derlemek:
+
+```powershell
+cargo run -- derle --json examples\topla.ana
+```
+
+JSON protokolu:
+
+```json
+{"ok":true,"exe":"examples\\topla.exe","diagnostics":[]}
+```
+
+Build veya toolchain hatalari ayni diagnostic listesine `native` stage'iyle duser.
+
 Assembly'yi ekrana basmak:
 
 ```powershell

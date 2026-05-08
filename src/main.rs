@@ -73,10 +73,12 @@ fn main() {
             let message = format!("Dosya okunamadi `{path}`: {error}");
             if output == OutputFormat::Json {
                 let diagnostic = Diagnostic::io(message);
-                if matches!(command, Command::Run) {
-                    println!("{}", json_run_result(false, "", &[diagnostic]));
-                } else {
-                    println!("{}", json_result(false, &[diagnostic]));
+                match command {
+                    Command::Run => println!("{}", json_run_result(false, "", &[diagnostic])),
+                    Command::CompileNative => {
+                        println!("{}", json_build_result(false, None, &[diagnostic]));
+                    }
+                    _ => println!("{}", json_result(false, &[diagnostic])),
                 }
             } else {
                 eprintln!("{message}");
@@ -201,13 +203,13 @@ impl Command {
     }
 
     fn supports_json(&self) -> bool {
-        matches!(self, Self::Run | Self::Check)
+        matches!(self, Self::Run | Self::Check | Self::CompileNative)
     }
 }
 
 fn usage(program: &str) -> String {
     format!(
-        "Anadil {}\n\nKullanim:\n  {program} <dosya.ana>\n  {program} calistir <dosya.ana>\n  {program} calistir --json <dosya.ana>\n  {program} kontrol <dosya.ana>\n  {program} kontrol --json <dosya.ana>\n  {program} ast <dosya.ana>\n  {program} typed <dosya.ana>\n  {program} asm <dosya.ana>\n  {program} asm-yaz <dosya.ana>\n  {program} derle <dosya.ana>\n  {program} repl\n  {program} ornekler\n  {program} surum\n  {program} yardim",
+        "Anadil {}\n\nKullanim:\n  {program} <dosya.ana>\n  {program} calistir <dosya.ana>\n  {program} calistir --json <dosya.ana>\n  {program} kontrol <dosya.ana>\n  {program} kontrol --json <dosya.ana>\n  {program} ast <dosya.ana>\n  {program} typed <dosya.ana>\n  {program} asm <dosya.ana>\n  {program} asm-yaz <dosya.ana>\n  {program} derle <dosya.ana>\n  {program} derle --json <dosya.ana>\n  {program} repl\n  {program} ornekler\n  {program} surum\n  {program} yardim",
         env!("CARGO_PKG_VERSION")
     )
 }
@@ -316,9 +318,30 @@ fn run_command(
             Ok(())
         }
         Command::CompileNative => {
-            let output = compile_native(path, source)?;
-            println!("Native executable yazildi: {}", output.display());
-            Ok(())
+            if output == OutputFormat::Json {
+                if let Err(diagnostic) = check_source(source) {
+                    println!("{}", json_build_result(false, None, &[diagnostic]));
+                    return Err(String::new());
+                }
+
+                match compile_native(path, source) {
+                    Ok(exe_path) => {
+                        println!("{}", json_build_result(true, Some(&exe_path), &[]));
+                        Ok(())
+                    }
+                    Err(message) => {
+                        println!(
+                            "{}",
+                            json_build_result(false, None, &[Diagnostic::native(message)])
+                        );
+                        Err(String::new())
+                    }
+                }
+            } else {
+                let output = compile_native(path, source)?;
+                println!("Native executable yazildi: {}", output.display());
+                Ok(())
+            }
         }
         Command::Help | Command::Version | Command::Examples | Command::Repl => unreachable!(),
     }
@@ -343,6 +366,18 @@ fn json_run_result(ok: bool, output: &str, diagnostics: &[Diagnostic]) -> String
         "{{\"ok\":{ok},\"output\":\"{}\",\"diagnostics\":[{diagnostics}]}}",
         json_escape(output)
     )
+}
+
+fn json_build_result(ok: bool, exe: Option<&Path>, diagnostics: &[Diagnostic]) -> String {
+    let diagnostics = diagnostics
+        .iter()
+        .map(json_diagnostic)
+        .collect::<Vec<_>>()
+        .join(",");
+    let exe = exe
+        .map(|path| format!("\"{}\"", json_escape(&path.display().to_string())))
+        .unwrap_or_else(|| "null".to_string());
+    format!("{{\"ok\":{ok},\"exe\":{exe},\"diagnostics\":[{diagnostics}]}}")
 }
 
 fn json_diagnostic(diagnostic: &Diagnostic) -> String {
@@ -807,6 +842,28 @@ mod tests {
         };
 
         assert!(matches!(command, Command::Run));
+        assert_eq!(path, "examples/topla.ana");
+        assert_eq!(output, super::OutputFormat::Json);
+    }
+
+    #[test]
+    fn accepts_json_native_compile_form() {
+        let args = vec![
+            "anadil".to_string(),
+            "derle".to_string(),
+            "--json".to_string(),
+            "examples/topla.ana".to_string(),
+        ];
+        let ParsedArgs::WithFile {
+            command,
+            path,
+            output,
+        } = parse_args(&args).expect("args should parse")
+        else {
+            panic!("expected file command");
+        };
+
+        assert!(matches!(command, Command::CompileNative));
         assert_eq!(path, "examples/topla.ana");
         assert_eq!(output, super::OutputFormat::Json);
     }

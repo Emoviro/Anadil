@@ -21,6 +21,7 @@ pub enum DiagnosticSeverity {
 pub enum DiagnosticStage {
     Io,
     Lexer,
+    Native,
     Parser,
     Runtime,
     Semantic,
@@ -31,6 +32,15 @@ impl Diagnostic {
         Self {
             severity: DiagnosticSeverity::Error,
             stage: DiagnosticStage::Io,
+            message: message.into(),
+            span: None,
+        }
+    }
+
+    pub fn native(message: impl Into<String>) -> Self {
+        Self {
+            severity: DiagnosticSeverity::Error,
+            stage: DiagnosticStage::Native,
             message: message.into(),
             span: None,
         }
@@ -86,6 +96,7 @@ impl DiagnosticStage {
         match self {
             Self::Io => "io",
             Self::Lexer => "lexer",
+            Self::Native => "native",
             Self::Parser => "parser",
             Self::Runtime => "runtime",
             Self::Semantic => "semantic",

@@ -183,6 +183,81 @@ Ana() {\n\
     assert!(stdout.contains("\"line\":2"));
 }
 
+#[test]
+fn build_json_reports_compile_time_error() {
+    let Some(anadil_bin) = anadil_binary() else {
+        eprintln!("cli diagnostic test skipped: anadil binary path is not available");
+        return;
+    };
+
+    let source_path = write_fixture(
+        "build_tip_hatasi.ana",
+        "\
+Ana() {\n\
+    x: say\u{0131} = do\u{011f}ru;\n\
+}\n",
+    );
+
+    let output = Command::new(anadil_bin)
+        .arg("derle")
+        .arg("--json")
+        .arg(&source_path)
+        .output()
+        .expect("build command should run");
+
+    assert!(!output.status.success(), "json build command should fail");
+    assert!(
+        output.stderr.is_empty(),
+        "json build failure should not write stderr"
+    );
+
+    let stdout = normalize_stdout(&output.stdout);
+    assert!(stdout.contains("\"ok\":false"));
+    assert!(stdout.contains("\"exe\":null"));
+    assert!(stdout.contains("\"stage\":\"semantic\""));
+    assert!(stdout.contains("\"line\":2"));
+}
+
+#[test]
+fn build_json_reports_executable_path() {
+    let Some(anadil_bin) = anadil_binary() else {
+        eprintln!("cli diagnostic test skipped: anadil binary path is not available");
+        return;
+    };
+
+    let source_path = write_fixture(
+        "build_valid.ana",
+        "\
+Ana() {\n\
+    yazdir(30);\n\
+}\n",
+    );
+
+    let output = Command::new(anadil_bin)
+        .arg("derle")
+        .arg("--json")
+        .arg(&source_path)
+        .output()
+        .expect("build command should run");
+
+    if !output.status.success() && native_toolchain_missing(&output) {
+        eprintln!("json build test skipped: Visual Studio native toolchain is not available");
+        return;
+    }
+
+    assert!(output.status.success(), "json build command should pass");
+    assert!(
+        output.stderr.is_empty(),
+        "json build success should not write stderr"
+    );
+
+    let stdout = normalize_stdout(&output.stdout);
+    assert!(stdout.contains("\"ok\":true"));
+    assert!(stdout.contains("\"exe\":\""));
+    assert!(stdout.contains("build_valid.exe"));
+    assert!(stdout.contains("\"diagnostics\":[]"));
+}
+
 fn write_fixture(name: &str, source: &str) -> PathBuf {
     let source_path = PathBuf::from("target").join("cli_diagnostics").join(name);
     let parent = source_path
@@ -202,4 +277,13 @@ fn normalize_stdout(output: &[u8]) -> String {
 
 fn anadil_binary() -> Option<PathBuf> {
     option_env!("CARGO_BIN_EXE_anadil").map(PathBuf::from)
+}
+
+fn native_toolchain_missing(output: &std::process::Output) -> bool {
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    stdout.contains("Visual Studio Build Tools")
+        || stderr.contains("Visual Studio Build Tools")
+        || stdout.contains("vcvars64.bat")
+        || stderr.contains("vcvars64.bat")
 }

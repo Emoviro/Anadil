@@ -116,6 +116,24 @@ cargo run -- derle examples\topla.ana
 examples\topla.exe
 ```
 
+IDE veya arac entegrasyonu icin JSON native build ciktisi:
+
+```powershell
+cargo run -- derle --json examples\topla.ana
+```
+
+Basarili cikti:
+
+```json
+{"ok":true,"exe":"examples\\topla.exe","diagnostics":[]}
+```
+
+Build veya toolchain hatasi:
+
+```json
+{"ok":false,"exe":null,"diagnostics":[{"severity":"error","stage":"native","message":"...","line":null,"column":null}]}
+```
+
 Not: Native derleme Windows x64 hedefler ve Visual Studio Build Tools C++ araclarini kullanir. `derle` komutu `ml64`/`link` PATH icinde yoksa kurulu Build Tools icindeki `vcvars64.bat` dosyasini otomatik bulmaya calisir.
 
 Ornek dosyalari listeleme:
@@ -224,6 +242,7 @@ Sinirlar:
 - CLI compile-time hatalari satir/sutun ve caret bilgisiyle basilir; bu cikti mini IDE tarafindan diagnostics paneline baglanabilecek durumdadir.
 - `kontrol --json` IDE icin makine okunabilir diagnostic protokolu saglar.
 - `calistir --json` IDE icin interpreter output ve diagnostic protokolu saglar.
+- `derle --json` IDE icin native build sonucu ve executable yolunu saglar.
 
 ### Komutlar
 
