@@ -5,6 +5,8 @@ use std::{
     process,
 };
 
+mod ide;
+
 use anadil::{
     check_source, compile_source, diagnostics::Diagnostic, emit_native_asm_source, parse_source,
     run_source, run_source_diagnostic,
@@ -22,6 +24,7 @@ enum Command {
     Help,
     Version,
     Examples,
+    Ide,
     Repl,
 }
 
@@ -167,6 +170,7 @@ fn parse_command(command: &str) -> Result<Command, String> {
         "yardim" | "yardım" | "help" | "-h" | "--help" => Ok(Command::Help),
         "surum" | "sürüm" | "version" | "-V" | "--version" => Ok(Command::Version),
         "ornekler" | "örnekler" | "examples" => Ok(Command::Examples),
+        "ide" => Ok(Command::Ide),
         "repl" => Ok(Command::Repl),
         _ => Err(format!("Bilinmeyen komut: `{command}`")),
     }
@@ -198,6 +202,7 @@ impl Command {
             Self::Help => "yardim",
             Self::Version => "surum",
             Self::Examples => "ornekler",
+            Self::Ide => "ide",
             Self::Repl => "repl",
         }
     }
@@ -209,7 +214,7 @@ impl Command {
 
 fn usage(program: &str) -> String {
     format!(
-        "Anadil {}\n\nKullanim:\n  {program} <dosya.ana>\n  {program} calistir <dosya.ana>\n  {program} calistir --json <dosya.ana>\n  {program} kontrol <dosya.ana>\n  {program} kontrol --json <dosya.ana>\n  {program} ast <dosya.ana>\n  {program} typed <dosya.ana>\n  {program} asm <dosya.ana>\n  {program} asm-yaz <dosya.ana>\n  {program} derle <dosya.ana>\n  {program} derle --json <dosya.ana>\n  {program} repl\n  {program} ornekler\n  {program} surum\n  {program} yardim",
+        "Anadil {}\n\nKullanim:\n  {program} <dosya.ana>\n  {program} calistir <dosya.ana>\n  {program} calistir --json <dosya.ana>\n  {program} kontrol <dosya.ana>\n  {program} kontrol --json <dosya.ana>\n  {program} ast <dosya.ana>\n  {program} typed <dosya.ana>\n  {program} asm <dosya.ana>\n  {program} asm-yaz <dosya.ana>\n  {program} derle <dosya.ana>\n  {program} derle --json <dosya.ana>\n  {program} ide\n  {program} repl\n  {program} ornekler\n  {program} surum\n  {program} yardim",
         env!("CARGO_PKG_VERSION")
     )
 }
@@ -219,6 +224,12 @@ fn run_standalone_command(command: Command, program: &str) {
         Command::Help => println!("{}", usage(program)),
         Command::Version => println!("Anadil {}", env!("CARGO_PKG_VERSION")),
         Command::Examples => print_examples(),
+        Command::Ide => {
+            if let Err(message) = ide::run() {
+                eprintln!("{message}");
+                process::exit(1);
+            }
+        }
         Command::Repl => run_repl(),
         Command::Run
         | Command::Check
@@ -343,7 +354,9 @@ fn run_command(
                 Ok(())
             }
         }
-        Command::Help | Command::Version | Command::Examples | Command::Repl => unreachable!(),
+        Command::Help | Command::Version | Command::Examples | Command::Ide | Command::Repl => {
+            unreachable!()
+        }
     }
 }
 
@@ -899,6 +912,16 @@ mod tests {
         };
 
         assert!(matches!(command, Command::Repl));
+    }
+
+    #[test]
+    fn accepts_standalone_ide_form() {
+        let args = vec!["anadil".to_string(), "ide".to_string()];
+        let ParsedArgs::Standalone(command) = parse_args(&args).expect("args should parse") else {
+            panic!("expected standalone command");
+        };
+
+        assert!(matches!(command, Command::Ide));
     }
 
     #[test]

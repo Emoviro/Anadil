@@ -21,7 +21,7 @@ Yapilanlar:
 - `Ana()` giris noktasi
 - `yazdir` yerlesik fonksiyonu
 - `//` satir yorumlari
-- CLI komutlari: `calistir`, `kontrol`, `ast`, `typed`, `asm`, `asm-yaz`, `derle`, `ornekler`, `surum`, `yardim`
+- CLI komutlari: `calistir`, `kontrol`, `ast`, `typed`, `asm`, `asm-yaz`, `derle`, `ide`, `ornekler`, `surum`, `yardim`
 - Etkilesimli REPL komutu: `repl`
 
 Henuz yapilmayanlar:
@@ -178,6 +178,14 @@ Fonksiyon kaydedildi.
 
 Not: REPL cok satirli girisi destekler ve fonksiyon tanimlarini oturum boyunca saklar. Degiskenler satirlar arasinda saklanmaz.
 
+Lokal IDE:
+
+```powershell
+cargo run -- ide
+```
+
+Komut yerel web IDE baslatir ve adresi terminale yazar. IDE icinde ornek dosyalar yuklenebilir, `.ana` dosyasi acilip kaydedilebilir, `Kontrol`, `Calistir` ve `EXE Derle` butonlariyla mevcut compiler protokolu kullanilabilir.
+
 ## Ornek
 
 ```ana
@@ -201,6 +209,7 @@ Proje iki parcaya ayrilmistir:
 - `src/lib.rs`: Dil motoru. Lexer, parser, semantic analiz, typed AST ve interpreter burada kutuphane olarak disari acilir.
 - `src/main.rs`: CLI katmani. Dosya okur, komutlari yorumlar ve `lib.rs` icindeki pipeline fonksiyonlarini cagirir.
 - `src/native.rs`: Typed AST'den Windows x64 MASM assembly ureten native compiler MVP katmani.
+- `src/ide.rs`: `ide` komutuyla calisan lokal web IDE server'i ve arayuzu.
 
 Kutuphane tarafinda uc ana giris fonksiyonu vardir:
 
@@ -270,4 +279,5 @@ cargo clippy --all-targets --all-features -- -D warnings
 
 - Guncel dil referansi: [Docs/dil_referansi.md](Docs/dil_referansi.md)
 - Native compiler notlari: [Docs/native_compiler.md](Docs/native_compiler.md)
+- Local IDE notlari: [Docs/local_ide.md](Docs/local_ide.md)
 - Ornek programlar: [examples/README.md](examples/README.md)
