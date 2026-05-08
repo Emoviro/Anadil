@@ -184,7 +184,7 @@ Lokal IDE:
 cargo run -- ide
 ```
 
-Komut yerel web IDE baslatir ve adresi terminale yazar. IDE icinde ornek dosyalar yuklenebilir, `.ana` dosyasi acilip kaydedilebilir, `Kontrol`, `Calistir` ve `EXE Derle` butonlariyla mevcut compiler protokolu kullanilabilir.
+Komut yerel web IDE baslatir ve adresi terminale yazar. IDE icinde ornek dosyalar yuklenebilir, `.ana` dosyasi acilip kaydedilebilir, syntax highlighting ve canli diagnostics kullanilabilir, `Kontrol`, `Calistir` ve `EXE Derle` butonlariyla mevcut compiler protokolu calistirilabilir.
 
 ## Ornek
 

@@ -570,6 +570,13 @@ const IDE_HTML: &str = r#"<!doctype html>
       font-size: 13px;
     }
 
+    .editor-head button {
+      margin-left: auto;
+      height: 28px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
     .filename {
       color: var(--text);
       font-weight: 650;
@@ -588,29 +595,81 @@ const IDE_HTML: &str = r#"<!doctype html>
     .gutter {
       color: #6f7f73;
       text-align: right;
-      padding: 16px 12px 16px 0;
+      padding: 16px 0;
       border-right: 1px solid #243028;
       user-select: none;
       overflow: hidden;
-      white-space: pre;
     }
 
-    textarea {
+    .gutter-line {
+      height: 23.25px;
+      padding: 0 12px 0 0;
+      border-right: 2px solid transparent;
+    }
+
+    .gutter-line.error {
+      color: #ffb0b3;
+      background: #2a191b;
+      border-right-color: var(--red);
+    }
+
+    .gutter-line.cursor {
+      color: var(--green);
+      background: #17221a;
+    }
+
+    .editor-stack {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .highlight, textarea {
       width: 100%;
       height: 100%;
-      resize: none;
-      border: 0;
-      outline: none;
       padding: 16px;
-      background: transparent;
-      color: var(--text);
-      caret-color: var(--green);
       font: inherit;
       line-height: inherit;
       tab-size: 4;
       white-space: pre;
+    }
+
+    .highlight {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      color: var(--text);
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    textarea {
+      position: absolute;
+      inset: 0;
+      resize: none;
+      border: 0;
+      outline: none;
+      background: transparent;
+      color: transparent;
+      caret-color: var(--green);
       overflow: auto;
     }
+
+    textarea::selection {
+      background: rgba(101, 199, 208, 0.28);
+      color: transparent;
+    }
+
+    .tok-keyword { color: var(--green); font-weight: 700; }
+    .tok-type { color: var(--cyan); font-weight: 650; }
+    .tok-number { color: var(--yellow); }
+    .tok-string { color: #f1a66a; }
+    .tok-comment { color: #77867a; font-style: italic; }
+    .tok-builtin { color: #a6d7ff; font-weight: 650; }
+    .tok-function { color: #d9e98c; }
+    .tok-operator { color: #c9d6cb; }
+    .tok-error-line { background: rgba(239, 118, 122, 0.09); display: inline-block; min-width: 100%; }
 
     .bottom {
       display: grid;
@@ -703,10 +762,14 @@ const IDE_HTML: &str = r#"<!doctype html>
         <div class="editor-head">
           <span class="filename" id="filename">adsiz.ana</span>
           <span id="cursor">1:1</span>
+          <button id="scrollBottomBtn" title="Dosyanin sonuna git">Asagi</button>
         </div>
         <div class="editor-wrap">
           <div id="gutter" class="gutter">1</div>
-          <textarea id="editor" spellcheck="false"></textarea>
+          <div class="editor-stack">
+            <pre id="highlight" class="highlight" aria-hidden="true"></pre>
+            <textarea id="editor" spellcheck="false"></textarea>
+          </div>
         </div>
       </main>
     </section>
@@ -726,6 +789,7 @@ const IDE_HTML: &str = r#"<!doctype html>
   <script>
     const editor = document.getElementById('editor');
     const gutter = document.getElementById('gutter');
+    const highlight = document.getElementById('highlight');
     const statusEl = document.getElementById('status');
     const filenameEl = document.getElementById('filename');
     const cursorEl = document.getElementById('cursor');
@@ -734,6 +798,9 @@ const IDE_HTML: &str = r#"<!doctype html>
     const examplesEl = document.getElementById('examples');
     let currentName = 'adsiz.ana';
     let fileHandle = null;
+    let diagnostics = [];
+    let autoCheckTimer = null;
+    let cursorLine = 1;
 
     const starter = `Topla(a: sayı, b: sayı) -> sayı {
     dön a + b;
@@ -747,10 +814,14 @@ Ana() {
 
     editor.value = starter;
     refreshEditorChrome();
+    scheduleAutoCheck();
     loadExamples();
 
-    editor.addEventListener('input', refreshEditorChrome);
-    editor.addEventListener('scroll', () => gutter.scrollTop = editor.scrollTop);
+    editor.addEventListener('input', () => {
+      refreshEditorChrome();
+      scheduleAutoCheck();
+    });
+    editor.addEventListener('scroll', syncEditorScroll);
     editor.addEventListener('keyup', updateCursor);
     editor.addEventListener('click', updateCursor);
     editor.addEventListener('keydown', event => {
@@ -761,6 +832,7 @@ Ana() {
         editor.value = editor.value.slice(0, start) + '    ' + editor.value.slice(end);
         editor.selectionStart = editor.selectionEnd = start + 4;
         refreshEditorChrome();
+        scheduleAutoCheck();
       }
     });
 
@@ -769,6 +841,7 @@ Ana() {
     document.getElementById('buildBtn').addEventListener('click', () => postSource('/api/build', 'Build tamamlandi'));
     document.getElementById('saveBtn').addEventListener('click', saveFile);
     document.getElementById('openFile').addEventListener('change', openPickedFile);
+    document.getElementById('scrollBottomBtn').addEventListener('click', scrollEditorToBottom);
 
     async function loadExamples() {
       const response = await fetch('/api/examples');
@@ -798,6 +871,7 @@ Ana() {
       refreshEditorChrome();
       outputEl.textContent = 'Ornek yuklendi.';
       renderDiagnostics([]);
+      scheduleAutoCheck();
       setStatus(`${name} acildi`);
     }
 
@@ -821,9 +895,11 @@ Ana() {
     }
 
     function renderDiagnostics(items) {
+      diagnostics = items;
       diagnosticsEl.innerHTML = '';
       if (!items.length) {
         diagnosticsEl.innerHTML = '<div class="empty">Hata yok.</div>';
+        refreshEditorChrome();
         return;
       }
       items.forEach(item => {
@@ -836,6 +912,7 @@ Ana() {
         });
         diagnosticsEl.appendChild(row);
       });
+      refreshEditorChrome();
     }
 
     async function openPickedFile(event) {
@@ -846,6 +923,8 @@ Ana() {
       fileHandle = null;
       filenameEl.textContent = currentName;
       refreshEditorChrome();
+      renderDiagnostics([]);
+      scheduleAutoCheck();
       setStatus(`${currentName} acildi`);
     }
 
@@ -878,15 +957,48 @@ Ana() {
 
     function refreshEditorChrome() {
       const count = Math.max(1, editor.value.split('\n').length);
-      gutter.textContent = Array.from({ length: count }, (_, index) => index + 1).join('\n');
+      const errorLines = new Set(diagnostics.filter(item => item.line).map(item => item.line));
+      gutter.innerHTML = Array.from({ length: count }, (_, index) => {
+        const line = index + 1;
+        const classes = ['gutter-line'];
+        if (errorLines.has(line)) classes.push('error');
+        if (line === cursorLine) classes.push('cursor');
+        return `<div class="${classes.join(' ')}">${line}</div>`;
+      }).join('');
+      highlight.innerHTML = syntaxHighlight(editor.value, errorLines);
       filenameEl.textContent = currentName;
       updateCursor();
+      syncEditorScroll();
     }
 
     function updateCursor() {
       const before = editor.value.slice(0, editor.selectionStart);
       const lines = before.split('\n');
-      cursorEl.textContent = `${lines.length}:${lines[lines.length - 1].length + 1}`;
+      cursorLine = lines.length;
+      cursorEl.textContent = `${cursorLine}:${lines[lines.length - 1].length + 1}`;
+      refreshGutterOnly();
+    }
+
+    function refreshGutterOnly() {
+      const errorLines = new Set(diagnostics.filter(item => item.line).map(item => item.line));
+      Array.from(gutter.children).forEach((lineEl, index) => {
+        const line = index + 1;
+        lineEl.classList.toggle('error', errorLines.has(line));
+        lineEl.classList.toggle('cursor', line === cursorLine);
+      });
+    }
+
+    function syncEditorScroll() {
+      gutter.scrollTop = editor.scrollTop;
+      highlight.style.transform = `translate(${-editor.scrollLeft}px, ${-editor.scrollTop}px)`;
+    }
+
+    function scrollEditorToBottom() {
+      editor.focus();
+      editor.scrollTop = editor.scrollHeight;
+      editor.selectionStart = editor.selectionEnd = editor.value.length;
+      updateCursor();
+      syncEditorScroll();
     }
 
     function moveTo(line, column) {
@@ -897,6 +1009,58 @@ Ana() {
       editor.focus();
       editor.selectionStart = editor.selectionEnd = Math.min(pos, editor.value.length);
       updateCursor();
+      const lineHeight = parseFloat(getComputedStyle(editor).lineHeight) || 23;
+      editor.scrollTop = Math.max(0, (line - 4) * lineHeight);
+      syncEditorScroll();
+    }
+
+    function scheduleAutoCheck() {
+      clearTimeout(autoCheckTimer);
+      autoCheckTimer = setTimeout(runAutoCheck, 650);
+    }
+
+    async function runAutoCheck() {
+      try {
+        const response = await fetch('/api/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+          body: editor.value
+        });
+        const data = await response.json();
+        renderDiagnostics(data.diagnostics || []);
+        setStatus(data.ok ? 'Canli kontrol temiz' : 'Canli kontrol hata buldu');
+      } catch (_error) {
+        setStatus('Canli kontrol calisamadi');
+      }
+    }
+
+    function syntaxHighlight(source, errorLines) {
+      return source.split('\n').map((line, index) => {
+        const rendered = highlightLine(line) || ' ';
+        if (errorLines.has(index + 1)) {
+          return `<span class="tok-error-line">${rendered}</span>`;
+        }
+        return rendered;
+      }).join('\n');
+    }
+
+    function highlightLine(line) {
+      const commentIndex = line.indexOf('//');
+      const code = commentIndex >= 0 ? line.slice(0, commentIndex) : line;
+      const comment = commentIndex >= 0 ? line.slice(commentIndex) : '';
+      const rendered = code.replace(/"([^"\\]|\\.)*"|\b[A-Za-z_ÇĞİÖŞÜçğıöşü][A-Za-z0-9_ÇĞİÖŞÜçğıöşü]*\b|\b\d+\b|==|!=|<=|>=|->|[+\-*\/=<>:;,(){}]/g, token => {
+        if (token.startsWith('"')) return `<span class="tok-string">${escapeHtml(token)}</span>`;
+        if (/^\d+$/.test(token)) return `<span class="tok-number">${token}</span>`;
+        if (['sayı', 'mantık', 'metin', 'sayÄ±', 'mantÄ±k'].includes(token)) return `<span class="tok-type">${escapeHtml(token)}</span>`;
+        if (['eğer', 'değilse', 'döngü', 'kır', 'devam', 'dön', 'doğru', 'yanlış', 'eÄŸer', 'deÄŸilse', 'dÃ¶ngÃ¼', 'kÄ±r', 'dÃ¶n', 'doÄŸru', 'yanlÄ±ÅŸ'].includes(token)) {
+          return `<span class="tok-keyword">${escapeHtml(token)}</span>`;
+        }
+        if (['Ana', 'yazdir'].includes(token)) return `<span class="tok-builtin">${escapeHtml(token)}</span>`;
+        if (/^[A-ZÇĞİÖŞÜ]/.test(token)) return `<span class="tok-function">${escapeHtml(token)}</span>`;
+        if (/^[+\-*\/=<>:;,(){}-]+$/.test(token)) return `<span class="tok-operator">${escapeHtml(token)}</span>`;
+        return escapeHtml(token);
+      });
+      return rendered + (comment ? `<span class="tok-comment">${escapeHtml(comment)}</span>` : '');
     }
 
     function setStatus(message) {
