@@ -450,17 +450,23 @@ fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
         })?)
     };
 
-    let asm_path = write_native_asm(path, source)?;
-    let obj_path = output_path(path, "obj");
     let exe_path = output_path(path, "exe");
+    let build_paths = create_native_build_paths(path)?;
+    let asm = emit_native_asm_source(source)?;
+    fs::write(&build_paths.asm, asm).map_err(|error| {
+        format!(
+            "Native build assembly dosyasi yazilamadi `{}`: {error}",
+            build_paths.asm.display()
+        )
+    })?;
 
     run_tool(
         "ml64",
         &[
             "/nologo".to_string(),
             "/c".to_string(),
-            format!("/Fo{}", obj_path.display()),
-            asm_path.display().to_string(),
+            format!("/Fo{}", build_paths.obj.display()),
+            build_paths.asm.display().to_string(),
         ],
         vcvars64.as_deref(),
     )?;
@@ -470,8 +476,8 @@ fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
             "/nologo".to_string(),
             "/SUBSYSTEM:CONSOLE".to_string(),
             "/ENTRY:main".to_string(),
-            format!("/OUT:{}", exe_path.display()),
-            obj_path.display().to_string(),
+            format!("/OUT:{}", build_paths.exe.display()),
+            build_paths.obj.display().to_string(),
             "msvcrt.lib".to_string(),
             "ucrt.lib".to_string(),
             "vcruntime.lib".to_string(),
@@ -480,7 +486,61 @@ fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
         vcvars64.as_deref(),
     )?;
 
+    fs::copy(&build_paths.exe, &exe_path).map_err(|error| {
+        format!(
+            "Native executable hedefe kopyalanamadi `{}` -> `{}`: {error}",
+            build_paths.exe.display(),
+            exe_path.display()
+        )
+    })?;
+
     Ok(exe_path)
+}
+
+#[derive(Debug)]
+struct NativeBuildPaths {
+    asm: PathBuf,
+    obj: PathBuf,
+    exe: PathBuf,
+}
+
+fn create_native_build_paths(source_path: &str) -> Result<NativeBuildPaths, String> {
+    let stem = Path::new(source_path)
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .map(sanitize_build_name)
+        .filter(|stem| !stem.is_empty())
+        .unwrap_or_else(|| "program".to_string());
+
+    let dir =
+        PathBuf::from("target")
+            .join("native-build")
+            .join(format!("{}-{}", process::id(), stem));
+
+    fs::create_dir_all(&dir).map_err(|error| {
+        format!(
+            "Native build klasoru olusturulamadi `{}`: {error}",
+            dir.display()
+        )
+    })?;
+
+    Ok(NativeBuildPaths {
+        asm: dir.join(format!("{stem}.asm")),
+        obj: dir.join(format!("{stem}.obj")),
+        exe: dir.join(format!("{stem}.exe")),
+    })
+}
+
+fn sanitize_build_name(name: &str) -> String {
+    name.chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' {
+                ch
+            } else {
+                '_'
+            }
+        })
+        .collect()
 }
 
 fn run_tool(program: &str, args: &[String], vcvars64: Option<&Path>) -> Result<(), String> {
@@ -775,7 +835,7 @@ fn looks_like_entry_program(input: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_args, Command, ParsedArgs};
+    use super::{parse_args, sanitize_build_name, Command, ParsedArgs};
 
     #[test]
     fn accepts_legacy_run_form() {
@@ -792,6 +852,13 @@ mod tests {
         assert!(matches!(command, Command::Run));
         assert_eq!(path, "examples/topla.ana");
         assert_eq!(output, super::OutputFormat::Text);
+    }
+
+    #[test]
+    fn sanitizes_native_build_file_name_for_cmd_tools() {
+        assert_eq!(sanitize_build_name("adsiz"), "adsiz");
+        assert_eq!(sanitize_build_name("Masaustu test"), "Masaustu_test");
+        assert_eq!(sanitize_build_name("çalışma-1"), "_al__ma-1");
     }
 
     #[test]
