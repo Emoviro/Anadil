@@ -329,4 +329,5 @@ cargo clippy --all-targets --all-features -- -D warnings
 - Native compiler notlari: [Docs/native_compiler.md](Docs/native_compiler.md)
 - Local IDE notlari: [Docs/local_ide.md](Docs/local_ide.md)
 - Native IDE smoke test: [Docs/ide_smoke_test.md](Docs/ide_smoke_test.md)
+- Yapilacaklar: [Docs/todo.md](Docs/todo.md)
 - Ornek programlar: [examples/README.md](examples/README.md)
