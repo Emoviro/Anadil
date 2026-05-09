@@ -10,6 +10,56 @@ use eframe::egui::{
     ScrollArea, TextEdit, TextFormat,
 };
 
+// ============================================================
+// Anadil Tema — "Bakir Gece"
+// Modern dark zemin + sicak bakir/amber aksan.
+// ============================================================
+
+// Backgrounds (deepest -> highest)
+const BG_BASE: Color32 = Color32::from_rgb(0x1B, 0x1C, 0x26);
+const BG_PANEL: Color32 = Color32::from_rgb(0x21, 0x23, 0x30);
+const BG_EDITOR: Color32 = Color32::from_rgb(0x16, 0x17, 0x21);
+const BG_RAISED: Color32 = Color32::from_rgb(0x2A, 0x2C, 0x3D);
+const BG_RAISED_HI: Color32 = Color32::from_rgb(0x36, 0x39, 0x50);
+const BG_INPUT: Color32 = Color32::from_rgb(0x14, 0x15, 0x1D);
+
+// Borders
+const BORDER: Color32 = Color32::from_rgb(0x2D, 0x30, 0x44);
+const BORDER_STRONG: Color32 = Color32::from_rgb(0x40, 0x43, 0x5C);
+
+// Text
+const FG_PRIMARY: Color32 = Color32::from_rgb(0xE8, 0xE9, 0xF2);
+const FG_SECONDARY: Color32 = Color32::from_rgb(0xA4, 0xA6, 0xB8);
+const FG_TERTIARY: Color32 = Color32::from_rgb(0x70, 0x73, 0x8A);
+
+// Accent — sicak bakir (Anadil imzasi)
+const ACCENT: Color32 = Color32::from_rgb(0xE8, 0xA8, 0x57);
+const ACCENT_HOVER: Color32 = Color32::from_rgb(0xF4, 0xBE, 0x73);
+const ACCENT_DIM: Color32 = Color32::from_rgb(0x4F, 0x39, 0x1D);
+const ACCENT_GLOW: Color32 = Color32::from_rgb(0x6B, 0x4D, 0x27);
+
+// Selection
+const SELECTION_BG: Color32 = Color32::from_rgb(0x3B, 0x3F, 0x6B);
+const HYPERLINK: Color32 = Color32::from_rgb(0x82, 0xAA, 0xFF);
+
+// Status
+const STATUS_OK: Color32 = Color32::from_rgb(0x88, 0xC9, 0x7A);
+const STATUS_ERROR: Color32 = Color32::from_rgb(0xFF, 0x8B, 0x92);
+const STATUS_WARN: Color32 = Color32::from_rgb(0xFF, 0xC9, 0x87);
+
+// Editor error line background
+const ERR_LINE_BG: Color32 = Color32::from_rgb(0x33, 0x1B, 0x24);
+
+// Syntax highlighting (palet uyumlu)
+const SYN_KEYWORD: Color32 = ACCENT; // egil/dön/döngü/...
+const SYN_TYPE: Color32 = Color32::from_rgb(0x7F, 0xCB, 0xC4); // sayı/mantık/metin
+const SYN_BUILTIN: Color32 = Color32::from_rgb(0x82, 0xAA, 0xFF); // Ana/yazdır
+const SYN_FUNCTION: Color32 = Color32::from_rgb(0xFF, 0xD4, 0x66); // Buyuk harfli ident
+const SYN_STRING: Color32 = Color32::from_rgb(0xC3, 0xE8, 0x8D);
+const SYN_NUMBER: Color32 = Color32::from_rgb(0xF7, 0x8C, 0x6C);
+const SYN_COMMENT: Color32 = Color32::from_rgb(0x60, 0x63, 0x7E);
+const SYN_PUNCT: Color32 = Color32::from_rgb(0xC5, 0xC6, 0xD6);
+
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -105,30 +155,37 @@ impl eframe::App for AnadilIde {
         self.handle_shortcuts(&context);
         context.send_viewport_cmd(egui::ViewportCommand::Title(self.window_title()));
 
-        egui::Panel::top("top_bar")
-            .exact_size(46.0)
-            .frame(panel_frame(Color32::from_rgb(37, 37, 38), 8, 4))
-            .show_inside(ui, |ui| self.top_bar(ui));
-
-        egui::Panel::left("left_panel")
-            .resizable(true)
-            .show_separator_line(true)
-            .default_size(285.0)
-            .size_range(220.0..=390.0)
-            .frame(panel_frame(Color32::from_rgb(37, 37, 38), 8, 8))
-            .show_inside(ui, |ui| self.left_panel(ui));
-
-        egui::Panel::bottom("bottom_panel")
-            .resizable(true)
-            .show_separator_line(true)
-            .default_size(210.0)
-            .size_range(140.0..=360.0)
-            .frame(panel_frame(Color32::from_rgb(30, 30, 30), 8, 6))
-            .show_inside(ui, |ui| self.bottom_panel(ui));
-
+        // Dis CentralPanel: bare ui arka plansiz; tum alani bizim BG_EDITOR ile boyar
+        // (yoksa orta seritte unclaimed window arka plani gorunuyor).
+        let outer_frame = egui::Frame::new().fill(BG_EDITOR);
         egui::CentralPanel::default()
-            .frame(panel_frame(Color32::from_rgb(30, 30, 30), 10, 8))
-            .show_inside(ui, |ui| self.editor_panel(ui));
+            .frame(outer_frame)
+            .show_inside(ui, |ui| {
+                egui::Panel::top("anadil_top_v2")
+                    .exact_size(52.0)
+                    .frame(panel_frame(BG_PANEL, 14, 6))
+                    .show_inside(ui, |ui| self.top_bar(ui));
+
+                egui::Panel::left("anadil_left_v2")
+                    .resizable(true)
+                    .show_separator_line(true)
+                    .default_size(290.0)
+                    .size_range(220.0..=400.0)
+                    .frame(panel_frame(BG_PANEL, 12, 12))
+                    .show_inside(ui, |ui| self.left_panel(ui));
+
+                egui::Panel::bottom("anadil_bottom_v2")
+                    .resizable(true)
+                    .show_separator_line(true)
+                    .default_size(220.0)
+                    .size_range(140.0..=380.0)
+                    .frame(panel_frame(BG_EDITOR, 14, 8))
+                    .show_inside(ui, |ui| self.bottom_panel(ui));
+
+                egui::CentralPanel::default()
+                    .frame(panel_frame(BG_EDITOR, 14, 10))
+                    .show_inside(ui, |ui| self.editor_panel(ui));
+            });
     }
 }
 
@@ -156,33 +213,41 @@ impl AnadilIde {
 
     fn top_bar(&mut self, ui: &mut egui::Ui) {
         ui.horizontal_centered(|ui| {
-            ui.add_space(4.0);
+            ui.add_space(2.0);
+            ui.label(RichText::new("◆").size(15.0).color(ACCENT));
+            ui.add_space(2.0);
             ui.label(
-                RichText::new("Anadil IDE")
+                RichText::new("Anadil")
                     .strong()
-                    .size(18.0)
-                    .color(Color32::from_rgb(220, 224, 229)),
+                    .size(19.0)
+                    .color(ACCENT),
             );
-            ui.separator();
+            ui.label(
+                RichText::new("IDE")
+                    .size(13.0)
+                    .color(FG_TERTIARY),
+            );
 
-            if ui
-                .button("Ac")
-                .on_hover_text("Ctrl+O ile dosya sec")
-                .clicked()
-            {
+            ui.add_space(10.0);
+            vertical_divider(ui);
+            ui.add_space(6.0);
+
+            if ui.button("Aç").on_hover_text("Ctrl+O").clicked() {
                 self.open_file_dialog();
             }
             if ui.button("Kaydet").on_hover_text("Ctrl+S").clicked() {
                 self.save_current_path();
             }
-            if ui.button("Farkli Kaydet").clicked() {
+            if ui.button("Farklı Kaydet").clicked() {
                 self.save_as_dialog();
             }
-            if ui.button("Klasor Ac").clicked() {
+            if ui.button("Klasör Aç").clicked() {
                 self.open_folder_dialog();
             }
 
-            ui.separator();
+            ui.add_space(6.0);
+            vertical_divider(ui);
+            ui.add_space(6.0);
 
             if ui.button("Kontrol").clicked() {
                 self.check();
@@ -190,7 +255,7 @@ impl AnadilIde {
 
             egui::ComboBox::from_id_salt("run_mode")
                 .selected_text(self.run_mode.label())
-                .width(118.0)
+                .width(126.0)
                 .show_ui(ui, |ui| {
                     ui.selectable_value(
                         &mut self.run_mode,
@@ -209,43 +274,51 @@ impl AnadilIde {
                     );
                 });
 
-            if ui.button("Yap").on_hover_text("F5").clicked() {
+            let run_button = egui::Button::new(
+                RichText::new("▶  Yap").color(BG_BASE).strong(),
+            )
+            .fill(ACCENT)
+            .corner_radius(egui::CornerRadius::same(6));
+            if ui.add(run_button).on_hover_text("F5").clicked() {
                 self.run_selected_mode();
             }
             if ui
-                .add_enabled(self.build_exe.is_some(), egui::Button::new("EXE Calistir"))
+                .add_enabled(self.build_exe.is_some(), egui::Button::new("EXE Çalıştır"))
                 .on_hover_text("Ctrl+Shift+F5")
                 .clicked()
             {
                 self.run_built_exe();
             }
 
-            ui.separator();
-            let dirty = if self.is_dirty() {
-                "Degisiklik var"
-            } else {
-                "Kayitli"
-            };
-            ui.label(
-                RichText::new(format!("{} - {dirty}", self.status))
-                    .color(Color32::from_rgb(178, 190, 181)),
-            );
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let (dot_color, label_color, label_text) = if self.is_dirty() {
+                    (STATUS_WARN, STATUS_WARN, "Değişiklik var")
+                } else {
+                    (STATUS_OK, FG_SECONDARY, "Kayıtlı")
+                };
+                ui.label(RichText::new(label_text).small().color(label_color));
+                ui.label(RichText::new("●").size(10.0).color(dot_color));
+                ui.add_space(8.0);
+                ui.label(
+                    RichText::new(&self.status)
+                        .small()
+                        .color(FG_SECONDARY),
+                );
+            });
         });
     }
 
     fn left_panel(&mut self, ui: &mut egui::Ui) {
-        ui.label(
-            RichText::new("EXPLORER")
-                .strong()
-                .small()
-                .color(Color32::from_rgb(204, 210, 218)),
-        );
+        // Frame'in panel_rect'i tam doldurmasi icin (resize'in PanelState'e dogru kaydedilmesi sart)
+        ui.take_available_width();
+
+        section_header(ui, "PROJE");
         ui.add_space(6.0);
 
         ui.horizontal(|ui| {
             if ui
-                .button("Klasor")
-                .on_hover_text("Proje klasoru ac")
+                .button("Klasör")
+                .on_hover_text("Proje klasörü aç")
                 .clicked()
             {
                 self.open_folder_dialog();
@@ -261,13 +334,13 @@ impl AnadilIde {
             }
         });
 
-        ui.add_space(6.0);
+        ui.add_space(8.0);
         ui.label(
             RichText::new(self.project_root_label())
                 .small()
-                .color(Color32::from_rgb(156, 163, 175)),
+                .color(FG_TERTIARY),
         );
-        ui.add_space(8.0);
+        ui.add_space(10.0);
 
         ui.horizontal(|ui| {
             ui.add(
@@ -276,38 +349,38 @@ impl AnadilIde {
                     .hint_text("yeni.ana"),
             );
             if ui
-                .add_enabled(self.project_root.is_some(), egui::Button::new("Olustur"))
+                .add_enabled(self.project_root.is_some(), egui::Button::new("Oluştur"))
                 .clicked()
             {
                 self.create_project_file();
             }
         });
 
+        ui.add_space(12.0);
+        horizontal_divider(ui);
         ui.add_space(8.0);
-        ui.separator();
+        section_header(ui, "DOSYALAR");
         ui.add_space(4.0);
-        ui.label(
-            RichText::new("DOSYALAR")
-                .strong()
-                .small()
-                .color(Color32::from_rgb(204, 210, 218)),
-        );
 
-        let file_list_height = (ui.available_height() - 190.0).max(180.0);
+        let file_list_height = (ui.available_height() - 200.0).max(180.0);
         ScrollArea::vertical()
             .id_salt("project_files")
             .max_height(file_list_height)
             .auto_shrink([false, false])
             .show(ui, |ui| {
                 if self.project_root.is_none() {
+                    ui.add_space(4.0);
                     ui.label(
-                        RichText::new("Bir proje klasoru ac.")
-                            .color(Color32::from_rgb(171, 186, 174)),
+                        RichText::new("Bir proje klasörü aç.")
+                            .small()
+                            .color(FG_TERTIARY),
                     );
                 } else if self.project_files.is_empty() {
+                    ui.add_space(4.0);
                     ui.label(
-                        RichText::new("Bu klasorde .ana dosyasi yok.")
-                            .color(Color32::from_rgb(171, 186, 174)),
+                        RichText::new("Bu klasörde .ana dosyası yok.")
+                            .small()
+                            .color(FG_TERTIARY),
                     );
                 }
 
@@ -317,24 +390,25 @@ impl AnadilIde {
                 }
             });
 
-        ui.add_space(8.0);
-        ui.separator();
+        ui.add_space(10.0);
+        horizontal_divider(ui);
+        ui.add_space(6.0);
 
-        egui::CollapsingHeader::new("Aktif dosya")
+        egui::CollapsingHeader::new(RichText::new("Aktif Dosya").color(FG_SECONDARY).strong())
             .default_open(false)
             .show(ui, |ui| {
-                ui.label("Aktif yol");
+                ui.label(RichText::new("Aktif yol").small().color(FG_TERTIARY));
                 ui.add(
                     TextEdit::singleline(&mut self.current_path)
                         .desired_width(f32::INFINITY)
                         .hint_text("examples\\topla.ana"),
                 );
-                if ui.button("Bu yoldan ac").clicked() {
+                if ui.button("Bu yoldan aç").clicked() {
                     self.open_current_path();
                 }
 
                 ui.add_space(8.0);
-                ui.label("Yeni ad");
+                ui.label(RichText::new("Yeni ad").small().color(FG_TERTIARY));
                 ui.add(
                     TextEdit::singleline(&mut self.rename_file_name)
                         .desired_width(f32::INFINITY)
@@ -343,7 +417,7 @@ impl AnadilIde {
                 ui.horizontal(|ui| {
                     let has_real_file = !self.current_path_is_placeholder();
                     if ui
-                        .add_enabled(has_real_file, egui::Button::new("Yeniden Adlandir"))
+                        .add_enabled(has_real_file, egui::Button::new("Yeniden Adlandır"))
                         .clicked()
                     {
                         self.rename_current_file();
@@ -357,7 +431,7 @@ impl AnadilIde {
                 });
             });
 
-        egui::CollapsingHeader::new("Ornekler")
+        egui::CollapsingHeader::new(RichText::new("Örnekler").color(FG_SECONDARY).strong())
             .default_open(false)
             .show(ui, |ui| {
                 ScrollArea::vertical().max_height(160.0).show(ui, |ui| {
@@ -368,7 +442,12 @@ impl AnadilIde {
                             .and_then(|name| name.to_str())
                             .unwrap_or("ornek.ana");
                         let selected = self.current_path == path.display().to_string();
-                        if ui.selectable_label(selected, name).clicked() {
+                        let text = RichText::new(name).color(if selected {
+                            ACCENT
+                        } else {
+                            FG_PRIMARY
+                        });
+                        if ui.selectable_label(selected, text).clicked() {
                             self.open_path_with_guard(&path);
                         }
                     }
@@ -393,12 +472,13 @@ impl AnadilIde {
         };
 
         ui.horizontal(|ui| {
-            ui.add_space(depth as f32 * 12.0);
-            let color = if selected {
-                Color32::from_rgb(220, 224, 229)
+            ui.add_space(depth as f32 * 14.0);
+            if selected {
+                ui.label(RichText::new("▸").color(ACCENT));
             } else {
-                Color32::from_rgb(200, 204, 209)
-            };
+                ui.add_space(10.0);
+            }
+            let color = if selected { ACCENT } else { FG_PRIMARY };
 
             if ui
                 .selectable_label(selected, RichText::new(label).color(color))
@@ -412,20 +492,32 @@ impl AnadilIde {
 
     fn editor_panel(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
+            if self.is_dirty() {
+                ui.label(RichText::new("●").size(14.0).color(ACCENT))
+                    .on_hover_text("Kaydedilmemiş değişiklik var");
+            } else {
+                ui.label(RichText::new("●").size(14.0).color(FG_TERTIARY));
+            }
             ui.label(
                 RichText::new(self.display_path())
                     .strong()
-                    .color(Color32::from_rgb(220, 224, 229)),
+                    .size(13.5)
+                    .color(FG_PRIMARY),
             );
             if let Some(exe) = &self.build_exe {
-                ui.separator();
+                ui.add_space(6.0);
+                ui.label(RichText::new("│").color(BORDER_STRONG));
+                ui.add_space(6.0);
+                ui.label(RichText::new("✔").color(STATUS_OK).size(13.0));
                 ui.label(
-                    RichText::new(format!("EXE: {exe}")).color(Color32::from_rgb(135, 214, 150)),
+                    RichText::new(format!("EXE: {exe}"))
+                        .small()
+                        .color(STATUS_OK),
                 );
             }
         });
 
-        ui.add_space(6.0);
+        ui.add_space(8.0);
         self.apply_pending_editor_jump(ui);
 
         let diagnostics = self.diagnostics.clone();
@@ -474,30 +566,29 @@ impl AnadilIde {
     }
 
     fn bottom_panel(&mut self, ui: &mut egui::Ui) {
+        // Frame'in panel_rect'i tam doldurmasi icin (resize'in PanelState'e dogru kaydedilmesi sart)
+        ui.take_available_height();
+
         ui.horizontal(|ui| {
-            if ui
-                .selectable_label(self.selected_tab == Tab::Output, "Cikti")
-                .clicked()
-            {
-                self.selected_tab = Tab::Output;
-            }
-            if ui
-                .selectable_label(self.selected_tab == Tab::Diagnostics, "Diagnostics")
-                .clicked()
-            {
-                self.selected_tab = Tab::Diagnostics;
-            }
-            if ui
-                .selectable_label(self.selected_tab == Tab::Build, "Build")
-                .clicked()
-            {
-                self.selected_tab = Tab::Build;
-            }
+            self.tab_button(ui, Tab::Output, "Çıktı");
+            ui.add_space(4.0);
+            self.tab_button(ui, Tab::Diagnostics, "Tanılama");
+            ui.add_space(4.0);
+            self.tab_button(ui, Tab::Build, "Build");
+
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.label(format!("{} diagnostic", self.diagnostics.len()));
+                let n = self.diagnostics.len();
+                let (text, color) = if n == 0 {
+                    ("0 tanılama".to_string(), FG_TERTIARY)
+                } else {
+                    (format!("{n} tanılama"), STATUS_ERROR)
+                };
+                ui.label(RichText::new(text).small().color(color));
             });
         });
-        ui.separator();
+        ui.add_space(2.0);
+        horizontal_divider(ui);
+        ui.add_space(8.0);
 
         match self.selected_tab {
             Tab::Output => {
@@ -526,9 +617,67 @@ impl AnadilIde {
         }
     }
 
+    fn tab_button(&mut self, ui: &mut egui::Ui, tab: Tab, label: &str) {
+        let active = self.selected_tab == tab;
+        let font = FontId::proportional(13.0);
+        let padding = egui::vec2(10.0, 6.0);
+
+        // Olcumu icin gecici layout
+        let measure = ui
+            .painter()
+            .layout_no_wrap(label.to_string(), font.clone(), FG_PRIMARY);
+        let desired = egui::vec2(
+            measure.size().x + padding.x * 2.0,
+            measure.size().y + padding.y * 2.0,
+        );
+        let (rect, response) = ui.allocate_exact_size(desired, egui::Sense::click());
+
+        let hovered = response.hovered();
+        let label_color = if active {
+            ACCENT
+        } else if hovered {
+            ACCENT_HOVER
+        } else {
+            FG_SECONDARY
+        };
+
+        if active || hovered {
+            let fill = if active { BG_RAISED } else { BG_RAISED.gamma_multiply(0.6) };
+            ui.painter().rect_filled(rect, egui::CornerRadius::same(4), fill);
+        }
+
+        let galley = ui
+            .painter()
+            .layout_no_wrap(label.to_string(), font, label_color);
+        ui.painter().galley(rect.left_top() + padding, galley, label_color);
+
+        if active {
+            let underline_y = rect.bottom() - 1.0;
+            ui.painter().line_segment(
+                [
+                    egui::pos2(rect.left() + 6.0, underline_y),
+                    egui::pos2(rect.right() - 6.0, underline_y),
+                ],
+                egui::Stroke::new(2.0, ACCENT),
+            );
+        }
+
+        if response.clicked() {
+            self.selected_tab = tab;
+        }
+    }
+
     fn diagnostics_ui(&mut self, ui: &mut egui::Ui) {
         if self.diagnostics.is_empty() {
-            ui.label(RichText::new("Hata yok.").color(Color32::from_rgb(171, 186, 174)));
+            ui.add_space(10.0);
+            ui.vertical_centered(|ui| {
+                ui.label(RichText::new("✓").size(22.0).color(STATUS_OK));
+                ui.add_space(4.0);
+                ui.label(
+                    RichText::new("Tanılama temiz — hata yok.")
+                        .color(FG_SECONDARY),
+                );
+            });
             return;
         }
 
@@ -537,34 +686,77 @@ impl AnadilIde {
             for (index, diagnostic) in diagnostics.iter().enumerate() {
                 let place = diagnostic
                     .span
-                    .map(|span| format!("satir {}, sutun {}", span.line, span.column))
-                    .unwrap_or_else(|| "konum yok".to_string());
+                    .map(|span| format!("satır {}, sütun {}", span.line, span.column))
+                    .unwrap_or_else(|| "konum belirtilmemiş".to_string());
 
-                let fill = if self.selected_diagnostic == Some(index) {
-                    Color32::from_rgb(42, 55, 47)
+                let active = self.selected_diagnostic == Some(index);
+                let fill = if active { BG_RAISED_HI } else { BG_RAISED };
+                let stroke = if active {
+                    egui::Stroke::new(1.0, ACCENT)
                 } else {
-                    Color32::from_rgb(31, 36, 33)
+                    egui::Stroke::new(1.0, BORDER)
+                };
+                let stripe = match diagnostic.severity.as_str() {
+                    "warning" => STATUS_WARN,
+                    "info" => HYPERLINK,
+                    _ => STATUS_ERROR,
                 };
 
-                let card = egui::Frame::group(ui.style()).fill(fill).show(ui, |ui| {
-                    ui.label(
-                        RichText::new(format!(
-                            "{} / {}",
-                            diagnostic.stage.as_str(),
-                            diagnostic.severity.as_str()
-                        ))
-                        .strong()
-                        .color(Color32::from_rgb(255, 178, 181)),
-                    );
-                    ui.label(RichText::new(place).color(Color32::from_rgb(171, 186, 174)));
-                    ui.label(&diagnostic.message);
-                    if diagnostic.span.is_some() {
-                        ui.label(
-                            RichText::new("Tikla: editor konumuna git")
-                                .small()
-                                .color(Color32::from_rgb(135, 214, 150)),
+                let frame = egui::Frame::new()
+                    .fill(fill)
+                    .stroke(stroke)
+                    .corner_radius(egui::CornerRadius::same(6))
+                    .inner_margin(egui::Margin::symmetric(12, 10));
+
+                let card = frame.show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        // Sol kenarda severity stripe
+                        let (_id, stripe_rect) = ui.allocate_space(egui::vec2(3.0, 38.0));
+                        ui.painter().rect_filled(
+                            stripe_rect,
+                            egui::CornerRadius::same(2),
+                            stripe,
                         );
-                    }
+                        ui.add_space(8.0);
+                        ui.vertical(|ui| {
+                            ui.horizontal(|ui| {
+                                ui.label(
+                                    RichText::new(diagnostic.severity.as_str().to_uppercase())
+                                        .strong()
+                                        .small()
+                                        .color(stripe),
+                                );
+                                ui.label(
+                                    RichText::new("·")
+                                        .color(FG_TERTIARY),
+                                );
+                                ui.label(
+                                    RichText::new(diagnostic.stage.as_str())
+                                        .small()
+                                        .color(FG_SECONDARY),
+                                );
+                                ui.add_space(6.0);
+                                ui.label(
+                                    RichText::new(place)
+                                        .small()
+                                        .color(FG_TERTIARY),
+                                );
+                            });
+                            ui.add_space(2.0);
+                            ui.label(
+                                RichText::new(&diagnostic.message)
+                                    .color(FG_PRIMARY),
+                            );
+                            if diagnostic.span.is_some() {
+                                ui.add_space(2.0);
+                                ui.label(
+                                    RichText::new("→ tıkla: editöre git")
+                                        .small()
+                                        .color(ACCENT),
+                                );
+                            }
+                        });
+                    });
                 });
 
                 let response = card.response.interact(egui::Sense::click());
@@ -575,6 +767,7 @@ impl AnadilIde {
                 if response.clicked() {
                     self.jump_to_diagnostic(index);
                 }
+                ui.add_space(6.0);
             }
         });
     }
@@ -1212,24 +1405,77 @@ impl AnadilIde {
 fn configure_fonts(context: &egui::Context) {
     let mut style = (*context.global_style()).clone();
     style.visuals = egui::Visuals::dark();
-    style.visuals.panel_fill = Color32::from_rgb(37, 37, 38);
-    style.visuals.window_fill = Color32::from_rgb(30, 30, 30);
-    style.visuals.extreme_bg_color = Color32::from_rgb(30, 30, 30);
-    style.visuals.faint_bg_color = Color32::from_rgb(45, 45, 48);
-    style.visuals.selection.bg_fill = Color32::from_rgb(38, 79, 120);
-    style.visuals.hyperlink_color = Color32::from_rgb(86, 156, 214);
-    style.visuals.widgets.inactive.bg_fill = Color32::from_rgb(45, 45, 48);
-    style.visuals.widgets.hovered.bg_fill = Color32::from_rgb(62, 62, 66);
-    style.visuals.widgets.active.bg_fill = Color32::from_rgb(38, 79, 120);
-    style.visuals.widgets.noninteractive.bg_fill = Color32::from_rgb(37, 37, 38);
-    style.visuals.widgets.noninteractive.bg_stroke =
-        egui::Stroke::new(1.0, Color32::from_rgb(58, 58, 60));
-    style.visuals.widgets.hovered.fg_stroke =
-        egui::Stroke::new(1.0, Color32::from_rgb(86, 156, 214));
-    style.visuals.widgets.active.fg_stroke =
-        egui::Stroke::new(1.0, Color32::from_rgb(86, 156, 214));
-    style.spacing.item_spacing = egui::vec2(6.0, 5.0);
-    style.interaction.resize_grab_radius_side = 2.0;
+
+    // Backgrounds
+    style.visuals.panel_fill = BG_PANEL;
+    style.visuals.window_fill = BG_EDITOR;
+    style.visuals.extreme_bg_color = BG_INPUT;
+    style.visuals.faint_bg_color = BG_RAISED;
+    style.visuals.code_bg_color = BG_EDITOR;
+    style.visuals.window_stroke = egui::Stroke::new(1.0, BORDER);
+
+    // Selection / hyperlink
+    style.visuals.selection.bg_fill = SELECTION_BG;
+    style.visuals.selection.stroke = egui::Stroke::new(1.0, ACCENT_HOVER);
+    style.visuals.hyperlink_color = HYPERLINK;
+
+    // Default metin rengi
+    style.visuals.override_text_color = Some(FG_PRIMARY);
+
+    // Noninteractive (label, separator)
+    style.visuals.widgets.noninteractive.bg_fill = BG_PANEL;
+    style.visuals.widgets.noninteractive.weak_bg_fill = BG_PANEL;
+    style.visuals.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0, BORDER);
+    style.visuals.widgets.noninteractive.fg_stroke = egui::Stroke::new(1.0, FG_SECONDARY);
+    style.visuals.widgets.noninteractive.corner_radius = egui::CornerRadius::same(4);
+
+    // Inactive (durmus dugmeler)
+    style.visuals.widgets.inactive.bg_fill = BG_RAISED;
+    style.visuals.widgets.inactive.weak_bg_fill = BG_RAISED;
+    style.visuals.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, BORDER);
+    style.visuals.widgets.inactive.fg_stroke = egui::Stroke::new(1.0, FG_PRIMARY);
+    style.visuals.widgets.inactive.corner_radius = egui::CornerRadius::same(6);
+    style.visuals.widgets.inactive.expansion = 0.0;
+
+    // Hovered
+    style.visuals.widgets.hovered.bg_fill = BG_RAISED_HI;
+    style.visuals.widgets.hovered.weak_bg_fill = BG_RAISED_HI;
+    style.visuals.widgets.hovered.bg_stroke = egui::Stroke::new(1.0, ACCENT_GLOW);
+    style.visuals.widgets.hovered.fg_stroke = egui::Stroke::new(1.0, ACCENT_HOVER);
+    style.visuals.widgets.hovered.corner_radius = egui::CornerRadius::same(6);
+    style.visuals.widgets.hovered.expansion = 1.0;
+
+    // Active (basili / secili)
+    style.visuals.widgets.active.bg_fill = ACCENT_DIM;
+    style.visuals.widgets.active.weak_bg_fill = ACCENT_DIM;
+    style.visuals.widgets.active.bg_stroke = egui::Stroke::new(1.0, ACCENT);
+    style.visuals.widgets.active.fg_stroke = egui::Stroke::new(1.0, ACCENT);
+    style.visuals.widgets.active.corner_radius = egui::CornerRadius::same(6);
+    style.visuals.widgets.active.expansion = 0.0;
+
+    // Open (acik combobox vb.)
+    style.visuals.widgets.open.bg_fill = BG_RAISED_HI;
+    style.visuals.widgets.open.weak_bg_fill = BG_RAISED_HI;
+    style.visuals.widgets.open.bg_stroke = egui::Stroke::new(1.0, ACCENT);
+    style.visuals.widgets.open.fg_stroke = egui::Stroke::new(1.0, FG_PRIMARY);
+    style.visuals.widgets.open.corner_radius = egui::CornerRadius::same(6);
+
+    // Yuvarlatma
+    style.visuals.window_corner_radius = egui::CornerRadius::same(8);
+    style.visuals.menu_corner_radius = egui::CornerRadius::same(8);
+
+    // Spacing
+    style.spacing.item_spacing = egui::vec2(8.0, 6.0);
+    style.spacing.button_padding = egui::vec2(12.0, 6.0);
+    style.spacing.indent = 14.0;
+    style.spacing.scroll.bar_width = 8.0;
+    style.spacing.icon_width = 16.0;
+    style.spacing.icon_spacing = 6.0;
+    style.spacing.menu_margin = egui::Margin::same(8);
+
+    style.interaction.resize_grab_radius_side = 4.0;
+    style.interaction.resize_grab_radius_corner = 6.0;
+
     context.set_global_style(style);
 }
 
@@ -1237,6 +1483,35 @@ fn panel_frame(fill: Color32, x_margin: i8, y_margin: i8) -> egui::Frame {
     egui::Frame::new()
         .fill(fill)
         .inner_margin(egui::Margin::symmetric(x_margin, y_margin))
+}
+
+fn section_header(ui: &mut egui::Ui, label: &str) {
+    ui.label(
+        RichText::new(label)
+            .strong()
+            .size(11.0)
+            .color(FG_TERTIARY),
+    );
+}
+
+fn vertical_divider(ui: &mut egui::Ui) {
+    let height = 22.0;
+    let (_id, rect) = ui.allocate_space(egui::vec2(1.0, height));
+    ui.painter().vline(
+        rect.center().x,
+        rect.y_range(),
+        egui::Stroke::new(1.0, BORDER_STRONG),
+    );
+}
+
+fn horizontal_divider(ui: &mut egui::Ui) {
+    let width = ui.available_width();
+    let (_id, rect) = ui.allocate_space(egui::vec2(width, 1.0));
+    ui.painter().hline(
+        rect.x_range(),
+        rect.center().y,
+        egui::Stroke::new(1.0, BORDER),
+    );
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -1687,25 +1962,17 @@ fn highlight_job(source: &str, diagnostics: &[Diagnostic]) -> LayoutJob {
     for (line_index, line) in source.lines().enumerate() {
         let line_number = line_index + 1;
         let background = if error_lines.contains(&line_number) {
-            Color32::from_rgb(54, 28, 31)
+            ERR_LINE_BG
         } else {
             Color32::TRANSPARENT
         };
 
         append_highlighted_line(&mut job, line, background);
-        job.append(
-            "\n",
-            0.0,
-            format(Color32::from_rgb(230, 238, 231), background),
-        );
+        job.append("\n", 0.0, format(FG_PRIMARY, background));
     }
 
     if source.is_empty() {
-        job.append(
-            "",
-            0.0,
-            format(Color32::from_rgb(230, 238, 231), Color32::TRANSPARENT),
-        );
+        job.append("", 0.0, format(FG_PRIMARY, Color32::TRANSPARENT));
     }
 
     job
@@ -1718,11 +1985,7 @@ fn append_highlighted_line(job: &mut LayoutJob, line: &str, background: Color32)
     while index < line.len() {
         let rest = &line[index..];
         if rest.starts_with("//") {
-            job.append(
-                rest,
-                0.0,
-                format(Color32::from_rgb(120, 135, 124), background),
-            );
+            job.append(rest, 0.0, format(SYN_COMMENT, background));
             break;
         }
 
@@ -1733,20 +1996,12 @@ fn append_highlighted_line(job: &mut LayoutJob, line: &str, background: Color32)
         if ch == '"' {
             let end = string_end(rest);
             let token = &rest[..end];
-            job.append(
-                token,
-                0.0,
-                format(Color32::from_rgb(239, 166, 106), background),
-            );
+            job.append(token, 0.0, format(SYN_STRING, background));
             index += token.len();
         } else if ch.is_ascii_digit() {
             let end = take_while(rest, |c| c.is_ascii_digit());
             let token = &rest[..end];
-            job.append(
-                token,
-                0.0,
-                format(Color32::from_rgb(232, 193, 90), background),
-            );
+            job.append(token, 0.0, format(SYN_NUMBER, background));
             index += token.len();
         } else if is_ident_start(ch) {
             let end = take_while(rest, is_ident_continue);
@@ -1759,11 +2014,7 @@ fn append_highlighted_line(job: &mut LayoutJob, line: &str, background: Color32)
                 .find_map(|(char_index, _)| (*char_index > index).then_some(*char_index))
                 .unwrap_or(line.len());
             let token = &line[index..next];
-            job.append(
-                token,
-                0.0,
-                format(Color32::from_rgb(210, 222, 213), background),
-            );
+            job.append(token, 0.0, format(SYN_PUNCT, background));
             index = next;
         }
     }
@@ -1805,22 +2056,22 @@ fn token_format(token: &str, background: Color32) -> TextFormat {
         token,
         "eğer" | "değilse" | "döngü" | "kır" | "devam" | "dön" | "doğru" | "yanlış"
     ) {
-        return format(Color32::from_rgb(123, 216, 143), background);
+        return format(SYN_KEYWORD, background);
     }
 
     if matches!(token, "sayı" | "mantık" | "metin") {
-        return format(Color32::from_rgb(101, 199, 208), background);
+        return format(SYN_TYPE, background);
     }
 
     if matches!(token, "Ana" | "yazdır" | "yazdir") {
-        return format(Color32::from_rgb(166, 215, 255), background);
+        return format(SYN_BUILTIN, background);
     }
 
     if token.chars().next().is_some_and(char::is_uppercase) {
-        return format(Color32::from_rgb(217, 233, 140), background);
+        return format(SYN_FUNCTION, background);
     }
 
-    format(Color32::from_rgb(230, 238, 231), background)
+    format(FG_PRIMARY, background)
 }
 
 fn format(color: Color32, background: Color32) -> TextFormat {
