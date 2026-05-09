@@ -216,10 +216,11 @@ Ctrl+Shift+F5  EXE Calistir
 Native IDE proje akisi:
 
 - `Klasor Ac` ile bir proje klasoru secilir.
-- Sol panelde klasor altindaki `.ana` dosyalari listelenir; `target` ve `.git` atlanir.
+- Sol explorer'da klasor altindaki `.ana` dosyalari listelenir; `target` ve `.git` atlanir.
 - Listedeki dosyaya tiklaninca editor aktif dosyayi acar.
 - `Yeni` yeni bir `adsiz.ana` taslagi acar; sol paneldeki `Olustur` proje icinde adli dosya olusturur.
 - Aktif dosya sol panelden yeniden adlandirilabilir veya onay penceresiyle silinebilir.
+- Son acilan proje klasoru ve dosya bir sonraki IDE acilisinda geri yuklenir.
 - Kaydedilmemis degisiklik varken baska dosya acmaya calisilirsa IDE onay ister.
 - Ust bardaki mod seciciden `Interpret et`, `Compile et` veya `Karsilastir` secilir; `Yap` veya `F5` secili modu calistirir.
 - `EXE Derle`, gerekiyorsa aktif dosyayi kaydeder ve `.exe` dosyasini aktif `.ana` dosyasinin yanina uretir.
@@ -228,7 +229,7 @@ Native IDE proje akisi:
 - Native executable, Explorer'dan cift tiklaninca terminal penceresi kapanmadan once Enter bekler.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri vardir.
 - `Diagnostics` sekmesindeki satir/sutun bilgili hata kartlarina tiklaninca editor ilgili konuma odaklanir.
-- Editor, VS Code benzeri koyu tema, satir numarasi gutter'i ve aktif diagnostic satiri vurgusu tasir.
+- Editor ve explorer, VS Code benzeri koyu tema, ince resize ayiricilari, satir numarasi gutter'i ve aktif diagnostic satiri vurgusu tasir.
 
 ## Ornek
 
