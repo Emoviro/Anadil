@@ -224,12 +224,13 @@ Native IDE proje akisi:
 - Kaydedilmemis degisiklik varken baska dosya acmaya calisilirsa IDE onay ister.
 - Ust bardaki mod seciciden `Interpret et`, `Compile et` veya `Karsilastir` secilir; `Yap` veya `F5` secili modu calistirir.
 - `EXE Derle`, gerekiyorsa aktif dosyayi kaydeder ve `.exe` dosyasini aktif `.ana` dosyasinin yanina uretir.
+- Build sekmesi derlenen kaynak dosyayi, uretilen `.exe` yolunu, exit/stdout/stderr detaylarini ve toolchain hatalarinda kisa cozum notunu gosterir.
 - `EXE Calistir`, son uretilen native executable'i calistirir ve stdout/stderr/exit code bilgisini `Build` sekmesinde gosterir.
 - `Karsilastir`, ayni kaynak kodu interpreter ve native executable olarak calistirir; stdout farklarini `Build` sekmesinde gosterir.
 - Native executable, Explorer'dan cift tiklaninca terminal penceresi kapanmadan once Enter bekler.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri vardir.
 - `Diagnostics` sekmesindeki satir/sutun bilgili hata kartlarina tiklaninca editor ilgili konuma odaklanir.
-- Editor ve explorer, VS Code benzeri koyu tema, ince resize ayiricilari, satir numarasi gutter'i ve aktif diagnostic satiri vurgusu tasir.
+- Editor ve explorer, VS Code benzeri koyu tema ve ince resize ayiricilari tasir; diagnostic kartina tiklaninca ilgili kod konumuna odaklanir.
 
 ## Ornek
 

@@ -72,7 +72,6 @@ struct AnadilIde {
     rename_file_name: String,
     selected_diagnostic: Option<usize>,
     pending_editor_jump: Option<(usize, usize)>,
-    pending_editor_scroll_line: Option<usize>,
 }
 
 impl Default for AnadilIde {
@@ -96,7 +95,6 @@ impl Default for AnadilIde {
             rename_file_name: "adsiz.ana".to_string(),
             selected_diagnostic: None,
             pending_editor_jump: None,
-            pending_editor_scroll_line: None,
         }
     }
 }
@@ -439,28 +437,14 @@ impl AnadilIde {
 
         let editor_id = ui.make_persistent_id("source_editor");
         let line_count = editor_line_count(&self.source);
-        let active_line = self.active_diagnostic_line();
-        let scroll_line = self.pending_editor_scroll_line.take();
-
-        let output = ScrollArea::vertical()
-            .id_salt("source_editor_scroll")
-            .auto_shrink([false, false])
-            .show(ui, |ui| {
-                ui.horizontal_top(|ui| {
-                    self.line_numbers_ui(ui, line_count, active_line, scroll_line);
-                    ui.add_space(6.0);
-                    TextEdit::multiline(&mut self.source)
-                        .id(editor_id)
-                        .font(FontId::new(15.0, FontFamily::Monospace))
-                        .desired_width(f32::INFINITY)
-                        .desired_rows(line_count.max(26))
-                        .lock_focus(true)
-                        .layouter(&mut layouter)
-                        .show(ui)
-                })
-                .inner
-            })
-            .inner;
+        let output = TextEdit::multiline(&mut self.source)
+            .id(editor_id)
+            .font(FontId::new(15.0, FontFamily::Monospace))
+            .desired_width(f32::INFINITY)
+            .desired_rows(line_count.max(26))
+            .lock_focus(true)
+            .layouter(&mut layouter)
+            .show(ui);
 
         if output.response.changed() {
             self.build_exe = None;
@@ -487,52 +471,6 @@ impl AnadilIde {
         ui.ctx()
             .memory_mut(|memory| memory.request_focus(editor_id));
         self.status = format!("Diagnostic konumu: satir {line}, sutun {column}");
-    }
-
-    fn line_numbers_ui(
-        &self,
-        ui: &mut egui::Ui,
-        line_count: usize,
-        active_line: Option<usize>,
-        scroll_line: Option<usize>,
-    ) {
-        let digits = line_count.to_string().len().max(2);
-        let width = (digits as f32 * 8.0) + 18.0;
-
-        egui::Frame::new()
-            .fill(Color32::from_rgb(30, 30, 30))
-            .inner_margin(egui::Margin::symmetric(6, 4))
-            .show(ui, |ui| {
-                ui.set_min_width(width);
-                for line in 1..=line_count {
-                    let selected = active_line == Some(line);
-                    let color = if selected {
-                        Color32::from_rgb(220, 224, 229)
-                    } else {
-                        Color32::from_rgb(110, 116, 126)
-                    };
-                    let fill = if selected {
-                        Color32::from_rgb(55, 65, 81)
-                    } else {
-                        Color32::TRANSPARENT
-                    };
-
-                    let response = egui::Frame::new().fill(fill).show(ui, |ui| {
-                        ui.set_min_width(width);
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            ui.label(
-                                RichText::new(line.to_string())
-                                    .font(FontId::new(15.0, FontFamily::Monospace))
-                                    .color(color),
-                            );
-                        });
-                    });
-
-                    if scroll_line == Some(line) {
-                        response.response.scroll_to_me(Some(egui::Align::Center));
-                    }
-                }
-            });
     }
 
     fn bottom_panel(&mut self, ui: &mut egui::Ui) {
@@ -653,14 +591,6 @@ impl AnadilIde {
 
         self.selected_diagnostic = Some(index);
         self.pending_editor_jump = Some((span.line, span.column));
-        self.pending_editor_scroll_line = Some(span.line);
-    }
-
-    fn active_diagnostic_line(&self) -> Option<usize> {
-        self.selected_diagnostic
-            .and_then(|index| self.diagnostics.get(index))
-            .and_then(|diagnostic| diagnostic.span)
-            .map(|span| span.line)
     }
 
     fn check(&mut self) {
@@ -685,9 +615,9 @@ impl AnadilIde {
         match run_source_diagnostic(&self.source) {
             Ok(output) => {
                 self.output = if output.is_empty() {
-                    "Program cikti uretmedi.".to_string()
+                    "Interpret modu\n\nProgram cikti uretmedi.".to_string()
                 } else {
-                    output
+                    format!("Interpret modu\n\nstdout:\n{}", output.trim_end())
                 };
                 self.diagnostics.clear();
                 self.status = "Calistirildi".to_string();
@@ -722,10 +652,13 @@ impl AnadilIde {
             return;
         };
 
+        self.build_output = format_build_started(&path);
+        self.selected_tab = Tab::Build;
+
         match run_native_build(&path) {
-            Ok(exe) => {
-                self.build_exe = Some(exe.clone());
-                self.build_output = format!("Native executable uretildi:\n{exe}");
+            Ok(build) => {
+                self.build_exe = Some(build.exe.clone());
+                self.build_output = format_build_success(&path, &build);
                 self.status = "EXE derlendi".to_string();
                 self.selected_tab = Tab::Build;
             }
@@ -740,7 +673,7 @@ impl AnadilIde {
 
     fn run_built_exe(&mut self) {
         let Some(exe) = self.build_exe.clone() else {
-            self.build_output = "Once EXE Derle ile native executable uret.".to_string();
+            self.build_output = "EXE calistir\n\nCalistirilacak executable yok.\nOnce `EXE Derle` veya `Compile et` ile native executable uret.".to_string();
             self.status = "Calistirilacak EXE yok".to_string();
             self.selected_tab = Tab::Build;
             return;
@@ -841,10 +774,13 @@ impl AnadilIde {
     fn prepare_build_source_path(&mut self) -> Option<PathBuf> {
         if self.current_path_is_placeholder() || self.is_dirty() {
             self.status = "Build icin once kaydediliyor".to_string();
+            self.build_output =
+                "Build hazirligi\n\nKaynak dosya kayitli degil veya degisti. Build oncesi kaydediliyor.".to_string();
+            self.selected_tab = Tab::Build;
             if !self.save_current_path() {
                 self.status = "Build iptal edildi".to_string();
                 self.build_output =
-                    "Build icin dosya kaydedilemedi veya islem iptal edildi.".to_string();
+                    "Build iptal edildi\n\nKaynak dosya kaydedilemedi veya kaydetme islemi iptal edildi.\nDerleme icin once `.ana` dosyasini kaydetmelisin.".to_string();
                 self.selected_tab = Tab::Build;
                 return None;
             }
@@ -1534,7 +1470,15 @@ fn collect_project_files(dir: &Path, files: &mut Vec<PathBuf>) {
     }
 }
 
-fn run_native_build(path: &Path) -> Result<String, String> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct NativeBuildOutput {
+    exe: String,
+    stdout: String,
+    stderr: String,
+}
+
+fn run_native_build(path: &Path) -> Result<NativeBuildOutput, String> {
+    let command = format!("cargo run --bin anadil -- derle --json {}", path.display());
     let output = Command::new("cargo")
         .arg("run")
         .arg("--bin")
@@ -1544,19 +1488,43 @@ fn run_native_build(path: &Path) -> Result<String, String> {
         .arg("--json")
         .arg(path)
         .output()
-        .map_err(|error| format!("Native build komutu calistirilamadi: {error}"))?;
+        .map_err(|error| {
+            format!(
+                "Native build baslatilamadi\n\nKomut:\n{command}\n\nHata:\n{error}\n\nNe yapmali:\nCargo veya Rust toolchain PATH icinde mi kontrol et."
+            )
+        })?;
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
     if !output.status.success() {
-        if let Some(message) = extract_json_string(&stdout, "message") {
-            return Err(message);
-        }
-        return Err(stderr.trim().to_string());
+        let message = extract_json_string(&stdout, "message")
+            .or_else(|| non_empty_trimmed(&stderr))
+            .or_else(|| non_empty_trimmed(&stdout))
+            .unwrap_or_else(|| {
+                format!(
+                    "Build process basarisiz bitti: {}",
+                    exit_code_label(&output.status)
+                )
+            });
+
+        return Err(format_native_build_error(
+            path, &command, &message, &stdout, &stderr,
+        ));
     }
 
-    extract_json_string(&stdout, "exe").ok_or_else(|| stdout.trim().to_string())
+    let Some(exe) = extract_json_string(&stdout, "exe") else {
+        let message = "Build basarili gorundu ama JSON ciktisinda `exe` yolu bulunamadi.";
+        return Err(format_native_build_error(
+            path, &command, message, &stdout, &stderr,
+        ));
+    };
+
+    Ok(NativeBuildOutput {
+        exe,
+        stdout,
+        stderr,
+    })
 }
 
 fn run_executable(path: &Path) -> Result<std::process::Output, std::io::Error> {
@@ -1574,7 +1542,7 @@ fn format_exe_run_output(path: &Path, output: &std::process::Output) -> String {
     let stderr = stderr.trim_end();
 
     format!(
-        "Native executable calistirildi:\n{}\n\nExit: {}\n\nstdout:\n{}\n\nstderr:\n{}",
+        "EXE calistir\n\nDosya:\n{}\n\nExit:\n{}\n\nstdout:\n{}\n\nstderr:\n{}",
         path.display(),
         exit_code_label(&output.status),
         empty_label(stdout),
@@ -1595,12 +1563,73 @@ fn format_comparison_output(
     };
 
     format!(
-        "Interpreter/native karsilastirma: {result}\n\nExit: {}\n\nInterpreter stdout:\n{}\n\nNative stdout:\n{}\n\nNative stderr:\n{}",
+        "Karsilastir\n\nSonuc:\n{result}\n\nNative exit:\n{}\n\nInterpreter stdout:\n{}\n\nNative stdout:\n{}\n\nNative stderr:\n{}",
         exit_code_label(status),
         empty_label(interpreter),
         empty_label(native),
         empty_label(stderr),
     )
+}
+
+fn format_build_started(path: &Path) -> String {
+    format!(
+        "EXE Derle\n\nKaynak:\n{}\n\nDurum:\nDerleme baslatildi...",
+        path.display()
+    )
+}
+
+fn format_build_success(path: &Path, build: &NativeBuildOutput) -> String {
+    format!(
+        "EXE Derle\n\nDurum:\nBasarili\n\nKaynak:\n{}\n\nExecutable:\n{}\n\nDerleyici stdout:\n{}\n\nDerleyici stderr:\n{}",
+        path.display(),
+        build.exe,
+        empty_label(build.stdout.trim_end()),
+        empty_label(build.stderr.trim_end()),
+    )
+}
+
+fn format_native_build_error(
+    path: &Path,
+    command: &str,
+    message: &str,
+    stdout: &str,
+    stderr: &str,
+) -> String {
+    format!(
+        "EXE Derle\n\nDurum:\nBasarisiz\n\nKaynak:\n{}\n\nKomut:\n{}\n\nHata:\n{}\n\nNe yapmali:\n{}\n\nDerleyici stdout:\n{}\n\nDerleyici stderr:\n{}",
+        path.display(),
+        command,
+        empty_label(message.trim()),
+        native_build_advice(message),
+        empty_label(stdout.trim_end()),
+        empty_label(stderr.trim_end()),
+    )
+}
+
+fn native_build_advice(message: &str) -> &'static str {
+    let lower = message.to_ascii_lowercase();
+    if lower.contains("ml64") || lower.contains("masm") || lower.contains("link.exe") {
+        "Visual Studio Build Tools C++ araclari kurulu ve erisilebilir olmali. Gerekirse Build Tools kurulumunda C++ build tools secenegini kontrol et."
+    } else if lower.contains("cannot open file")
+        || lower.contains("dosya")
+        || lower.contains("path")
+        || lower.contains("masa")
+    {
+        "Kaynak yolunda bosluk/Turkce karakter/OneDrive etkisi olabilir. Dosyayi proje klasoru icinde kaydedip tekrar dene; hata surerse Build sekmesindeki ham stdout/stderr'i kullan."
+    } else if lower.contains("entry") || lower.contains("ana") {
+        "Programda `Ana()` giris noktasi ve semantic hatalarini kontrol et."
+    } else {
+        "Diagnostics sekmesini ve Build sekmesindeki stdout/stderr detaylarini kontrol et. Mesaj toolchain kaynakliysa Visual Studio Build Tools kurulumu ilk supheli."
+    }
+}
+
+fn non_empty_trimmed(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
+    }
 }
 
 fn empty_label(text: &str) -> &str {
@@ -1820,8 +1849,9 @@ Ana() {
 #[cfg(test)]
 mod tests {
     use super::{
-        char_index_for_line_column, editor_line_count, format_ide_state, parent_hint,
-        parse_ide_state, project_child_path, relative_component_depth, sibling_file_path,
+        char_index_for_line_column, editor_line_count, format_build_started, format_ide_state,
+        format_native_build_error, native_build_advice, parent_hint, parse_ide_state,
+        project_child_path, relative_component_depth, sibling_file_path,
     };
     use std::path::Path;
 
@@ -1885,5 +1915,31 @@ mod tests {
         assert_eq!(relative_component_depth(r"src\main.ana"), 2);
         assert_eq!(parent_hint(r"src\main.ana"), "(src)");
         assert_eq!(parent_hint("main.ana"), "");
+    }
+
+    #[test]
+    fn formats_build_messages_with_source_and_advice() {
+        let path = Path::new("examples").join("topla.ana");
+        let started = format_build_started(&path);
+        assert!(started.contains("EXE Derle"));
+        assert!(started.contains("examples"));
+
+        let error = format_native_build_error(
+            &path,
+            "cargo run --bin anadil -- derle --json examples\\topla.ana",
+            "MASM : fatal error A1000: cannot open file",
+            "",
+            "stderr",
+        );
+        assert!(error.contains("Durum:\nBasarisiz"));
+        assert!(error.contains("Ne yapmali"));
+        assert!(error.contains("stdout"));
+    }
+
+    #[test]
+    fn gives_specific_native_build_advice() {
+        assert!(native_build_advice("ml64 not found").contains("Visual Studio Build Tools"));
+        assert!(native_build_advice("cannot open file").contains("Kaynak yolunda"));
+        assert!(native_build_advice("missing Ana entry").contains("Ana()"));
     }
 }

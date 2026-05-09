@@ -56,12 +56,13 @@ Proje akisi:
 - Kaydedilmemis degisiklik varken dosya degistirme veya yeni dosya acma onay ister.
 - Ust bardaki mod secici `Interpret et`, `Compile et` ve `Karsilastir` modlarini tasir; `Yap` veya `F5` secili modu calistirir.
 - `EXE Derle`, build oncesi aktif dosyayi kaydeder ve executable'i kaynak dosyanin yanina uretir.
+- Build sekmesi derlenen kaynak dosyayi, uretilen `.exe` yolunu, exit/stdout/stderr detaylarini ve toolchain hatalarinda kisa cozum notunu gosterir.
 - `EXE Calistir`, son uretilen executable'i calistirir ve stdout/stderr/exit code bilgisini `Build` sekmesine yazar.
 - `Karsilastir`, interpreter ve native executable stdout sonuclarini ayni panelde karsilastirir.
 - Native executable, Explorer'dan cift tiklaninca terminal penceresi kapanmadan once Enter bekler.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri bulunur.
 - `Diagnostics` sekmesindeki satir/sutun bilgili hata kartlarina tiklaninca editor ilgili konuma odaklanir.
-- Native editor ve explorer VS Code benzeri koyu tema, ince resize ayiricilari, satir numarasi gutter'i ve aktif diagnostic satiri vurgusu kullanir.
+- Native editor ve explorer VS Code benzeri koyu tema ve ince resize ayiricilari kullanir; diagnostic kartina tiklaninca ilgili kod konumuna odaklanir.
 
 ## Ortak Ozellikler
 
