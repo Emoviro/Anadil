@@ -724,14 +724,14 @@ fn run_repl() {
 
 fn print_repl_help() {
     println!("Ornekler:");
-    println!("  yazdir(10);");
-    println!("  yazdir(10 + -3);");
+    println!("  yazdır(10);");
+    println!("  yazdır(10 + -3);");
     println!("  x: sayı = 5;");
     println!("  Kare(x: sayı) -> sayı {{");
     println!("      dön x * x;");
     println!("  }}");
-    println!("  yazdir(Kare(5));");
-    println!("  Ana() {{ yazdir(10); }}");
+    println!("  yazdır(Kare(5));");
+    println!("  Ana() {{ yazdır(10); }}");
     println!();
     println!("Fonksiyon tanimlari oturum boyunca saklanir.");
     println!("Degiskenler satirlar arasinda saklanmaz.");
@@ -994,16 +994,16 @@ mod tests {
     #[test]
     fn wraps_repl_statement_in_entry_point() {
         let session = super::ReplSession::new();
-        let source = session.prepare_source("yazdir(10);");
+        let source = session.prepare_source("yazdır(10);");
 
         assert!(source.contains("Ana()"));
-        assert!(source.contains("yazdir(10);"));
+        assert!(source.contains("yazdır(10);"));
     }
 
     #[test]
     fn keeps_repl_full_program_unchanged() {
         let session = super::ReplSession::new();
-        let source = "Ana() { yazdir(10); }";
+        let source = "Ana() { yazdır(10); }";
 
         assert_eq!(session.prepare_source(source), format!("{source}\n"));
     }
@@ -1031,7 +1031,7 @@ Kare(x: sayı) -> sayı {
         );
         assert_eq!(
             session
-                .execute("yazdir(Kare(5));")
+                .execute("yazdır(Kare(5));")
                 .expect("call should run"),
             super::ReplOutcome::Output("25".to_string())
         );

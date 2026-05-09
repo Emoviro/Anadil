@@ -17,7 +17,7 @@ durum = doğru;
 5. İfade Sonlandırma
 Her ifade noktalı virgül ile biter.
 x: sayı = 10;
-yazdir(x);
+yazdır(x);
 x = x + 1;
 6. Aritmetik Operatörler
 +
@@ -33,14 +33,14 @@ x = x + 1;
 >=
 8. Koşul Yapısı
 eğer (x < y) {
-    yazdir(x);
+    yazdır(x);
 } değilse {
-    yazdir(y);
+    yazdır(y);
 }
 9. Döngü Yapısı
 Sonsuz döngü:
 döngü {
-    yazdir(1);
+    yazdır(1);
 }
 Koşullu döngü:
 döngü (x < 10) {
@@ -48,7 +48,7 @@ döngü (x < 10) {
 }
 Sayaçlı döngü:
 döngü (i: sayı = 0; i < 10; i = i + 1) {
-    yazdir(i);
+    yazdır(i);
 }
 10. Döngü Kontrol İfadeleri
 kır
@@ -62,7 +62,7 @@ döngü (i: sayı = 0; i < 10; i = i + 1) {
     eğer (i == 5) {
         devam;
     }
-    yazdir(i);
+    yazdır(i);
 }
 11. Fonksiyon Tanımı
 Fonksiyon tanımlamak için özel bir anahtar kelime kullanılmaz.
@@ -80,15 +80,15 @@ Topla(a: sayı, b: sayı) -> sayı {
     dön a + b;
 }
 YazdirDeger(x: sayı) {
-    yazdir(x);
+    yazdır(x);
 }
 13. Program Giriş Noktası
 Her program bir Ana() fonksiyonu içermelidir. Program çalıştırıldığında yürütme Ana() fonksiyonundan başlar.
 Ana() {
-    yazdir(10);
+    yazdır(10);
 }
 14. Yerleşik Fonksiyon
-yazdir(değer);
+yazdır(değer);
 15. Örnek Program
 Topla(a: sayı, b: sayı) -> sayı {
     dön a + b;
@@ -106,9 +106,9 @@ Ana() {
     sonuc: sayı = Topla(x, y);
 
     eğer (BuyukMu(sonuc)) {
-        yazdir(sonuc);
+        yazdır(sonuc);
     } değilse {
-        yazdir(0);
+        yazdır(0);
     }
 
 }

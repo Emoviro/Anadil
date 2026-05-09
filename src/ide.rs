@@ -808,7 +808,7 @@ const IDE_HTML: &str = r#"<!doctype html>
 
 Ana() {
     sonuc: sayı = Topla(10, 20);
-    yazdir(sonuc);
+    yazdır(sonuc);
 }
 `;
 
@@ -1055,7 +1055,7 @@ Ana() {
         if (['eğer', 'değilse', 'döngü', 'kır', 'devam', 'dön', 'doğru', 'yanlış', 'eÄŸer', 'deÄŸilse', 'dÃ¶ngÃ¼', 'kÄ±r', 'dÃ¶n', 'doÄŸru', 'yanlÄ±ÅŸ'].includes(token)) {
           return `<span class="tok-keyword">${escapeHtml(token)}</span>`;
         }
-        if (['Ana', 'yazdir'].includes(token)) return `<span class="tok-builtin">${escapeHtml(token)}</span>`;
+        if (['Ana', 'yazdır', 'yazdir'].includes(token)) return `<span class="tok-builtin">${escapeHtml(token)}</span>`;
         if (/^[A-ZÇĞİÖŞÜ]/.test(token)) return `<span class="tok-function">${escapeHtml(token)}</span>`;
         if (/^[+\-*\/=<>:;,(){}-]+$/.test(token)) return `<span class="tok-operator">${escapeHtml(token)}</span>`;
         return escapeHtml(token);

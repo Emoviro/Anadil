@@ -17,7 +17,7 @@ Ana() {
     x: sayı = 10;
     y: sayı = 20;
     sonuc: sayı = Topla(x, y);
-    yazdir(sonuc);
+    yazdır(sonuc);
 }
 "#;
 

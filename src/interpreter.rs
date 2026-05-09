@@ -293,7 +293,7 @@ impl<'a> Interpreter<'a> {
                 let value = values
                     .into_iter()
                     .next()
-                    .ok_or_else(|| RuntimeError::at(span, "`yazdir` bir arguman bekler"))?;
+                    .ok_or_else(|| RuntimeError::at(span, "`yazdır` bir arguman bekler"))?;
                 self.output.push(value.render());
                 Ok(None)
             }
@@ -406,7 +406,7 @@ Topla(a: sayı, b: sayı) -> sayı {
 
 Ana() {
     sonuc: sayı = Topla(10, 20);
-    yazdir(sonuc);
+    yazdır(sonuc);
 }
 "#;
 
@@ -424,7 +424,7 @@ Ana() {
         eğer (i == 4) {
             kır;
         }
-        yazdir(i);
+        yazdır(i);
     }
 }
 "#;
@@ -436,7 +436,7 @@ Ana() {
     fn reports_division_by_zero() {
         let source = r#"
 Ana() {
-    yazdir(10 / 0);
+    yazdır(10 / 0);
 }
 "#;
 
@@ -453,12 +453,12 @@ BuyukMu(x: sayı) -> mantık {
 
 Ana() {
     eğer (BuyukMu(12)) {
-        yazdir(doğru);
+        yazdır(doğru);
     } değilse {
-        yazdir(yanlış);
+        yazdır(yanlış);
     }
 
-    yazdir(BuyukMu(5));
+    yazdır(BuyukMu(5));
 }
 "#;
 
@@ -472,7 +472,7 @@ Ana() {
     x: sayı = 0;
 
     döngü (x < 3) {
-        yazdir(x);
+        yazdır(x);
         x = x + 1;
     }
 }
@@ -492,7 +492,7 @@ Ana() {
             kır;
         }
 
-        yazdir(x);
+        yazdır(x);
         x = x + 1;
     }
 }
@@ -509,10 +509,10 @@ Ana() {
 
     eğer (doğru) {
         x: sayı = 2;
-        yazdir(x);
+        yazdır(x);
     }
 
-    yazdir(x);
+    yazdır(x);
 }
 "#;
 
@@ -524,9 +524,9 @@ Ana() {
         let source = r#"
 Ana() {
     x: sayı = -10;
-    yazdir(x);
-    yazdir(10 + -3);
-    yazdir(-x);
+    yazdır(x);
+    yazdır(10 + -3);
+    yazdır(-x);
 }
 "#;
 
@@ -538,9 +538,9 @@ Ana() {
         let source = r#"
 Ana() {
     mesaj: metin = "Merhaba";
-    yazdir(mesaj);
-    yazdir(mesaj == "Merhaba");
-    yazdir(mesaj != "Baska");
+    yazdır(mesaj);
+    yazdır(mesaj == "Merhaba");
+    yazdır(mesaj != "Baska");
 }
 "#;
 

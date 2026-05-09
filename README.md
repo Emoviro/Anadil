@@ -19,7 +19,7 @@ Yapilanlar:
 - `kır`, `devam`, `dön`
 - Fonksiyon tanimlama ve fonksiyon cagirma
 - `Ana()` giris noktasi
-- `yazdir` yerlesik fonksiyonu
+- `yazdır` yerlesik fonksiyonu (`yazdir` ASCII alias'i da desteklenir)
 - `//` satir yorumlari
 - CLI komutlari: `calistir`, `kontrol`, `ast`, `typed`, `asm`, `asm-yaz`, `derle`, `ide`, `ornekler`, `surum`, `yardim`
 - Etkilesimli REPL komutu: `repl`
@@ -163,15 +163,15 @@ cargo run -- repl
 REPL icinde:
 
 ```text
-> yazdir(10);
+> yazdır(10);
 10
-> yazdir(10 + -3);
+> yazdır(10 + -3);
 7
 > Kare(x: sayı) -> sayı {
 |     dön x * x;
 | }
 Fonksiyon kaydedildi.
-> yazdir(Kare(5));
+> yazdır(Kare(5));
 25
 > :cik
 ```
@@ -242,7 +242,7 @@ Topla(a: sayı, b: sayı) -> sayı {
 
 Ana() {
     sonuc: sayı = Topla(10, 20);
-    yazdir(sonuc);
+    yazdır(sonuc);
 }
 ```
 
@@ -286,7 +286,7 @@ Desteklenenler:
 - Sonsuz, kosullu ve sayacli donguler
 - `kir`, `devam`, `don`
 - Fonksiyon tanimlama ve fonksiyon cagirma
-- `yazdir`
+- `yazdır` (`yazdir` alias'i desteklenir)
 
 Sinirlar:
 

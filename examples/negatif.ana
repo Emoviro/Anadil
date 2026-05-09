@@ -2,7 +2,7 @@
 Ana() {
     x: sayı = -10;
 
-    yazdir(x);
-    yazdir(10 + -3);
-    yazdir(-x);
+    yazdır(x);
+    yazdır(10 + -3);
+    yazdır(-x);
 }

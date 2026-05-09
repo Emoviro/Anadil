@@ -201,9 +201,9 @@ str_0 db "Merhaba", 0
 lea rax, str_0
 ```
 
-## Yazdir Runtime Modeli
+## yazdır Runtime Modeli
 
-`yazdir` native backend'de C runtime `printf` fonksiyonuna dusurulur.
+`yazdır` native backend'de C runtime `printf` fonksiyonuna dusurulur. `yazdir` ASCII alias'i da ayni builtin'e baglanir.
 
 Kullanilan formatlar:
 

@@ -9,6 +9,6 @@ Ana() {
             kır;
         }
 
-        yazdir(i);
+        yazdır(i);
     }
 }

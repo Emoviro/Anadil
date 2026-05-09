@@ -73,7 +73,7 @@ mod tests {
     fn parses_source_through_library_api() {
         let source = r#"
 Ana() {
-    yazdir(10);
+    yazdır(10);
 }
 "#;
 
@@ -85,7 +85,7 @@ Ana() {
     fn compiles_source_through_library_api() {
         let source = r#"
 Ana() {
-    yazdir(10);
+    yazdır(10);
 }
 "#;
 
@@ -97,7 +97,7 @@ Ana() {
     fn runs_source_through_library_api() {
         let source = r#"
 Ana() {
-    yazdir(10 + 20);
+    yazdır(10 + 20);
 }
 "#;
 

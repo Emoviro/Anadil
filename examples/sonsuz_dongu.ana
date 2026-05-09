@@ -6,7 +6,7 @@ Ana() {
             kır;
         }
 
-        yazdir(x);
+        yazdır(x);
         x = x + 1;
     }
 }

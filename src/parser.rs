@@ -764,7 +764,7 @@ Ana() {
     x: sayı = 10;
     y: sayı = 20;
     sonuc: sayı = Topla(x, y);
-    yazdir(sonuc);
+    yazdır(sonuc);
 }
 "#,
         );
@@ -794,7 +794,7 @@ Ana() {
         eğer (i == 5) {
             devam;
         }
-        yazdir(i);
+        yazdır(i);
     }
 }
 "#,
@@ -818,7 +818,7 @@ Ana() {
             r#"
 Ana() {
     x: sayı = -10;
-    yazdir(10 + -x);
+    yazdır(10 + -x);
 }
 "#,
         );

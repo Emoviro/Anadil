@@ -159,7 +159,7 @@ pub enum BuiltinFunction {
 impl BuiltinFunction {
     pub fn from_name(name: &str) -> Option<Self> {
         match name {
-            "yazdir" => Some(Self::Yazdir),
+            "yazdır" | "yazdir" => Some(Self::Yazdir),
             _ => None,
         }
     }

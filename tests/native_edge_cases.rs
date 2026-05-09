@@ -14,7 +14,7 @@ Topla4(a: say\u{0131}, b: say\u{0131}, c: say\u{0131}, d: say\u{0131}) -> say\u{
 }\n\
 \n\
 Ana() {\n\
-    yazdir(Topla4(1, 2, 3, 4));\n\
+    yazdır(Topla4(1, 2, 3, 4));\n\
 }\n",
     );
 }
@@ -27,8 +27,8 @@ fn native_string_equality_and_inequality_match_interpreter() {
 Ana() {\n\
     a: metin = \"Merhaba\";\n\
     b: metin = \"Dunya\";\n\
-    yazdir(a == \"Merhaba\");\n\
-    yazdir(a != b);\n\
+    yazdır(a == \"Merhaba\");\n\
+    yazdır(a != b);\n\
 }\n",
     );
 }
@@ -50,7 +50,7 @@ Ana() {\n\
             toplam = toplam + i;\n\
         }\n\
     }\n\
-    yazdir(toplam);\n\
+    yazdır(toplam);\n\
 }\n",
     );
 }
@@ -64,9 +64,9 @@ Ana() {\n\
     x: say\u{0131} = 7;\n\
     e\u{011f}er (do\u{011f}ru) {\n\
         x: say\u{0131} = 11;\n\
-        yazdir(x);\n\
+        yazdır(x);\n\
     }\n\
-    yazdir(x);\n\
+    yazdır(x);\n\
 }\n",
     );
 }
@@ -81,7 +81,7 @@ Besli(a: say\u{0131}, b: say\u{0131}, c: say\u{0131}, d: say\u{0131}, e: say\u{0
 }\n\
 \n\
 Ana() {\n\
-    yazdir(Besli(1, 2, 3, 4, 5));\n\
+    yazdır(Besli(1, 2, 3, 4, 5));\n\
 }\n",
     );
 }
@@ -96,7 +96,7 @@ Topla7(a: say\u{0131}, b: say\u{0131}, c: say\u{0131}, d: say\u{0131}, e: say\u{
 }\n\
 \n\
 Ana() {\n\
-    yazdir(Topla7(1, 2, 3, 4, 5, 6, 7));\n\
+    yazdır(Topla7(1, 2, 3, 4, 5, 6, 7));\n\
 }\n",
     );
 }
@@ -107,7 +107,7 @@ fn native_nested_calls_preserve_arguments_and_order() {
         "nested_calls_preserve_args",
         "\
 Etiket(x: say\u{0131}) -> say\u{0131} {\n\
-    yazdir(x);\n\
+    yazdır(x);\n\
     d\u{00f6}n x;\n\
 }\n\
 \n\
@@ -116,8 +116,8 @@ Topla3(a: say\u{0131}, b: say\u{0131}, c: say\u{0131}) -> say\u{0131} {\n\
 }\n\
 \n\
 Ana() {\n\
-    yazdir(Topla3(Etiket(1), Etiket(2), Etiket(3)));\n\
-    yazdir(10 + Etiket(4));\n\
+    yazdır(Topla3(Etiket(1), Etiket(2), Etiket(3)));\n\
+    yazdır(10 + Etiket(4));\n\
 }\n",
     );
 }
@@ -128,13 +128,13 @@ fn native_numeric_comparisons_match_interpreter() {
         "numeric_comparisons",
         "\
 Ana() {\n\
-    yazdir(1 < 2);\n\
-    yazdir(2 < 1);\n\
-    yazdir(2 <= 2);\n\
-    yazdir(3 > 2);\n\
-    yazdir(2 >= 3);\n\
-    yazdir(4 == 4);\n\
-    yazdir(4 != 5);\n\
+    yazdır(1 < 2);\n\
+    yazdır(2 < 1);\n\
+    yazdır(2 <= 2);\n\
+    yazdır(3 > 2);\n\
+    yazdır(2 >= 3);\n\
+    yazdır(4 == 4);\n\
+    yazdır(4 != 5);\n\
 }\n",
     );
 }
@@ -148,7 +148,7 @@ fn native_division_by_zero_reports_runtime_error() {
 
     let source = "\
 Ana() {\n\
-    yazdir(10 / 0);\n\
+    yazdır(10 / 0);\n\
 }\n";
 
     let interpreter_error = run_source(source).expect_err("interpreter should reject zero divide");

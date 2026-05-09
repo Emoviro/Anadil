@@ -5,5 +5,5 @@ Topla(a: sayı, b: sayı) -> sayı {
 
 Ana() {
     sonuc: sayı = Topla(10, 20);
-    yazdir(sonuc);
+    yazdır(sonuc);
 }

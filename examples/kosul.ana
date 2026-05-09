@@ -6,8 +6,8 @@ Ana() {
     sonuc: sayı = 15;
 
     eğer (BuyukMu(sonuc)) {
-        yazdir(sonuc);
+        yazdır(sonuc);
     } değilse {
-        yazdir(0);
+        yazdır(0);
     }
 }

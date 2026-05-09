@@ -1,6 +1,6 @@
 Ana() {
     mesaj: metin = "Merhaba Anadil";
-    yazdir(mesaj);
-    yazdir("Codex");
-    yazdir(mesaj == "Merhaba Anadil");
+    yazdır(mesaj);
+    yazdır("Codex");
+    yazdır(mesaj == "Merhaba Anadil");
 }

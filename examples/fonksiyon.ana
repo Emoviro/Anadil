@@ -8,5 +8,5 @@ Topla(a: sayı, b: sayı) -> sayı {
 
 Ana() {
     sonuc: sayı = Topla(Kare(3), Kare(4));
-    yazdir(sonuc);
+    yazdır(sonuc);
 }

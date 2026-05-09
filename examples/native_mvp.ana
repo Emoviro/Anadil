@@ -22,8 +22,8 @@ Ana() {
     }
 
     mesaj: metin = "native";
-    yazdir(toplam);
-    yazdir(Topla5(1, 2, 3, 4, 5));
-    yazdir(PozitifMi(toplam));
-    yazdir(mesaj);
+    yazdır(toplam);
+    yazdır(Topla5(1, 2, 3, 4, 5));
+    yazdır(PozitifMi(toplam));
+    yazdır(mesaj);
 }

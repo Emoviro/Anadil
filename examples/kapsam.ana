@@ -3,8 +3,8 @@ Ana() {
 
     eğer (doğru) {
         x: sayı = 2;
-        yazdir(x);
+        yazdır(x);
     }
 
-    yazdir(x);
+    yazdır(x);
 }

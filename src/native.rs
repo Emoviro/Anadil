@@ -379,7 +379,7 @@ impl<'a> NativeEmitter<'a> {
             CallTarget::Builtin(BuiltinFunction::Yazdir) => {
                 let arg = args
                     .first()
-                    .ok_or("`yazdir` native codegen icin bir arguman bekler")?;
+                    .ok_or("`yazdır` native codegen icin bir arguman bekler")?;
                 self.emit_yazdir(arg, out)
             }
             CallTarget::Function { function_id, name } => {
@@ -704,7 +704,7 @@ Topla(a: say\u{0131}, b: say\u{0131}) -> say\u{0131} {\n\
 
 Ana() {
     sonuc: say\u{0131} = Topla(10, 20);\n\
-    yazdir(sonuc);\n\
+    yazdır(sonuc);\n\
 }
 ";
 

@@ -663,11 +663,11 @@ impl Analyzer {
             });
         }
 
-        if callee == "yazdir" {
+        if BuiltinFunction::from_name(callee).is_some() {
             if arg_types.len() != 1 {
                 return Err(SemanticError::at(
                     call_span,
-                    "`yazdir` yerleşik fonksiyonu tam olarak 1 argüman bekler",
+                    "`yazdır` yerleşik fonksiyonu tam olarak 1 argüman bekler",
                 ));
             }
 
@@ -1332,7 +1332,7 @@ impl Analyzer {
                     if typed_args.len() != 1 {
                         return Err(SemanticError::at(
                             call_span,
-                            "`yazdir` yerleşik fonksiyonu tam olarak 1 argüman bekler",
+                            "`yazdır` yerleşik fonksiyonu tam olarak 1 argüman bekler",
                         ));
                     }
                 }
@@ -1383,7 +1383,7 @@ Topla(a: sayı, b: sayı) -> sayı {
 
 Ana() {
     sonuc: sayı = Topla(1, 2);
-    yazdir(sonuc);
+    yazdır(sonuc);
 }
 "#;
 
@@ -1420,6 +1420,17 @@ Ana() {
     }
 
     #[test]
+    fn accepts_ascii_alias_for_yazdir_builtin() {
+        let source = r#"
+Ana() {
+    yazdir(10);
+}
+"#;
+
+        analyze(source).expect("ascii yazdir alias should remain valid");
+    }
+
+    #[test]
     fn types_function_call_result() {
         let source = r#"
 Topla(a: sayı, b: sayı) -> sayı {
@@ -1428,7 +1439,7 @@ Topla(a: sayı, b: sayı) -> sayı {
 
 Ana() {
     sonuc: sayı = Topla(1, 2);
-    yazdir(sonuc);
+    yazdır(sonuc);
 }
 "#;
 
@@ -1452,11 +1463,11 @@ Ana() {
         let source = "\
 Topla(a: say\u{131}, b: say\u{131}) -> say\u{131} {\n\
     d\u{f6}n a + b;\n\
-    yazdir(a);\n\
+    yazdır(a);\n\
 }\n\
 \n\
 Ana() {\n\
-    yazdir(1);\n\
+    yazdır(1);\n\
 }\n";
 
         let error = analyze(source).expect_err("semantic analysis should fail");
@@ -1470,7 +1481,7 @@ Ana() {\n\
 Ana() {\n\
     d\u{f6}ng\u{fc} (do\u{11f}ru) {\n\
         devam;\n\
-        yazdir(1);\n\
+        yazdır(1);\n\
     }\n\
 }\n";
 
@@ -1494,7 +1505,7 @@ Ana() -> sayı {
     #[test]
     fn rejects_reserved_builtin_name_as_function() {
         let source = r#"
-yazdir(x: sayı) {
+yazdır(x: sayı) {
 }
 
 Ana() {
@@ -1509,7 +1520,7 @@ Ana() {
     fn rejects_using_void_builtin_as_value() {
         let source = r#"
 Ana() {
-    sonuc: sayı = yazdir(1);
+    sonuc: sayı = yazdır(1);
 }
 "#;
 
@@ -1530,7 +1541,7 @@ Ana() {
         eğer (i == 1) {
             devam;
         }
-        yazdir(sonuc);
+        yazdır(sonuc);
     }
 }
 "#;
@@ -1551,7 +1562,7 @@ Karar(x: mantık) -> sayı {
 
 Ana() {
     sonuc: sayı = Karar(doğru);
-    yazdir(sonuc);
+    yazdır(sonuc);
 }
 "#;
 
@@ -1632,7 +1643,7 @@ Karar(x: mantık) -> sayı {
 }
 
 Ana() {
-    yazdir(1);
+    yazdır(1);
 }
 "#;
 
@@ -1645,7 +1656,7 @@ Ana() {
         let source = r#"
 Ana() {
     x: sayı = -10;
-    yazdir(10 + -x);
+    yazdır(10 + -x);
 }
 "#;
 
@@ -1656,7 +1667,7 @@ Ana() {
     fn rejects_unary_minus_for_bool() {
         let source = r#"
 Ana() {
-    yazdir(-doğru);
+    yazdır(-doğru);
 }
 "#;
 

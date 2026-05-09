@@ -8,7 +8,7 @@ Her program parametresiz bir `Ana()` fonksiyonu icermelidir.
 
 ```ana
 Ana() {
-    yazdir(10);
+    yazdır(10);
 }
 ```
 
@@ -56,8 +56,8 @@ Unary eksi sayilar icin gecerlidir:
 
 ```ana
 x: sayı = -10;
-yazdir(-x);
-yazdir(10 + -3);
+yazdır(-x);
+yazdır(10 + -3);
 ```
 
 ## Yorum Satirlari
@@ -66,7 +66,7 @@ yazdir(10 + -3);
 
 ```ana
 // Bu satir calistirilmaz.
-yazdir(10);
+yazdır(10);
 ```
 
 ## Aritmetik Operatorler
@@ -98,7 +98,7 @@ sonuc: sayı = (10 + 20) * 2;
 Karsilastirmalar `mantık` degeri uretir.
 
 ```ana
-yazdir(10 > 5);
+yazdır(10 > 5);
 ```
 
 ## Kosul
@@ -107,9 +107,9 @@ Kosul parantez icinde yazilir.
 
 ```ana
 eğer (x > 10) {
-    yazdir(x);
+    yazdır(x);
 } değilse {
-    yazdir(0);
+    yazdır(0);
 }
 ```
 
@@ -119,7 +119,7 @@ Sonsuz dongu:
 
 ```ana
 döngü {
-    yazdir(1);
+    yazdır(1);
 }
 ```
 
@@ -135,7 +135,7 @@ Sayacli dongu:
 
 ```ana
 döngü (i: sayı = 0; i < 10; i = i + 1) {
-    yazdir(i);
+    yazdır(i);
 }
 ```
 
@@ -160,7 +160,7 @@ Dönüş tipi olmayan fonksiyon:
 
 ```ana
 YazdirDeger(x: sayı) {
-    yazdir(x);
+    yazdır(x);
 }
 ```
 
@@ -171,13 +171,13 @@ Dönüş tipi belirtilirse tum kontrol yolları deger dondurmelidir.
 Su anda tek yerlesik fonksiyon vardir:
 
 ```ana
-yazdir(deger);
+yazdır(deger);
 ```
 
-`yazdir` deger dondurmez. Bu yuzden su gecersizdir:
+`yazdır` deger dondurmez. Geriye uyumluluk icin `yazdir` ASCII alias'i da kabul edilir. Bu yuzden su gecersizdir:
 
 ```ana
-x: sayı = yazdir(10);
+x: sayı = yazdır(10);
 ```
 
 ## Hata Kontrolleri
@@ -192,7 +192,7 @@ Semantic analiz su durumlari yakalar:
 - Tanimlanmamis fonksiyon cagrisi
 - Yanlis arguman sayisi veya tipi
 - `kir` / `devam` ifadelerinin dongu disinda kullanilmasi
-- `yazdir` sonucunun deger gibi kullanilmasi
+- `yazdır` sonucunun deger gibi kullanilmasi
 
 ## Native Derleme
 

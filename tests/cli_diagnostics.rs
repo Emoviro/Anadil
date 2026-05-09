@@ -52,7 +52,7 @@ fn check_json_reports_success() {
         "valid.ana",
         "\
 Ana() {\n\
-    yazdir(10);\n\
+    yazdır(10);\n\
 }\n",
     );
 
@@ -121,8 +121,8 @@ fn run_json_reports_output() {
         "run_valid.ana",
         "\
 Ana() {\n\
-    yazdir(10);\n\
-    yazdir(20);\n\
+    yazdır(10);\n\
+    yazdır(20);\n\
 }\n",
     );
 
@@ -157,7 +157,7 @@ fn run_json_reports_runtime_error() {
         "run_division_by_zero.ana",
         "\
 Ana() {\n\
-    yazdir(10 / 0);\n\
+    yazdır(10 / 0);\n\
 }\n",
     );
 
@@ -229,7 +229,7 @@ fn build_json_reports_executable_path() {
         "build_valid.ana",
         "\
 Ana() {\n\
-    yazdir(30);\n\
+    yazdır(30);\n\
 }\n",
     );
 

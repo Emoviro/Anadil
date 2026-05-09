@@ -1812,7 +1812,7 @@ fn token_format(token: &str, background: Color32) -> TextFormat {
         return format(Color32::from_rgb(101, 199, 208), background);
     }
 
-    if matches!(token, "Ana" | "yazdir") {
+    if matches!(token, "Ana" | "yazdır" | "yazdir") {
         return format(Color32::from_rgb(166, 215, 255), background);
     }
 
@@ -1840,7 +1840,7 @@ Topla(a: sayı, b: sayı) -> sayı {
 
 Ana() {
     sonuc: sayı = Topla(10, 20);
-    yazdir(sonuc);
+    yazdır(sonuc);
 }
 "
     .to_string()
