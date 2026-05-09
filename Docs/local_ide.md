@@ -32,6 +32,8 @@ target\release\anadil-ide.exe
 
 Native IDE `eframe/egui` ile yazilir. Browser, localhost veya HTML/CSS gerektirmez.
 
+Degisikliklerden sonra hizli elle kontrol icin [Native IDE Smoke Test](ide_smoke_test.md) listesini kullan.
+
 Kisayollar:
 
 ```text
