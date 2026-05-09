@@ -122,7 +122,14 @@ struct AnadilIde {
     rename_file_name: String,
     selected_diagnostic: Option<usize>,
     pending_editor_jump: Option<(usize, usize)>,
+    left_panel_width: f32,
+    bottom_panel_height: f32,
 }
+
+const LEFT_PANEL_MIN: f32 = 220.0;
+const LEFT_PANEL_MAX: f32 = 520.0;
+const BOTTOM_PANEL_MIN: f32 = 140.0;
+const BOTTOM_PANEL_MAX: f32 = 480.0;
 
 impl Default for AnadilIde {
     fn default() -> Self {
@@ -145,6 +152,8 @@ impl Default for AnadilIde {
             rename_file_name: "adsiz.ana".to_string(),
             selected_diagnostic: None,
             pending_editor_jump: None,
+            left_panel_width: 290.0,
+            bottom_panel_height: 220.0,
         }
     }
 }
@@ -155,32 +164,39 @@ impl eframe::App for AnadilIde {
         self.handle_shortcuts(&context);
         context.send_viewport_cmd(egui::ViewportCommand::Title(self.window_title()));
 
-        // Dis CentralPanel: bare ui arka plansiz; tum alani bizim BG_EDITOR ile boyar
-        // (yoksa orta seritte unclaimed window arka plani gorunuyor).
+        // Dis CentralPanel: bare ui arka plansiz; tum alani BG_EDITOR ile boyar.
         let outer_frame = egui::Frame::new().fill(BG_EDITOR);
         egui::CentralPanel::default()
             .frame(outer_frame)
             .show_inside(ui, |ui| {
-                egui::Panel::top("anadil_top_v2")
+                egui::Panel::top("anadil_top_v3")
                     .exact_size(52.0)
                     .frame(panel_frame(BG_PANEL, 14, 6))
                     .show_inside(ui, |ui| self.top_bar(ui));
 
-                egui::Panel::left("anadil_left_v2")
-                    .resizable(true)
-                    .show_separator_line(true)
-                    .default_size(290.0)
-                    .size_range(220.0..=400.0)
+                // Sol panel: egui'nin resize'ini kullanmiyoruz, exact_size + kendi handle.
+                self.left_panel_width = self
+                    .left_panel_width
+                    .clamp(LEFT_PANEL_MIN, LEFT_PANEL_MAX);
+                egui::Panel::left("anadil_left_v3")
+                    .resizable(false)
+                    .show_separator_line(false)
+                    .exact_size(self.left_panel_width)
                     .frame(panel_frame(BG_PANEL, 12, 12))
                     .show_inside(ui, |ui| self.left_panel(ui));
+                self.draw_left_resize_handle(ui);
 
-                egui::Panel::bottom("anadil_bottom_v2")
-                    .resizable(true)
-                    .show_separator_line(true)
-                    .default_size(220.0)
-                    .size_range(140.0..=380.0)
+                // Alt panel: aynisi.
+                self.bottom_panel_height = self
+                    .bottom_panel_height
+                    .clamp(BOTTOM_PANEL_MIN, BOTTOM_PANEL_MAX);
+                egui::Panel::bottom("anadil_bottom_v3")
+                    .resizable(false)
+                    .show_separator_line(false)
+                    .exact_size(self.bottom_panel_height)
                     .frame(panel_frame(BG_EDITOR, 14, 8))
                     .show_inside(ui, |ui| self.bottom_panel(ui));
+                self.draw_bottom_resize_handle(ui);
 
                 egui::CentralPanel::default()
                     .frame(panel_frame(BG_EDITOR, 14, 10))
@@ -190,6 +206,71 @@ impl eframe::App for AnadilIde {
 }
 
 impl AnadilIde {
+    fn draw_left_resize_handle(&mut self, ui: &mut egui::Ui) {
+        // Sol panelin sag kenarinda 6px genisliginde dikey draggable strip.
+        let outer = ui.max_rect();
+        let top_y = outer.top() + 52.0; // top bar yuksekligi
+        let bottom_y = outer.bottom() - self.bottom_panel_height;
+        let handle_x = outer.left() + self.left_panel_width;
+        let handle_rect = egui::Rect::from_min_max(
+            egui::pos2(handle_x - 3.0, top_y),
+            egui::pos2(handle_x + 3.0, bottom_y),
+        );
+        let handle_id = ui.make_persistent_id("anadil_left_resize");
+        let response = ui.interact(handle_rect, handle_id, egui::Sense::drag());
+        if response.hovered() || response.dragged() {
+            ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeHorizontal);
+        }
+        if response.dragged() {
+            if let Some(pos) = response.interact_pointer_pos() {
+                self.left_panel_width = (pos.x - outer.left())
+                    .clamp(LEFT_PANEL_MIN, LEFT_PANEL_MAX);
+            }
+        }
+        let stroke_color = if response.hovered() || response.dragged() {
+            ACCENT
+        } else {
+            BORDER
+        };
+        ui.painter().vline(
+            handle_x,
+            handle_rect.y_range(),
+            egui::Stroke::new(1.0, stroke_color),
+        );
+    }
+
+    fn draw_bottom_resize_handle(&mut self, ui: &mut egui::Ui) {
+        // Alt panelin ust kenarinda 6px yuksekligindeki yatay draggable strip.
+        let outer = ui.max_rect();
+        let handle_y = outer.bottom() - self.bottom_panel_height;
+        let left_x = outer.left() + self.left_panel_width;
+        let handle_rect = egui::Rect::from_min_max(
+            egui::pos2(left_x, handle_y - 3.0),
+            egui::pos2(outer.right(), handle_y + 3.0),
+        );
+        let handle_id = ui.make_persistent_id("anadil_bottom_resize");
+        let response = ui.interact(handle_rect, handle_id, egui::Sense::drag());
+        if response.hovered() || response.dragged() {
+            ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeVertical);
+        }
+        if response.dragged() {
+            if let Some(pos) = response.interact_pointer_pos() {
+                self.bottom_panel_height = (outer.bottom() - pos.y)
+                    .clamp(BOTTOM_PANEL_MIN, BOTTOM_PANEL_MAX);
+            }
+        }
+        let stroke_color = if response.hovered() || response.dragged() {
+            ACCENT
+        } else {
+            BORDER
+        };
+        ui.painter().hline(
+            handle_rect.x_range(),
+            handle_y,
+            egui::Stroke::new(1.0, stroke_color),
+        );
+    }
+
     fn new() -> Self {
         let mut ide = Self::default();
         ide.restore_last_session();
@@ -208,6 +289,13 @@ impl AnadilIde {
 
         if let Some(path) = state.current_path.filter(|path| path.is_file()) {
             self.load_path(&path);
+        }
+
+        if let Some(width) = state.left_panel_width {
+            self.left_panel_width = width.clamp(LEFT_PANEL_MIN, LEFT_PANEL_MAX);
+        }
+        if let Some(height) = state.bottom_panel_height {
+            self.bottom_panel_height = height.clamp(BOTTOM_PANEL_MIN, BOTTOM_PANEL_MAX);
         }
     }
 
@@ -1311,7 +1399,12 @@ impl AnadilIde {
             Some(Path::new(self.current_path.trim()))
         };
 
-        write_ide_state(self.project_root.as_deref(), current_path);
+        write_ide_state(
+            self.project_root.as_deref(),
+            current_path,
+            Some(self.left_panel_width),
+            Some(self.bottom_panel_height),
+        );
     }
 
     fn report_io_error(&mut self, message: impl Into<String>) {
@@ -1514,10 +1607,12 @@ fn horizontal_divider(ui: &mut egui::Ui) {
     );
 }
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq)]
 struct IdeSavedState {
     project_root: Option<PathBuf>,
     current_path: Option<PathBuf>,
+    left_panel_width: Option<f32>,
+    bottom_panel_height: Option<f32>,
 }
 
 fn load_ide_state() -> Option<IdeSavedState> {
@@ -1526,7 +1621,12 @@ fn load_ide_state() -> Option<IdeSavedState> {
     Some(parse_ide_state(&source))
 }
 
-fn write_ide_state(project_root: Option<&Path>, current_path: Option<&Path>) {
+fn write_ide_state(
+    project_root: Option<&Path>,
+    current_path: Option<&Path>,
+    left_panel_width: Option<f32>,
+    bottom_panel_height: Option<f32>,
+) {
     let Some(path) = ide_state_path() else {
         return;
     };
@@ -1537,7 +1637,15 @@ fn write_ide_state(project_root: Option<&Path>, current_path: Option<&Path>) {
         }
     }
 
-    let _ = fs::write(path, format_ide_state(project_root, current_path));
+    let _ = fs::write(
+        path,
+        format_ide_state(
+            project_root,
+            current_path,
+            left_panel_width,
+            bottom_panel_height,
+        ),
+    );
 }
 
 fn ide_state_path() -> Option<PathBuf> {
@@ -1558,21 +1666,36 @@ fn parse_ide_state(source: &str) -> IdeSavedState {
             state.project_root = non_empty_path(value);
         } else if let Some(value) = line.strip_prefix("current_path=") {
             state.current_path = non_empty_path(value);
+        } else if let Some(value) = line.strip_prefix("left_panel_width=") {
+            state.left_panel_width = value.trim().parse::<f32>().ok();
+        } else if let Some(value) = line.strip_prefix("bottom_panel_height=") {
+            state.bottom_panel_height = value.trim().parse::<f32>().ok();
         }
     }
 
     state
 }
 
-fn format_ide_state(project_root: Option<&Path>, current_path: Option<&Path>) -> String {
+fn format_ide_state(
+    project_root: Option<&Path>,
+    current_path: Option<&Path>,
+    left_panel_width: Option<f32>,
+    bottom_panel_height: Option<f32>,
+) -> String {
     format!(
-        "project_root={}\ncurrent_path={}\n",
+        "project_root={}\ncurrent_path={}\nleft_panel_width={}\nbottom_panel_height={}\n",
         project_root
             .map(|path| path.display().to_string())
             .unwrap_or_default(),
         current_path
             .map(|path| path.display().to_string())
-            .unwrap_or_default()
+            .unwrap_or_default(),
+        left_panel_width
+            .map(|value| value.to_string())
+            .unwrap_or_default(),
+        bottom_panel_height
+            .map(|value| value.to_string())
+            .unwrap_or_default(),
     )
 }
 
@@ -2153,11 +2276,13 @@ mod tests {
     fn parses_and_formats_ide_state() {
         let root = Path::new(r"C:\projeler\anadil");
         let file = root.join("main.ana");
-        let source = format_ide_state(Some(root), Some(&file));
+        let source = format_ide_state(Some(root), Some(&file), Some(310.0), Some(240.0));
         let parsed = parse_ide_state(&source);
 
         assert_eq!(parsed.project_root.as_deref(), Some(root));
         assert_eq!(parsed.current_path.as_deref(), Some(file.as_path()));
+        assert_eq!(parsed.left_panel_width, Some(310.0));
+        assert_eq!(parsed.bottom_panel_height, Some(240.0));
     }
 
     #[test]
