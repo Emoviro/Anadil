@@ -223,8 +223,8 @@ isler veya `Docs/handoff.md` icindeki sonraki is listesiyle ortusur.
   (kalan ana isler madde 5)
 - [x] `Docs/native_compiler.md` runtime cache ve `.lib` paketleme
   modelini son haliyle iceriyor (`Runtime Library Paketleme` basligi).
-- [ ] Windows API bagimli runtime katmaninin platform soyutlamasi icin
-  kisa tasarim notu yazilmis. (kalan ana isler madde 4)
+- [x] Windows API bagimli runtime katmaninin platform soyutlamasi icin
+  kisa tasarim notu yazilmis (`Docs/runtime_platform_abstraction.md`).
 
 ### IDE V0.1 minimum
 

@@ -49,7 +49,7 @@ basligi altinda listelenmistir.
 - [x] Native runtime I/O icin sayi, bos metin ve UTF-8 edge testleri ekle.
 - [x] Runtime object cache ekle.
 - [x] Runtime objesini `.lib` modeline tasi.
-- [ ] Windows API bagimli runtime katmanini ileride platform soyutlamasina bol.
+- [x] Windows API bagimli runtime katmanini ileride platform soyutlamasina bol. (tasarim notu: `Docs/runtime_platform_abstraction.md`)
 - [ ] Runtime helper objesini tekrar kullanilabilir kutuphane modeline tasarla.
 
 ## Dil Tasarimi
