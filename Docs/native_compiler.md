@@ -268,16 +268,19 @@ Bu nedenle:
 - String literal'lar static `.data` bolumunde yasar.
 - `sayi`, `mantik` ve local `metin` referanslari stack slot'larda tutulur.
 
-Bu model mevcut dil alt kumesi icin yeterlidir. `metin` birlestirme, dizi, struct veya dinamik obje destegi eklendiginde runtime allocator veya GC tasarimi gerekecektir.
+Bu model mevcut V0.1 dil alt kumesi icin yeterlidir. `metin` birlestirme, dizi, struct veya dinamik obje destegi eklendiginde heap modeli gerekecektir.
 
-Onerilen sonraki bellek modeli:
+Karar belgesi: [memory_model.md](memory_model.md)
 
-```text
-anadil_alloc(size)
-anadil_runtime_shutdown()
-```
+Onerilen V0.2+ bellek modeli reference counting uzerine kuruludur:
 
-Ilk asamada arena allocator yeterli olabilir. Mark-and-sweep GC daha sonra eklenebilir.
+- `anadil_runtime_tahsis`
+- `anadil_runtime_paylas`
+- `anadil_runtime_birak`
+- length-prefixed heap/static `metin`
+- daha sonra `dizi`, `yapi` ve `zayif<T>`
+
+V0.1 icin GC, manual `free/delete`, heap allocator veya RC emit hedeflenmez.
 
 ## Test Stratejisi
 

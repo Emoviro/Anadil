@@ -330,6 +330,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 
 - Guncel dil referansi: [Docs/dil_referansi.md](Docs/dil_referansi.md)
 - Native compiler notlari: [Docs/native_compiler.md](Docs/native_compiler.md)
+- Bellek modeli notlari: [Docs/memory_model.md](Docs/memory_model.md)
 - Local IDE notlari: [Docs/local_ide.md](Docs/local_ide.md)
 - Native IDE smoke test: [Docs/ide_smoke_test.md](Docs/ide_smoke_test.md)
 - Yapilacaklar: [Docs/todo.md](Docs/todo.md)

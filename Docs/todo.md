@@ -4,14 +4,14 @@
 
 - Runtime object cache icin native testleri calistir ve commit/push sonrasi ilk build davranisini izle.
 - Runtime `.lib` modelinin commit/push sonrasi ilk build davranisini izle.
-- Memory management notunu yaz: MVP'de stack/static, sonraki hedefte heap allocator.
+- Memory management notunu push sonrasi gozden gecir.
 
 ## Sonraki Native Compiler Sprinti
 
 1. Runtime object cache ekle.
 2. Cache invalidation icin runtime asm timestamp kontrolu yap.
 3. Link hattini cached runtime objesiyle calistir ve mevcut native testleri koru.
-4. Memory management notunu yaz: MVP'de stack/static, sonraki hedefte heap allocator.
+4. V0.1 compiler tamam kriterlerini yaz.
 5. Runtime library yeterince sabitlenince paketleme modelini degerlendir.
 
 ## Native IDE
@@ -42,7 +42,7 @@
 
 - [ ] Turkce karakterli ana builtin yazimi ve `yazdir` ASCII alias kararini dokumanlarda tutarli tut.
 - [ ] Dizi/struct/modul icin MVP kapsam kararini yaz.
-- [ ] Memory management modelini kisa tasarim notuna dok.
+- [x] Memory management modelini kisa tasarim notuna dok.
 
 ## Sonra
 
