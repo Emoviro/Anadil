@@ -25,8 +25,9 @@ Compiler tarafinda tercih edilen yon:
 Anadil C'ye transpile etmez. V0.1 native backend Windows x64 assembly uretir
 ve Microsoft Build Tools (`ml64`, `lib`, `link`) ile executable olusturur.
 V0.1 kullanici akisi interpreter'a degil, dogrudan native derle-ve-calistir
-akisi uzerine kuruludur; interpreter gecici dogrulama ve test oracle'i olarak
-tutulur.
+akisi uzerine kuruludur. CLI'da `calistir` ve ciplak dosya cagirmak native
+programi derleyip kosar; interpreter `yorumla` komutuyla gecici
+dogrulama/debug araci olarak tutulur.
 
 ## Su Ana Kadar Yapilanlar
 
@@ -209,11 +210,12 @@ isler veya `Docs/handoff.md` icindeki sonraki is listesiyle ortusur.
 
 ### CLI ve diagnostics
 
-- [x] CLI komut yuzeyi sabit: `calistir`, `kontrol`, `ast`, `typed`,
-  `asm`, `asm-yaz`, `derle`, `ide`, `ornekler`, `surum`, `yardim`,
+- [x] CLI komut yuzeyi sabit: `calistir`, `yorumla`, `kontrol`, `ast`,
+  `typed`, `asm`, `asm-yaz`, `derle`, `ide`, `ornekler`, `surum`, `yardim`,
   `repl`.
-- [x] `kontrol --json` ve `derle --json` IDE icin kararli diagnostic semasi
-  uretiyor. `calistir --json` gecici interpreter/test protokolu olarak kalir.
+- [x] `kontrol --json`, `calistir --json` ve `derle --json` IDE/araclar icin
+  kararli diagnostic semasi uretiyor. `yorumla --json` gecici
+  interpreter/test protokolu olarak kalir.
 - [x] CLI hata ciktisi `tests/cli_diagnostics.rs` ile regresyondan
   korunuyor.
 

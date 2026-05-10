@@ -60,7 +60,19 @@ JSON protokolu:
 {"ok":true,"output":"30","diagnostics":[]}
 ```
 
-Runtime hatalari ayni diagnostic listesine `runtime` stage'iyle duser.
+`calistir`, kaynak dosyayi native executable olarak derler ve uretilen
+programi hemen calistirir. Native runtime hatalari su an kaynak satir/sutun
+tasimaz; diagnostic stage'i `native` olur ve program stdout'u `output`
+alaninda korunur.
+
+Interpreter/debug yolu gerekiyorsa:
+
+```powershell
+cargo run -- yorumla --json examples\topla.ana
+```
+
+`yorumla --json` runtime hatalarini satir/sutun bilgili `runtime` stage'iyle
+raporlar; bu yol V0.1'de dogrulama/test araci olarak kalir.
 
 Native executable'i IDE entegrasyonu icin JSON build sonucu ile derlemek:
 

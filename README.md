@@ -25,7 +25,7 @@ Yapilanlar:
 - `Ana()` giris noktasi
 - `yazdır` yerlesik fonksiyonu (`yazdir` ASCII alias'i da desteklenir)
 - `//` satir yorumlari
-- CLI komutlari: `calistir`, `kontrol`, `ast`, `typed`, `asm`, `asm-yaz`, `derle`, `ide`, `ornekler`, `surum`, `yardim`
+- CLI komutlari: `calistir`, `yorumla`, `kontrol`, `ast`, `typed`, `asm`, `asm-yaz`, `derle`, `ide`, `ornekler`, `surum`, `yardim`
 - Etkilesimli REPL komutu: `repl`
 
 Bu CLI yuzeyi V0.1 icin sabit kabul edilir.
@@ -37,19 +37,19 @@ Henuz yapilmayanlar:
 
 ## Calistirma
 
-Varsayilan calistirma:
+Varsayilan calistirma native derle-ve-calistir yapar:
 
 ```powershell
 cargo run -- examples\topla.ana
 ```
 
-Acik komutla calistirma:
+Acik komutla native calistirma:
 
 ```powershell
 cargo run -- calistir examples\topla.ana
 ```
 
-IDE veya arac entegrasyonu icin JSON calistirma ciktisi:
+IDE veya arac entegrasyonu icin JSON native calistirma ciktisi:
 
 ```powershell
 cargo run -- calistir --json examples\topla.ana
@@ -67,9 +67,14 @@ Runtime hatasi:
 {"ok":false,"output":"","diagnostics":[{"severity":"error","stage":"runtime","message":"Sifira bolme hatasi","line":2,"column":12}]}
 ```
 
-Bu ornek interpreter runtime diagnostic formatidir. Native executable
-icindeki runtime hatalari su an kaynak satir/sutun bilgisi tasimaz; hata
-metnini standart output/stderr uzerinden raporlar ve exit code `1` ile biter.
+Native executable icindeki runtime hatalari su an kaynak satir/sutun bilgisi
+tasimaz; hata metnini standart output/stderr uzerinden raporlar ve exit code
+`1` ile biter. Interpreter/debug yolu gerekiyorsa:
+
+```powershell
+cargo run -- yorumla examples\topla.ana
+cargo run -- yorumla --json examples\topla.ana
+```
 
 Program gecerli mi kontrol etme:
 
@@ -322,7 +327,8 @@ Sinirlar:
 - Native executable program sonunda ve runtime hata cikisinda terminalin kapanmamasi icin Enter bekler.
 - CLI compile-time hatalari satir/sutun ve caret bilgisiyle basilir; bu cikti mini IDE tarafindan diagnostics paneline baglanabilecek durumdadir.
 - `kontrol --json` IDE icin makine okunabilir diagnostic protokolu saglar.
-- `calistir --json` IDE icin interpreter output ve diagnostic protokolu saglar.
+- `calistir --json` native derle-ve-calistir output ve diagnostic protokolu saglar.
+- `yorumla --json` gecici interpreter/debug output ve diagnostic protokolu saglar.
 - `derle --json` IDE icin native build sonucu ve executable yolunu saglar.
 
 ### Komutlar

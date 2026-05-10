@@ -133,6 +133,11 @@ Ana() {\n\
         .output()
         .expect("run command should run");
 
+    if !output.status.success() && native_toolchain_missing(&output) {
+        eprintln!("json native run test skipped: Visual Studio native toolchain is not available");
+        return;
+    }
+
     assert!(output.status.success(), "json run command should pass");
     assert!(
         output.stderr.is_empty(),
@@ -144,6 +149,41 @@ Ana() {\n\
         stdout,
         "{\"ok\":true,\"output\":\"10\\n20\",\"diagnostics\":[]}"
     );
+}
+
+#[test]
+fn default_file_argument_runs_native_program() {
+    let Some(anadil_bin) = anadil_binary() else {
+        eprintln!("cli diagnostic test skipped: anadil binary path is not available");
+        return;
+    };
+
+    let source_path = write_fixture(
+        "default_native_run.ana",
+        "\
+Ana() {\n\
+    yazdır(41);\n\
+}\n",
+    );
+
+    let output = Command::new(anadil_bin)
+        .arg(&source_path)
+        .output()
+        .expect("default file command should run");
+
+    if !output.status.success() && native_toolchain_missing(&output) {
+        eprintln!(
+            "default native run test skipped: Visual Studio native toolchain is not available"
+        );
+        return;
+    }
+
+    assert!(output.status.success(), "default native run should pass");
+    assert!(
+        output.stderr.is_empty(),
+        "native run should not write stderr"
+    );
+    assert_eq!(normalize_stdout(&output.stdout), "41");
 }
 
 #[test]
@@ -168,10 +208,55 @@ Ana() {\n\
         .output()
         .expect("run command should run");
 
+    if !output.status.success() && native_toolchain_missing(&output) {
+        eprintln!("json native run test skipped: Visual Studio native toolchain is not available");
+        return;
+    }
+
     assert!(!output.status.success(), "json run command should fail");
     assert!(
         output.stderr.is_empty(),
         "json run failure should not write stderr"
+    );
+
+    let stdout = normalize_stdout(&output.stdout);
+    assert!(stdout.contains("\"ok\":false"));
+    assert!(stdout.contains("\"output\":\"Anadil runtime hatasi: Sifira bolme hatasi\""));
+    assert!(stdout.contains("\"severity\":\"error\""));
+    assert!(stdout.contains("\"stage\":\"native\""));
+    assert!(stdout.contains("\"message\":\"Native program basarisiz bitti: 1\""));
+    assert!(stdout.contains("\"line\":null"));
+}
+
+#[test]
+fn interpret_json_reports_runtime_error() {
+    let Some(anadil_bin) = anadil_binary() else {
+        eprintln!("cli diagnostic test skipped: anadil binary path is not available");
+        return;
+    };
+
+    let source_path = write_fixture(
+        "interpret_division_by_zero.ana",
+        "\
+Ana() {\n\
+    yazdır(10 / 0);\n\
+}\n",
+    );
+
+    let output = Command::new(anadil_bin)
+        .arg("yorumla")
+        .arg("--json")
+        .arg(&source_path)
+        .output()
+        .expect("interpret command should run");
+
+    assert!(
+        !output.status.success(),
+        "json interpret command should fail"
+    );
+    assert!(
+        output.stderr.is_empty(),
+        "json interpret failure should not write stderr"
     );
 
     let stdout = normalize_stdout(&output.stdout);

@@ -4,6 +4,8 @@
 
 - ~~Native IDE kullanici akisini interpreter modundan arindir; `Yap`/`F5`
   native EXE derleyip hemen calistirmali.~~
+- ~~CLI `calistir` ve ciplak dosya akisini native derle-ve-calistir yap;
+  interpreter'i `yorumla` komutuna tasi.~~
 - Runtime object cache icin native testleri calistir ve commit/push sonrasi ilk build davranisini izle.
 - Runtime `.lib` modelinin commit/push sonrasi ilk build davranisini izle.
 - Memory management notunu push sonrasi gozden gecir.

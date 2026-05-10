@@ -123,10 +123,11 @@ test edilebilir bir yuzey degil.
 |---|---|
 | `kontrol` | ✓ cli_diagnostics |
 | `kontrol --json` | ✓ cli_diagnostics |
-| `calistir` | (CLI integration testi yok; lib seviyesinde `run_source` kullaniliyor) |
-| `calistir --json` | · |
+| `calistir` | ✓ cli_diagnostics native derle-ve-calistir |
+| `calistir --json` | ✓ cli_diagnostics native derle-ve-calistir |
+| `yorumla --json` | ✓ cli_diagnostics interpreter/debug |
 | `derle` | ✓ native_examples, native_edge_cases |
-| `derle --json` | · |
+| `derle --json` | ✓ cli_diagnostics |
 | `asm`, `asm-yaz`, `ast`, `typed`, `ornekler`, `surum`, `yardim`, `repl`, `ide` | · |
 
 ## Bulunan Bosluklar
@@ -173,9 +174,10 @@ inline parity testleriyle kapatildi.
    Her birine kucuk bir negative test eklemek `tests/examples.rs` veya
    yeni `tests/sema_diagnostics.rs` icinde basittir.
 
-6. **CLI alt komutlari**: `calistir`, `calistir --json`, `derle --json`
-   icin integration testi yok. `cli_diagnostics.rs` `kontrol` ile
-   sinirli. IDE protokolu icin onemli.
+6. **CLI alt komutlari**: `calistir`, `yorumla --json`, `derle --json`
+   icin ek success/failure integration testleri genisletilebilir.
+   Temel `calistir --json`, `yorumla --json`, `kontrol --json` ve
+   `derle --json` akislari `cli_diagnostics.rs` icinde kapsandi.
 
 ### Dusuk oncelik (kozmetik)
 
