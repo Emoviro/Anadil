@@ -45,24 +45,25 @@ jobs:
           arch: x64
 
       - name: Verify toolchain
+        shell: powershell
         run: |
           cargo --version
           rustc --version
-          ml64 /? > nul && echo "ml64 OK"
-          lib /? > nul && echo "lib OK"
-          link /? > nul && echo "link OK"
+          where.exe ml64
+          where.exe lib
+          where.exe link
 
       - name: Run tests
-        run: cargo test --release
         shell: powershell
+        run: cargo test --release
 
       - name: Install NSIS
-        run: choco install nsis -y --no-progress
         shell: powershell
+        run: choco install nsis -y --no-progress
 
       - name: Run packaging script (ZIP + Setup)
-        run: pwsh -File .\package.ps1 -Installer
         shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\package.ps1 -Installer
 
       - name: Locate artifacts
         id: artifacts
@@ -72,19 +73,19 @@ jobs:
           if (-not $zip) { throw "ZIP bulunamadi (target\dist altinda)." }
           $zipHash = (Get-FileHash -Algorithm SHA256 $zip.FullName).Hash
           $zipSize = "{0:N2} MB" -f ($zip.Length / 1MB)
-          "zip_path=$($zip.FullName)"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "zip_name=$($zip.Name)"      | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "zip_sha=$zipHash"           | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "zip_size=$zipSize"          | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "zip_path=$($zip.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "zip_name=$($zip.Name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "zip_sha=$zipHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "zip_size=$zipSize" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
           $setup = Get-ChildItem -Path target\dist -Filter "Anadil-Setup-*.exe" | Select-Object -First 1
           if ($setup) {
             $setupHash = (Get-FileHash -Algorithm SHA256 $setup.FullName).Hash
             $setupSize = "{0:N2} MB" -f ($setup.Length / 1MB)
             "setup_path=$($setup.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            "setup_name=$($setup.Name)"     | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            "setup_sha=$setupHash"          | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            "setup_size=$setupSize"         | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "setup_name=$($setup.Name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "setup_sha=$setupHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "setup_size=$setupSize" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           } else {
             "setup_path=" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           }
@@ -98,27 +99,27 @@ jobs:
           if ("${{ steps.artifacts.outputs.setup_path }}" -ne "") {
             $setupBlock = @"
 
-Setup (kurulum sihirbazi):
-  Dosya:  ${{ steps.artifacts.outputs.setup_name }}
-  Boyut:  ${{ steps.artifacts.outputs.setup_size }}
-  SHA256: ${{ steps.artifacts.outputs.setup_sha }}
-"@
+          Setup (kurulum sihirbazi):
+            Dosya:  ${{ steps.artifacts.outputs.setup_name }}
+            Boyut:  ${{ steps.artifacts.outputs.setup_size }}
+            SHA256: ${{ steps.artifacts.outputs.setup_sha }}
+          "@
           }
           $notes = @"
-Anadil $tag — Windows x64 release
+          Anadil $tag - Windows x64 release
 
-ZIP arsivi:
-  Dosya:  ${{ steps.artifacts.outputs.zip_name }}
-  Boyut:  ${{ steps.artifacts.outputs.zip_size }}
-  SHA256: ${{ steps.artifacts.outputs.zip_sha }}
-$setupBlock
+          ZIP arsivi:
+            Dosya:  ${{ steps.artifacts.outputs.zip_name }}
+            Boyut:  ${{ steps.artifacts.outputs.zip_size }}
+            SHA256: ${{ steps.artifacts.outputs.zip_sha }}
+          $setupBlock
 
-Kurulum talimatlari icin ZIP icindeki KURULUM.txt dosyasina bakin.
-Surum notlari icin CHANGELOG.txt dosyasina bakin.
+          Kurulum talimatlari icin ZIP icindeki KURULUM.txt dosyasina bakin.
+          Surum notlari icin CHANGELOG.txt dosyasina bakin.
 
-Native derleme (anadil derle) Visual Studio Build Tools gerektirir.
-Interpreter modu (anadil yorumla) ve native IDE Build Tools olmadan calisir.
-"@
+          Native derleme (anadil derle) Visual Studio Build Tools gerektirir.
+          Interpreter modu (anadil yorumla) ve native IDE Build Tools olmadan calisir.
+          "@
           $notesPath = Join-Path $env:RUNNER_TEMP "release_notes.txt"
           Set-Content -Path $notesPath -Value $notes -Encoding UTF8
           "notes_path=$notesPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
