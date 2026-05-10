@@ -96,9 +96,9 @@ enum RunMode {
 impl RunMode {
     fn label(self) -> &'static str {
         match self {
-            Self::Interpret => "Interpret et",
-            Self::Compile => "Compile et",
-            Self::Compare => "Karsilastir",
+            Self::Interpret => "Yorumla",
+            Self::Compile => "EXE Derle",
+            Self::Compare => "Yorumla + EXE",
         }
     }
 }
@@ -870,9 +870,9 @@ impl AnadilIde {
         match run_source_diagnostic(&self.source) {
             Ok(output) => {
                 self.output = if output.is_empty() {
-                    "Interpret modu\n\nProgram cikti uretmedi.".to_string()
+                    "Yorumla modu\n\nProgram cikti uretmedi.".to_string()
                 } else {
-                    format!("Interpret modu\n\nstdout:\n{}", output.trim_end())
+                    format!("Yorumla modu\n\nstdout:\n{}", output.trim_end())
                 };
                 self.diagnostics.clear();
                 self.status = "Calistirildi".to_string();
@@ -928,7 +928,7 @@ impl AnadilIde {
 
     fn run_built_exe(&mut self) {
         let Some(exe) = self.build_exe.clone() else {
-            self.build_output = "EXE calistir\n\nCalistirilacak executable yok.\nOnce `EXE Derle` veya `Compile et` ile native executable uret.".to_string();
+            self.build_output = "EXE calistir\n\nCalistirilacak executable yok.\nOnce `EXE Derle` ile native executable uret.".to_string();
             self.status = "Calistirilacak EXE yok".to_string();
             self.selected_tab = Tab::Build;
             return;
@@ -1930,7 +1930,7 @@ fn format_comparison_output(
     };
 
     format!(
-        "Karsilastir\n\nSonuc:\n{result}\n\nNative exit:\n{}\n\nInterpreter stdout:\n{}\n\nNative stdout:\n{}\n\nNative stderr:\n{}",
+        "Yorumla + EXE\n\nSonuc:\n{result}\n\nNative exit:\n{}\n\nYorumla stdout:\n{}\n\nNative stdout:\n{}\n\nNative stderr:\n{}",
         exit_code_label(status),
         empty_label(interpreter),
         empty_label(native),
@@ -2051,7 +2051,7 @@ fn highlight_job(source: &str, diagnostics: &[Diagnostic]) -> LayoutJob {
         .filter_map(|diagnostic| diagnostic.span.map(|span| span.line))
         .collect::<Vec<_>>();
 
-    for (line_index, line) in source.lines().enumerate() {
+    for (line_index, line) in source.split_inclusive('\n').enumerate() {
         let line_number = line_index + 1;
         let background = if error_lines.contains(&line_number) {
             ERR_LINE_BG
@@ -2059,8 +2059,12 @@ fn highlight_job(source: &str, diagnostics: &[Diagnostic]) -> LayoutJob {
             Color32::TRANSPARENT
         };
 
-        append_highlighted_line(&mut job, line, background);
-        job.append("\n", 0.0, format(FG_PRIMARY, background));
+        let body = line.trim_end_matches(['\r', '\n']);
+        let ending = &line[body.len()..];
+        append_highlighted_line(&mut job, body, background);
+        if !ending.is_empty() {
+            job.append(ending, 0.0, format(FG_PRIMARY, background));
+        }
     }
 
     if source.is_empty() {
@@ -2188,8 +2192,8 @@ Ana() {
 mod tests {
     use super::{
         char_index_for_line_column, editor_line_count, format_build_started, format_ide_state,
-        format_native_build_error, native_build_advice, parent_hint, parse_ide_state,
-        project_child_path, relative_component_depth, sibling_file_path,
+        format_native_build_error, highlight_job, native_build_advice, parent_hint,
+        parse_ide_state, project_child_path, relative_component_depth, sibling_file_path,
     };
     use std::path::Path;
 
@@ -2234,6 +2238,13 @@ mod tests {
         assert_eq!(editor_line_count(""), 1);
         assert_eq!(editor_line_count("a\nb"), 2);
         assert_eq!(editor_line_count("a\n"), 2);
+    }
+
+    #[test]
+    fn syntax_layout_preserves_editor_text() {
+        for source in ["", "Ana() {\n\n}", "Ana() {\r\n    yazdır(1);\r\n}\r\n"] {
+            assert_eq!(highlight_job(source, &[]).text, source);
+        }
     }
 
     #[test]
