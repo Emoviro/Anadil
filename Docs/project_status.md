@@ -233,7 +233,8 @@ isler veya `Docs/handoff.md` icindeki sonraki is listesiyle ortusur.
   raporluyor.
 - [x] Diagnostics karti tikla-git ile editor konumuna gidiyor.
 - [ ] Native IDE smoke test (`Docs/ide_smoke_test.md`) kontrolden
-  gecmis ve sonuclar kaydedilmis. (`Docs/todo.md` Native IDE madde 1)
+  gecmis ve sonuclar kaydedilmis. Otomatik build/test sonucu kaydedildi;
+  manuel GUI akisi bekliyor. (`Docs/todo.md` Native IDE madde 1)
 
 ## V0.1 Disi Birakilanlar
 

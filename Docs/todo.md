@@ -16,7 +16,8 @@
 
 ## Native IDE
 
-- [ ] Smoke test sonucunu kaydet.
+- [x] Smoke test sonucunu kaydet. (2026-05-10 otomatik build/test sonucu `Docs/ide_smoke_test.md` icinde)
+- [ ] Manuel GUI smoke akisini uygula.
 - [x] Satir numarasi gutter'ini editor yazma erisimini bozmadan geri getir.
 - [ ] Build panelindeki hata metinlerini kart/bolum olarak daha okunur yap.
 - [ ] Dosya explorer'da uzun proje ve alt klasor deneyimini tekrar kontrol et.

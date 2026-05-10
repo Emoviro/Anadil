@@ -2,6 +2,18 @@
 
 Bu liste, native IDE degisikligi yapmadan once ve sonra hizli elle kontrol icindir.
 
+## Son Sonuc
+
+2026-05-10 otomatik kontrol:
+
+- [x] `cargo build --release --bin anadil-ide`
+- [x] `cargo test --bin anadil-ide`
+- [ ] Manuel GUI smoke akisi henuz bu oturumda uygulanmadi.
+
+Not: Codex oturumunda native GUI penceresini guvenilir bicimde gozlemleyemedigimiz
+icin editor/dosya acma/tiklama akisi elle kontrol bekliyor. Release binary
+basariyla uretildi: `target\release\anadil-ide.exe`.
+
 ## Hazirlik
 
 ```powershell
