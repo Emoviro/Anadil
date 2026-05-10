@@ -8,10 +8,12 @@ Bu liste, native IDE degisikligi yapmadan once ve sonra hizli elle kontrol icind
 
 - [x] `cargo build --release --bin anadil-ide`
 - [x] `cargo test --bin anadil-ide`
-- [ ] Manuel GUI smoke akisi henuz bu oturumda uygulanmadi.
+- [x] Manuel GUI smoke akisi uygulandi.
 
-Not: Codex oturumunda native GUI penceresini guvenilir bicimde gozlemleyemedigimiz
-icin editor/dosya acma/tiklama akisi elle kontrol bekliyor. Release binary
+Manuel kontrolde yeni/ornek `.ana` dosyasi acma, `Yap`/`F5` ile native
+derle-ve-calistir, `Cikti` sekmesinde stdout, `Build` sekmesinde exe yolu ve
+exit/stdout/stderr bolumleri, `EXE Derle`, `EXE Calistir` ve diagnostic
+kartindan editor konumuna gitme akislari basarili gecti. Release binary
 basariyla uretildi: `target\release\anadil-ide.exe`.
 
 ## Hazirlik

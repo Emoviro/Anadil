@@ -22,7 +22,7 @@
 
 - [x] `Yap`/`F5` akisini native derle-ve-calistir yap.
 - [x] Smoke test sonucunu kaydet. (2026-05-10 otomatik build/test sonucu `Docs/ide_smoke_test.md` icinde)
-- [ ] Manuel GUI smoke akisini uygula.
+- [x] Manuel GUI smoke akisini uygula.
 - [x] Satir numarasi gutter'ini editor yazma erisimini bozmadan geri getir.
 - [x] Build panelindeki hata metinlerini kart/bolum olarak daha okunur yap.
 - [ ] Dosya explorer'da uzun proje ve alt klasor deneyimini tekrar kontrol et.
@@ -68,4 +68,4 @@ basligi altinda listelenmistir.
 
 - [ ] Outline paneli: fonksiyon listesi.
 - [ ] Basit autocomplete: anahtar kelimeler, `Ana`, `yazdir`.
-- [ ] Gorsel tasarim polish: smoke test temiz gecmeden baslama.
+- [ ] Gorsel tasarim polish: smoke test temiz gecti; artik baslanabilir.
