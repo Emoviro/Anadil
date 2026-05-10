@@ -11,7 +11,7 @@
 1. Runtime object cache ekle.
 2. Cache invalidation icin runtime asm timestamp kontrolu yap.
 3. Link hattini cached runtime objesiyle calistir ve mevcut native testleri koru.
-4. V0.1 compiler tamam kriterlerini yaz.
+4. ~~V0.1 compiler tamam kriterlerini yaz.~~ (project_status.md `V0.1 Tamam Kriterleri`)
 5. Runtime library yeterince sabitlenince paketleme modelini degerlendir.
 
 ## Native IDE

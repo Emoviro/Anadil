@@ -152,6 +152,88 @@ Compiler tarafinda V0.1'e "tamam" diyebilmek icin kalan ana isler:
 
 Bu isler bittikten sonra compiler MVP V0.1 icin sabit kabul edilebilir.
 
+## V0.1 Tamam Kriterleri
+
+V0.1 compiler MVP'sini "tamam" kabul edebilmek icin asagidaki kriterler
+saglanmali. Cogu kriter su anda saglanmis durumda; isaretsiz olanlar
+yukaridaki "V0.1 Icin Kalan Ana Isler" basliginda listelenen kalan
+isler veya `Docs/handoff.md` icindeki sonraki is listesiyle ortusur.
+
+### Dil ve compiler
+
+- [x] `sayi`, `mantik`, `metin` tipleri parser, sema, interpreter ve
+  native backend'de destekleniyor.
+- [x] Atama, kosullu (`eger`/`degilse`), dongu (sonsuz, kosullu,
+  sayacli), `kir`, `devam`, `don`, fonksiyon tanim/cagri ve `Ana()`
+  entry point hem interpreter hem native tarafinda calisiyor.
+- [x] `yazdir` yerlesik fonksiyonu (Turkce ve ASCII alias) `sayi`,
+  `mantik`, `metin` tiplerini yazdiriyor.
+- [x] Lexer/parser/sema hatalari satir/sutun ve caret bilgisiyle
+  raporlaniyor.
+
+### Native build hatti
+
+- [x] `cargo run -- derle <dosya>.ana` calisan `.exe` uretiyor.
+- [x] Native exe interpreter ile ayni `stdout`'u uretiyor;
+  parite `tests/native_examples.rs` ile korunuyor.
+- [x] Linker satiri yalnizca `kernel32.lib` ve `anadil_runtime.lib`
+  kullaniyor; CRT (`msvcrt`, `ucrt`, `vcruntime`,
+  `legacy_stdio_definitions`) bagimliligi yok.
+- [x] Runtime `.obj` ve `.lib` cache, kaynak `.asm` mtime ile
+  invalidate oluyor.
+- [x] Paralel `derle` cagrilarinda runtime cache yarisi cache lock ile
+  cozuluyor.
+
+### Path ve Windows dayanikliligi
+
+- [x] Bosluklu kaynak yolu native build'de calisiyor.
+- [x] Turkce karakterli kaynak yolu native build'de calisiyor.
+- [x] OneDrive/Masaustu tarzi uzun yollar build sirasinda probleme
+  yol acmiyor.
+
+### Test guvencesi
+
+- [x] `tests/native_examples.rs` `examples/` altindaki tum `.ana`
+  dosyalarini interpreter/native parity ile dogruluyor.
+- [x] `tests/native_edge_cases.rs` runtime hatasi, fonksiyon argumani,
+  nested call ve I/O edge case'lerini iceriyor.
+- [ ] V0.1 oncesi son bosluk tarama gecisi: her dil kurali icin en az
+  bir interpreter+native parity ornegi var mi? (yukaridaki kalan ana
+  isler madde 2)
+- [x] `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`
+  ve `cargo test` temiz makinede yesil.
+
+### CLI ve diagnostics
+
+- [x] CLI komut yuzeyi sabit: `calistir`, `kontrol`, `ast`, `typed`,
+  `asm`, `asm-yaz`, `derle`, `ide`, `ornekler`, `surum`, `yardim`,
+  `repl`.
+- [x] `kontrol --json`, `calistir --json` ve `derle --json` IDE icin
+  kararli diagnostic semasi uretiyor.
+- [x] CLI hata ciktisi `tests/cli_diagnostics.rs` ile regresyondan
+  korunuyor.
+
+### Dokumantasyon hizalamasi
+
+- [x] `Docs/memory_model.md` V0.1'in heap/RC icermedigini ve V0.2+
+  yolunu acikca anlatiyor.
+- [ ] `README.md` mevcut runtime library modelini, kaldirilmis CRT
+  bagimliligini ve sabitlenmis CLI komutlarini yansitiyor.
+  (kalan ana isler madde 5)
+- [ ] `Docs/native_compiler.md` runtime cache ve `.lib` paketleme
+  modelini son haliyle iceriyor. (kalan ana isler madde 5)
+- [ ] Windows API bagimli runtime katmaninin platform soyutlamasi icin
+  kisa tasarim notu yazilmis. (kalan ana isler madde 4)
+
+### IDE V0.1 minimum
+
+- [x] Native IDE acilip kapaniyor; klasor ve dosya acilabiliyor.
+- [x] Build paneli native exe yolunu, exit code'u ve `stdout`/`stderr`
+  raporluyor.
+- [x] Diagnostics karti tikla-git ile editor konumuna gidiyor.
+- [ ] Native IDE smoke test (`Docs/ide_smoke_test.md`) kontrolden
+  gecmis ve sonuclar kaydedilmis. (`Docs/todo.md` Native IDE madde 1)
+
 ## V0.1 Disi Birakilanlar
 
 Asagidakiler bilerek V0.1 disinda tutulur:
