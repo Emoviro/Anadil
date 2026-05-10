@@ -2,7 +2,9 @@
 
 **Ders:** Bilgisayar Mühendisliği Proje 2
 **Üniversite:** Kırıkkale Üniversitesi — Bilgisayar Mühendisliği Bölümü
-**Hazırlayan:** Emir Canbaz 233205046    Akif Buğra Karslı 233205007
+**Hazırlayan:** 
+Emir Canbaz 233205046    
+Akif Buğra Karslı 233205007
 **Sürüm:** Anadil V0.1
 **Tarih:** Mayıs 2026
 
