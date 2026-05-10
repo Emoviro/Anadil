@@ -40,7 +40,7 @@ Henuz yapilmayanlar:
 Anadil'i kullanmak icin Rust toolchain'ine veya kaynak kodu derlemeye
 ihtiyaciniz yok. Hazir Windows x64 paketi:
 
-[Anadil v0.1.0 — GitHub Releases](https://github.com/ArsenAlighieri/Anadil/releases/tag/v0.1.0)
+[Anadil v0.1.1 - GitHub Releases](https://github.com/ArsenAlighieri/Anadil/releases/tag/v0.1.1)
 
 Iki kurulum yolu vardir:
 

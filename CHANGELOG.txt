@@ -5,6 +5,20 @@ Bu dosya Anadil'in kamuya acik surumlerini ve her surumun getirdigi
 degisiklikleri toplar. En yeni surum en uste yazilir.
 
 
+v0.1.1 - Mayis 2026
+-------------------
+
+V0.1 icin patch release.
+
+Duzeltilenler:
+
+  Native IDE
+    * ZIP/Setup icinden calisan `anadil-ide.exe`, `EXE Derle` ve `Yap`
+      islemlerinde artik `cargo run` yerine yanindaki `anadil.exe`
+      komutunu kullanir. Boylece paketlenmis kurulumlarda `Cargo.toml`
+      arama hatasi giderildi.
+
+
 v0.1.0 — Mayis 2026
 -------------------
 

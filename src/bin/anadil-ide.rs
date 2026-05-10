@@ -2017,20 +2017,28 @@ struct NativeBuildOutput {
     stderr: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct NativeBuildCommand {
+    program: PathBuf,
+    args: Vec<String>,
+    current_dir: Option<PathBuf>,
+    display: String,
+}
+
 fn run_native_build(path: &Path) -> Result<NativeBuildOutput, String> {
-    let command = format!("cargo run --bin anadil -- derle --json {}", path.display());
-    let output = Command::new("cargo")
-        .arg("run")
-        .arg("--bin")
-        .arg("anadil")
-        .arg("--")
-        .arg("derle")
-        .arg("--json")
-        .arg(path)
+    let build_command = native_build_command(path);
+    let mut command = Command::new(&build_command.program);
+    command.args(&build_command.args);
+    if let Some(current_dir) = &build_command.current_dir {
+        command.current_dir(current_dir);
+    }
+
+    let output = command
         .output()
         .map_err(|error| {
             format!(
-                "Native build baslatilamadi\n\nKomut:\n{command}\n\nHata:\n{error}\n\nNe yapmali:\nCargo veya Rust toolchain PATH icinde mi kontrol et."
+                "Native build baslatilamadi\n\nKomut:\n{}\n\nHata:\n{error}\n\nNe yapmali:\nAnadil paketinde anadil.exe dosyasi var mi ve calistirilabiliyor mu kontrol et.",
+                build_command.display
             )
         })?;
 
@@ -2049,22 +2057,85 @@ fn run_native_build(path: &Path) -> Result<NativeBuildOutput, String> {
             });
 
         return Err(format_native_build_error(
-            path, &command, &message, &stdout, &stderr,
+            path,
+            &build_command.display,
+            &message,
+            &stdout,
+            &stderr,
         ));
     }
 
     let Some(exe) = extract_json_string(&stdout, "exe") else {
         let message = "Build basarili gorundu ama JSON ciktisinda `exe` yolu bulunamadi.";
         return Err(format_native_build_error(
-            path, &command, message, &stdout, &stderr,
+            path,
+            &build_command.display,
+            message,
+            &stdout,
+            &stderr,
         ));
     };
+    let exe = absolutize_build_output_exe(&exe, build_command.current_dir.as_deref());
 
     Ok(NativeBuildOutput {
         exe,
         stdout,
         stderr,
     })
+}
+
+fn native_build_command(path: &Path) -> NativeBuildCommand {
+    if let Some(anadil_exe) = packaged_anadil_cli_path() {
+        let current_dir = anadil_exe.parent().map(Path::to_path_buf);
+        return NativeBuildCommand {
+            display: format!("{} derle --json {}", anadil_exe.display(), path.display()),
+            program: anadil_exe,
+            args: vec![
+                "derle".to_string(),
+                "--json".to_string(),
+                path.display().to_string(),
+            ],
+            current_dir,
+        };
+    }
+
+    NativeBuildCommand {
+        program: PathBuf::from("cargo"),
+        args: vec![
+            "run".to_string(),
+            "--bin".to_string(),
+            "anadil".to_string(),
+            "--".to_string(),
+            "derle".to_string(),
+            "--json".to_string(),
+            path.display().to_string(),
+        ],
+        current_dir: None,
+        display: format!("cargo run --bin anadil -- derle --json {}", path.display()),
+    }
+}
+
+fn packaged_anadil_cli_path() -> Option<PathBuf> {
+    let ide_exe = env::current_exe().ok()?;
+    packaged_anadil_cli_path_from_ide_exe(&ide_exe)
+}
+
+fn packaged_anadil_cli_path_from_ide_exe(ide_exe: &Path) -> Option<PathBuf> {
+    let dir = ide_exe.parent()?;
+    let anadil_exe = dir.join("anadil.exe");
+    let runtime_lib = dir.join("runtime").join("anadil_runtime.lib");
+    (anadil_exe.is_file() && runtime_lib.is_file()).then_some(anadil_exe)
+}
+
+fn absolutize_build_output_exe(exe: &str, current_dir: Option<&Path>) -> String {
+    let exe_path = PathBuf::from(exe);
+    if exe_path.is_absolute() {
+        return exe_path.display().to_string();
+    }
+
+    current_dir
+        .map(|dir| dir.join(exe_path).display().to_string())
+        .unwrap_or_else(|| exe.to_string())
 }
 
 fn run_executable(path: &Path) -> Result<std::process::Output, std::io::Error> {
@@ -2387,7 +2458,8 @@ mod tests {
     use super::{
         apply_editor_smart_edit, char_index_for_line_column, editor_line_count,
         format_build_started, format_ide_state, format_native_build_error, highlight_job,
-        list_project_files, native_build_advice, parent_hint, parse_ide_state, project_child_path,
+        list_project_files, native_build_advice, native_build_command,
+        packaged_anadil_cli_path_from_ide_exe, parent_hint, parse_ide_state, project_child_path,
         relative_component_depth, sibling_file_path, AnadilIde, IdeSavedState, BOTTOM_PANEL_MIN,
         LEFT_PANEL_MAX,
     };
@@ -2554,6 +2626,33 @@ mod tests {
         assert!(error.contains("Hata\n----"));
         assert!(error.contains("Ne yapmali"));
         assert!(error.contains("Derleyici stdout"));
+    }
+
+    #[test]
+    fn packaged_cli_is_resolved_next_to_ide_executable() {
+        let dir = Path::new("target").join("ide_command_unit_tests");
+        let runtime_dir = dir.join("runtime");
+        fs::create_dir_all(&runtime_dir).expect("runtime dir should be created");
+        let ide_exe = dir.join("anadil-ide.exe");
+        let cli_exe = dir.join("anadil.exe");
+        let runtime_lib = runtime_dir.join("anadil_runtime.lib");
+        fs::write(&ide_exe, "fake ide").expect("fake ide should be written");
+        fs::write(&cli_exe, "fake cli").expect("fake cli should be written");
+        fs::write(&runtime_lib, "fake lib").expect("fake runtime lib should be written");
+
+        assert_eq!(
+            packaged_anadil_cli_path_from_ide_exe(&ide_exe),
+            Some(cli_exe)
+        );
+    }
+
+    #[test]
+    fn dev_native_build_command_uses_cargo_fallback() {
+        let command = native_build_command(Path::new("examples").join("topla.ana").as_path());
+
+        assert_eq!(command.program, Path::new("cargo"));
+        assert!(command.display.contains("cargo run --bin anadil"));
+        assert_eq!(command.current_dir, None);
     }
 
     #[test]
