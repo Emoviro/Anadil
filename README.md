@@ -255,6 +255,7 @@ Proje iki parcaya ayrilmistir:
 - `src/lib.rs`: Dil motoru. Lexer, parser, semantic analiz, typed AST ve interpreter burada kutuphane olarak disari acilir.
 - `src/main.rs`: CLI katmani. Dosya okur, komutlari yorumlar ve `lib.rs` icindeki pipeline fonksiyonlarini cagirir.
 - `src/native.rs`: Typed AST'den Windows x64 MASM assembly ureten native compiler MVP katmani.
+- `runtime/anadil_runtime.asm`: Native executable'lara linklenen Anadil runtime helper modulu.
 - `src/ide.rs`: `ide` komutuyla calisan lokal web IDE server'i ve arayuzu.
 - `src/bin/anadil-ide.rs`: Native executable IDE.
 
@@ -274,7 +275,7 @@ anadil::emit_native_asm_source(source)
 Native compiler hatti:
 
 ```text
-.ana -> lexer -> parser -> semantic analiz -> typed AST -> Windows x64 assembly -> obj -> exe
+.ana -> lexer -> parser -> semantic analiz -> typed AST -> Windows x64 assembly -> obj + Anadil runtime obj -> exe
 ```
 
 Desteklenenler:
@@ -287,6 +288,7 @@ Desteklenenler:
 - `kir`, `devam`, `don`
 - Fonksiyon tanimlama ve fonksiyon cagirma
 - `yazdır` (`yazdir` alias'i desteklenir)
+- `yazdir`, metin karsilastirma ve runtime hata cikislari ayri Anadil runtime objesi uzerinden linklenir.
 
 Sinirlar:
 

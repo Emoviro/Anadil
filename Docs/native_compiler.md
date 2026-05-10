@@ -20,6 +20,7 @@ Native derleme hatti su sekildedir:
 Ilgili dosyalar:
 
 - `src/native.rs`: Typed AST'den Windows x64 MASM assembly uretir.
+- `runtime/anadil_runtime.asm`: Anadil runtime helper'larini ayri MASM modulu olarak saglar.
 - `src/lib.rs`: `emit_native_asm_source` API'sini disari acar.
 - `src/main.rs`: `asm`, `asm-yaz` ve `derle` CLI komutlarini calistirir.
 - `tests/native_examples.rs`: Ornek programlari native executable olarak derler ve interpreter ciktisiyla karsilastirir.
@@ -93,7 +94,7 @@ cargo run -- derle examples\topla.ana
 examples\topla.exe
 ```
 
-`derle` komutu once assembly uretir, sonra `ml64` ile object file ve `link` ile executable olusturur. `ml64` ve `link` PATH icinde yoksa Visual Studio Build Tools altindaki `vcvars64.bat` dosyasini otomatik bulmaya calisir. Uretilen executable program sonunda `getchar` ile Enter bekler; bu, dosyaya Explorer'dan cift tiklandiginda terminal penceresinin hemen kapanmamasini saglar.
+`derle` komutu once program assembly'sini uretir. Sonra `ml64` ile program object file'ini ve `runtime/anadil_runtime.asm` dosyasindan Anadil runtime object file'ini olusturur. `link`, program objesi ile runtime objesini birlestirerek executable olusturur. `ml64` ve `link` PATH icinde yoksa Visual Studio Build Tools altindaki `vcvars64.bat` dosyasini otomatik bulmaya calisir. Uretilen executable program sonunda runtime helper uzerinden Enter bekler; bu, dosyaya Explorer'dan cift tiklandiginda terminal penceresinin hemen kapanmamasini saglar.
 
 ## Hedef Platform
 
@@ -203,7 +204,7 @@ lea rax, str_0
 
 ## yazdır Runtime Modeli
 
-`yazdır` native backend'de C runtime `printf` fonksiyonuna dusurulur. `yazdir` ASCII alias'i da ayni builtin'e baglanir.
+`yazdır` native backend'de Anadil runtime helper'larina dusurulur. `yazdir` ASCII alias'i da ayni builtin'e baglanir. Helper'lar `runtime/anadil_runtime.asm` icinde ayri assemble edilir ve altta simdilik C runtime `printf` fonksiyonunu cagirir.
 
 Kullanilan formatlar:
 
@@ -221,7 +222,7 @@ false -> "yanlis" UTF-8: yanlış
 
 ## Metin Karsilastirma
 
-`metin == metin` ve `metin != metin` islemleri C runtime `strcmp` fonksiyonuyla uretilir.
+`metin == metin` ve `metin != metin` islemleri `anadil_runtime_strcmp` helper'i ile uretilir. Bu helper su an C runtime `strcmp` fonksiyonuna delege eder.
 
 ```text
 strcmp(a, b) == 0 -> esit
@@ -230,13 +231,28 @@ strcmp(a, b) != 0 -> esit degil
 
 ## Runtime Hatalari
 
-Native MVP sifira bolme icin interpreter'a benzer kontrollu hata davranisi uretir:
+Native MVP sifira bolme icin interpreter'a benzer kontrollu hata davranisi uretir. Kodgen bu durumda `anadil_runtime_panic` helper'ini cagirir:
 
 ```text
 Sifira bolme hatasi
 ```
 
 Bu durumda executable Enter bekledikten sonra `exit(1)` ile biter. Kaynak satir/sutun bilgisi su an native executable icine gomulmez; IDE entegrasyonu icin compile-time lexer/parser/semantic hatalari CLI tarafinda caret'li diagnostic ve `kontrol --json` ile structured diagnostic olarak kalir.
+
+## Runtime Helper ABI
+
+Compiler artik kullanici kodundan dogrudan `printf`, `strcmp`, `getchar` veya `exit` cagrisi uretmek yerine kendi runtime helper'larini cagirir:
+
+```text
+anadil_runtime_print_sayi(rcx=sayi)
+anadil_runtime_print_metin(rcx=metin_ptr)
+anadil_runtime_print_mantik(rcx=0/1)
+anadil_runtime_strcmp(rcx=left_ptr, rdx=right_ptr) -> eax
+anadil_runtime_wait_before_exit()
+anadil_runtime_panic(rcx=message_ptr) -> exit(1)
+```
+
+Bu helper'lar program assembly'sinden ayri bir runtime object file olarak linklenir. Sonraki asamada bu object dosyasi kutuphane haline getirilebilir ve icindeki C runtime bagimliliklari azaltilabilir.
 
 ## Memory Management
 

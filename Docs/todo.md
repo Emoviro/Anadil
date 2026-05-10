@@ -2,14 +2,14 @@
 
 ## Hemen Sonraki Adim
 
-- Native IDE smoke test listesini elle calistir: `Docs/ide_smoke_test.md`
-- Test sirasinda cikan sorunlari bu dosyaya isaretle.
-- Gorsel polish yapmadan once editor yazma, dosya kaydetme, build ve compare akislarinin temiz oldugunu dogrula.
+- Native runtime helper'larini ayri runtime objesinden kutuphane modeline tasimayi planla.
+- C benzeri `derle -> exe -> calistir` akisini IDE/CLI tarafinda ana yol yap.
+- Runtime hata mesajlarini native executable ciktilarinda daha net raporla.
 
 ## Native IDE
 
 - [ ] Smoke test sonucunu kaydet.
-- [ ] Satir numarasi gutter'ini editor yazma erisimini bozmadan geri getir.
+- [x] Satir numarasi gutter'ini editor yazma erisimini bozmadan geri getir.
 - [ ] Build panelindeki hata metinlerini kart/bolum olarak daha okunur yap.
 - [ ] Dosya explorer'da uzun proje ve alt klasor deneyimini tekrar kontrol et.
 - [ ] Son acilan proje/dosya state'inin bozuk path durumunda sessizce toparlandigini test et.
@@ -17,18 +17,20 @@
 ## Native Compiler
 
 - [ ] Interpreter/native karsilastirmasini daha fazla ornekle genislet.
-- [ ] String ve bool `yazdır` davranisini native tarafta smoke test et.
+- [x] String ve bool `yazdir` davranisini native tarafta smoke test et.
 - [ ] Runtime hatalarini native executable ciktilarinda daha net raporla.
 - [ ] Windows path/OneDrive/Turkce karakter senaryolarini build testlerine ekle.
+- [x] Runtime helper'larini ayri obje olarak linkleme yolunu tasarla.
+- [ ] Runtime helper objesini tekrar kullanilabilir kutuphane modeline tasarla.
 
 ## Dil Tasarimi
 
-- [ ] `yazdır` ana builtin, `yazdir` alias kararini dokumanlarda tutarli tut.
+- [ ] Turkce karakterli ana builtin yazimi ve `yazdir` ASCII alias kararini dokumanlarda tutarli tut.
 - [ ] Dizi/struct/modul icin MVP kapsam kararini yaz.
 - [ ] Memory management modelini kisa tasarim notuna dok.
 
 ## Sonra
 
 - [ ] Outline paneli: fonksiyon listesi.
-- [ ] Basit autocomplete: anahtar kelimeler, `Ana`, `yazdır`.
+- [ ] Basit autocomplete: anahtar kelimeler, `Ana`, `yazdir`.
 - [ ] Gorsel tasarim polish: smoke test temiz gecmeden baslama.

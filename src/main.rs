@@ -471,6 +471,16 @@ fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
         vcvars64.as_deref(),
     )?;
     run_tool(
+        "ml64",
+        &[
+            "/nologo".to_string(),
+            "/c".to_string(),
+            format!("/Fo{}", build_paths.runtime_obj.display()),
+            runtime_asm_path()?.display().to_string(),
+        ],
+        vcvars64.as_deref(),
+    )?;
+    run_tool(
         "link",
         &[
             "/nologo".to_string(),
@@ -478,6 +488,7 @@ fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
             "/ENTRY:main".to_string(),
             format!("/OUT:{}", build_paths.exe.display()),
             build_paths.obj.display().to_string(),
+            build_paths.runtime_obj.display().to_string(),
             "msvcrt.lib".to_string(),
             "ucrt.lib".to_string(),
             "vcruntime.lib".to_string(),
@@ -501,6 +512,7 @@ fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
 struct NativeBuildPaths {
     asm: PathBuf,
     obj: PathBuf,
+    runtime_obj: PathBuf,
     exe: PathBuf,
 }
 
@@ -527,8 +539,23 @@ fn create_native_build_paths(source_path: &str) -> Result<NativeBuildPaths, Stri
     Ok(NativeBuildPaths {
         asm: dir.join(format!("{stem}.asm")),
         obj: dir.join(format!("{stem}.obj")),
+        runtime_obj: dir.join("anadil_runtime.obj"),
         exe: dir.join(format!("{stem}.exe")),
     })
+}
+
+fn runtime_asm_path() -> Result<PathBuf, String> {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("runtime")
+        .join("anadil_runtime.asm");
+    if path.is_file() {
+        Ok(path)
+    } else {
+        Err(format!(
+            "Anadil runtime assembly dosyasi bulunamadi `{}`",
+            path.display()
+        ))
+    }
 }
 
 fn sanitize_build_name(name: &str) -> String {
