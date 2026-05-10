@@ -470,16 +470,7 @@ fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
         ],
         vcvars64.as_deref(),
     )?;
-    run_tool(
-        "ml64",
-        &[
-            "/nologo".to_string(),
-            "/c".to_string(),
-            format!("/Fo{}", build_paths.runtime_obj.display()),
-            runtime_asm_path()?.display().to_string(),
-        ],
-        vcvars64.as_deref(),
-    )?;
+    let runtime_obj = ensure_runtime_obj(vcvars64.as_deref())?;
     run_tool(
         "link",
         &[
@@ -488,7 +479,7 @@ fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
             "/ENTRY:main".to_string(),
             format!("/OUT:{}", build_paths.exe.display()),
             build_paths.obj.display().to_string(),
-            build_paths.runtime_obj.display().to_string(),
+            runtime_obj.display().to_string(),
             "kernel32.lib".to_string(),
         ],
         vcvars64.as_deref(),
@@ -509,7 +500,6 @@ fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
 struct NativeBuildPaths {
     asm: PathBuf,
     obj: PathBuf,
-    runtime_obj: PathBuf,
     exe: PathBuf,
 }
 
@@ -536,9 +526,28 @@ fn create_native_build_paths(source_path: &str) -> Result<NativeBuildPaths, Stri
     Ok(NativeBuildPaths {
         asm: dir.join(format!("{stem}.asm")),
         obj: dir.join(format!("{stem}.obj")),
-        runtime_obj: dir.join("anadil_runtime.obj"),
         exe: dir.join(format!("{stem}.exe")),
     })
+}
+
+fn ensure_runtime_obj(vcvars64: Option<&Path>) -> Result<PathBuf, String> {
+    let runtime_asm = runtime_asm_path()?;
+    let runtime_obj = runtime_obj_cache_path()?;
+
+    if runtime_obj_needs_rebuild(&runtime_asm, &runtime_obj)? {
+        run_tool(
+            "ml64",
+            &[
+                "/nologo".to_string(),
+                "/c".to_string(),
+                format!("/Fo{}", runtime_obj.display()),
+                runtime_asm.display().to_string(),
+            ],
+            vcvars64,
+        )?;
+    }
+
+    Ok(runtime_obj)
 }
 
 fn runtime_asm_path() -> Result<PathBuf, String> {
@@ -553,6 +562,44 @@ fn runtime_asm_path() -> Result<PathBuf, String> {
             path.display()
         ))
     }
+}
+
+fn runtime_obj_cache_path() -> Result<PathBuf, String> {
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("target")
+        .join("native-runtime");
+    fs::create_dir_all(&dir).map_err(|error| {
+        format!(
+            "Native runtime cache klasoru olusturulamadi `{}`: {error}",
+            dir.display()
+        )
+    })?;
+    Ok(dir.join("anadil_runtime.obj"))
+}
+
+fn runtime_obj_needs_rebuild(runtime_asm: &Path, runtime_obj: &Path) -> Result<bool, String> {
+    if !runtime_obj.is_file() {
+        return Ok(true);
+    }
+
+    let asm_modified = fs::metadata(runtime_asm)
+        .and_then(|metadata| metadata.modified())
+        .map_err(|error| {
+            format!(
+                "Native runtime assembly zamani okunamadi `{}`: {error}",
+                runtime_asm.display()
+            )
+        })?;
+    let obj_modified = fs::metadata(runtime_obj)
+        .and_then(|metadata| metadata.modified())
+        .map_err(|error| {
+            format!(
+                "Native runtime object zamani okunamadi `{}`: {error}",
+                runtime_obj.display()
+            )
+        })?;
+
+    Ok(asm_modified > obj_modified)
 }
 
 fn sanitize_build_name(name: &str) -> String {
@@ -859,7 +906,9 @@ fn looks_like_entry_program(input: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_args, sanitize_build_name, Command, ParsedArgs};
+    use std::{fs, path::PathBuf};
+
+    use super::{parse_args, runtime_obj_needs_rebuild, sanitize_build_name, Command, ParsedArgs};
 
     #[test]
     fn accepts_legacy_run_form() {
@@ -883,6 +932,19 @@ mod tests {
         assert_eq!(sanitize_build_name("adsiz"), "adsiz");
         assert_eq!(sanitize_build_name("Masaustu test"), "Masaustu_test");
         assert_eq!(sanitize_build_name("çalışma-1"), "_al__ma-1");
+    }
+
+    #[test]
+    fn runtime_obj_cache_rebuilds_when_obj_is_missing() {
+        let dir = PathBuf::from("target").join("runtime_cache_unit_tests");
+        fs::create_dir_all(&dir).expect("test cache dir should be created");
+        let runtime_asm = dir.join("anadil_runtime.asm");
+        let runtime_obj = dir.join("anadil_runtime.obj");
+        fs::write(&runtime_asm, "; test runtime").expect("runtime asm should be written");
+        let _ = fs::remove_file(&runtime_obj);
+
+        assert!(runtime_obj_needs_rebuild(&runtime_asm, &runtime_obj)
+            .expect("runtime cache state should be checked"));
     }
 
     #[test]

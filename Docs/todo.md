@@ -2,14 +2,14 @@
 
 ## Hemen Sonraki Adim
 
-- Runtime object cache: `runtime/anadil_runtime.asm` sadece degistiginde `target/native-runtime/anadil_runtime.obj` olarak yeniden assemble edilsin.
+- Runtime object cache icin native testleri calistir ve commit/push sonrasi ilk build davranisini izle.
 - Sonra bu modeli `.lib` paketine tasima kararini ver.
 - Native runtime hata mesajlari ve Windows path/Turkce karakter build testlerini tamamla.
 
 ## Sonraki Native Compiler Sprinti
 
 1. Runtime object cache ekle.
-2. Cache invalidation icin runtime asm timestamp veya icerik hash kontrolu yap.
+2. Cache invalidation icin runtime asm timestamp kontrolu yap.
 3. Link hattini cached runtime objesiyle calistir ve mevcut native testleri koru.
 4. Windows path, OneDrive ve Turkce karakter iceren kaynak yolu icin build testi ekle.
 5. Runtime hata ciktilarini tek formatta netlestir.
@@ -35,7 +35,7 @@
 - [x] Runtime panic cikisini C `exit` yerine Windows process cikisina bagla.
 - [x] `printf` ve `getchar` bagimliliklarini runtime I/O katmaniyla azalt.
 - [x] Native runtime I/O icin sayi, bos metin ve UTF-8 edge testleri ekle.
-- [ ] Runtime object cache ekle.
+- [x] Runtime object cache ekle.
 - [ ] Runtime objesini `.lib` modeline tasimayi degerlendir.
 - [ ] Windows API bagimli runtime katmanini ileride platform soyutlamasina bol.
 - [ ] Runtime helper objesini tekrar kullanilabilir kutuphane modeline tasarla.
