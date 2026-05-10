@@ -1,0 +1,161 @@
+Anadil v0.1.0 — Kurulum
+=========================
+
+Anadil, Turkce sozdizimine sahip kucuk bir programlama dilidir. Bu paket
+Anadil komut satiri arayuzunu, native IDE'yi, ornek programlari ve
+kisa belgeleri icerir.
+
+Sistem Gereksinimleri
+---------------------
+
+- Windows 10 veya Windows 11, 64-bit
+- (Native derleme icin) Visual Studio Build Tools — asagidaki "Native
+  Derleme" basligina bakiniz
+
+Anadil'in interpreter modu ve native IDE Build Tools olmadan calisir;
+yalnizca `derle` komutu ve IDE'deki `EXE Derle` butonu Build Tools'a
+ihtiyac duyar.
+
+Kurulum Adimlari
+----------------
+
+1. Bu ZIP arsivini bir klasore cikartin. Tavsiye edilen yer:
+
+       C:\Anadil\
+
+   Klasor adinda Turkce karakter ve bosluk olabilir; Anadil bunu
+   destekler.
+
+2. (Istege bagli) Komut satirindan `anadil` yazip kullanmak isterseniz
+   klasoru PATH'e ekleyin:
+
+   Baslat menusu -> "ortam degiskenleri" arayin -> Sistem Ozellikleri
+   -> Ortam Degiskenleri -> "Path" duzenle -> Yeni -> C:\Anadil\
+   ekleyin -> Tamam.
+
+   Bu adim atlanirsa `anadil` ve `anadil-ide` icin tam yol yazmaniz
+   gerekir.
+
+3. (Native derleme icin) Visual Studio Build Tools kurulu degilse
+   indirin ve kurun:
+
+       https://visualstudio.microsoft.com/visual-cpp-build-tools/
+
+   Kurulum sirasinda "Desktop development with C++" workload'unu secin.
+   Bu paket `ml64.exe`, `lib.exe` ve `link.exe` araclarini saglar.
+
+4. Test edin. Komut isteminde:
+
+       anadil yardim
+       anadil yorumla examples\topla.ana
+
+   IDE'yi acmak icin `anadil-ide.exe` dosyasina cift tiklayin.
+
+Ilk Kullanim
+------------
+
+Bir Anadil programi yazip calistirmak:
+
+   1. IDE'yi acin: anadil-ide.exe
+   2. Sol panelden "Klasor Ac" ile bu klasoru veya kendi proje
+      klasorunuzu acin.
+   3. examples/topla.ana dosyasini secin.
+   4. F5 (Yap) tusu ile programi native derleyip calistirin.
+
+Komut satirindan ayni isi yapmak:
+
+   anadil examples\topla.ana
+
+Bu komut programi native derler ve hemen calistirir. Sadece
+interpreter ile calistirmak isterseniz:
+
+   anadil yorumla examples\topla.ana
+
+Sadece native `.exe` uretmek (calistirmadan):
+
+   anadil derle examples\topla.ana
+   examples\topla.exe
+
+Komutlarin tam listesi icin:
+
+   anadil yardim
+
+Native Derleme
+--------------
+
+`anadil derle` komutu Visual Studio Build Tools icindeki `link.exe`
+aracina ihtiyac duyar. Build Tools yoksa Anadil su mesaji verir:
+
+   "Visual Studio Build Tools bulunamadi.
+    Indirme: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+    Interpreter ile calistirmak icin: anadil yorumla <dosya>.ana"
+
+Build Tools'u kurdugunuzda yeni bir komut istemi acin (PATH guncellenmis
+olur) ve `anadil derle ...` komutunu tekrar deneyin.
+
+Anadil runtime kutuphanesi (anadil_runtime.lib) bu pakete dahil edilmis
+durumdadir; her derlemede yeniden assemble edilmesine gerek yoktur.
+
+Sorun Giderme
+-------------
+
+> "Bu uygulama bilgisayarinizi koruyor" Windows SmartScreen uyarisi
+  Anadil binary'leri imzasiz oldugu icin Windows SmartScreen ilk
+  acilista uyari verebilir. "Daha fazla bilgi" -> "Yine de calistir"
+  ile devam edebilirsiniz.
+
+> `anadil` komut bulunamadi
+  PATH'e Anadil klasorunu eklemediyseniz veya ekledikten sonra yeni bir
+  komut istemi acmadiysaniz bu hatayi alirsiniz. Cozum: yeni cmd / PowerShell
+  penceresi acin.
+
+> `anadil derle` Build Tools hatasi veriyor
+  Build Tools kuruldugundan ve "C++ build tools" workload'unun secili
+  oldugundan emin olun. Visual Studio Installer'i acip
+  "Modify" -> "Workloads" sekmesine bakin.
+
+> Native exe Explorer'dan cift tiklandiginda hemen kapaniyor
+  Anadil native programlari Explorer cift tiklamasinda terminal
+  penceresinin kapanmamasi icin program sonunda Enter bekler. Eger
+  pencere yine de hizla kapanirsa kaynagi `cmd` icinden calistirin.
+
+Belgeler
+--------
+
+Bu pakette `docs/` klasoru altinda:
+
+- PROJE_RAPORU.md — Anadil V0.1 proje raporu
+- DIL_REFERANSI.md — Anadil dil yuzeyi
+- NATIVE_COMPILER.md — Native compiler ic yapisi
+
+Daha fazla belge ve kaynak kodu icin:
+
+   https://github.com/ArsenAlighieri/Anadil
+
+Kaldirma
+--------
+
+Anadil bir kayit defteri veya Program Files girisi olusturmaz; sadece
+cikarttiginiz klasor ve PATH'e ekledigi yol vardir. Kaldirmak icin:
+
+   1. PATH'ten Anadil klasor yolunu silin (eklemediyseniz atlayin).
+   2. Anadil klasorunu silin.
+
+Anadil bir cache klasoru olusturabilir:
+
+   %LOCALAPPDATA%\Anadil\cache\
+
+Bu klasor de manuel olarak silinebilir.
+
+Lisans
+------
+
+Bu pakette LICENSE.txt dosyasina bakiniz.
+
+Surum Bilgisi
+-------------
+
+Surum:    v0.1.0
+Tarih:    Mayis 2026
+Hedef:    Windows x64
+Kaynak:   https://github.com/ArsenAlighieri/Anadil

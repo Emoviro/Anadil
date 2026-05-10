@@ -1,0 +1,111 @@
+Anadil Surum Notlari
+======================
+
+Bu dosya Anadil'in kamuya acik surumlerini ve her surumun getirdigi
+degisiklikleri toplar. En yeni surum en uste yazilir.
+
+
+v0.1.0 — Mayis 2026
+-------------------
+
+Anadil'in ilk kamuya acik surumu. Hedef: Turkce sozdizimine sahip,
+yerel `.exe` derleyebilen ve native IDE iceren kucuk bir programlama
+dili olarak guvenilir bir taban koymak.
+
+Eklenenler:
+
+  Dil ve Compiler
+    * sayi (i64), mantik (boole), metin (statik UTF-8) tipleri
+    * Aritmetik (+, -, *, /), unary eksi, karsilastirma
+      (==, !=, <, >, <=, >=) operatorleri
+    * eger / degilse kosullu yapilari
+    * Sonsuz, kosullu ve sayacli dongu cesitleri
+    * kir, devam, don akis kontrol ifadeleri
+    * Fonksiyon tanimi, fonksiyon cagrisi, yedi parametreye kadar
+      register/stack arg gecisi
+    * Ana() giris noktasi
+    * yazdir yerlesik fonksiyonu (yazdir ASCII alias'i da kabul edilir)
+    * // satir yorumlari
+    * Satir/sutun ve caret bilgili lexer/parser/sema hata mesajlari
+
+  Native Derleyici
+    * Typed AST'den dogrudan Windows x64 MASM assembly uretimi
+    * `anadil derle` ile kaynak `.ana` dosyasindan calisan `.exe`
+    * Microsoft Build Tools (`ml64`, `lib`, `link`) ile entegrasyon
+    * Sifira bolme runtime hatasi standart formatta raporlanir
+
+  Native Runtime
+    * runtime/anadil_runtime.asm icinde ayri MASM modulu
+    * Windows kernel32 API'lari (WriteFile, ReadFile, GetStdHandle,
+      ExitProcess) uzerinden calisir
+    * C runtime bagimliligi yoktur (printf, getchar, strcmp, exit
+      kullanilmaz)
+    * print_sayi, print_metin, print_mantik, strcmp, panic,
+      wait_before_exit yardimcilari
+    * Pre-built `anadil_runtime.lib` kutuphanesi olarak paketlenir
+
+  Komut Satiri Arayuzu
+    * `anadil <dosya.ana>` kisayolu (native derle ve calistir)
+    * `anadil calistir` (native derle ve calistir)
+    * `anadil yorumla` (interpreter modu)
+    * `anadil kontrol` (sema dogrulamasi)
+    * `anadil derle` (native `.exe` uretimi)
+    * `anadil ast`, `anadil typed`, `anadil asm`, `anadil asm-yaz`
+    * `anadil ide` (yerel web IDE — deneysel)
+    * `anadil repl` (etkilesimli okuma-degerlendirme)
+    * `anadil ornekler`, `anadil surum`, `anadil yardim`
+    * `--json` formatinda makine okur diagnostic ciktisi: kontrol,
+      calistir, yorumla, derle
+
+  Native IDE (anadil-ide.exe)
+    * Editor, dosya gezgini, derleme paneli, tanilama paneli
+    * Sozdizim renklendirme, satir numarasi, parantez/tirnak
+      tamamlama
+    * `Yap` (F5) ile native derle ve calistir
+    * `EXE Derle` (Ctrl+B) sadece artifact uretir
+    * `EXE Calistir` (Ctrl+Shift+F5) son uretilen exe'yi tekrar
+      calistirir
+    * Tanilama kartlarina tiklayinca editor ilgili konuma gider
+    * Modern koyu tema, Turkce arayuz dili
+    * Son acilan proje ve dosya bir sonraki acilista geri yuklenir
+
+  Test Altyapisi
+    * tests/native_examples.rs: 11 ornek programda interpreter <->
+      native parity dogrulamasi
+    * tests/native_edge_cases.rs: calling convention, runtime hata,
+      scope, UTF-8, Turkce yol kenar durumlari
+    * tests/cli_diagnostics.rs: CLI hata formati regresyonu
+
+  Path ve Windows Dayanikliligi
+    * Bosluklu kaynak yollari
+    * Turkce karakterli kaynak yollari (Masaustu, Turkce Klasor)
+    * OneDrive / uzun yol senaryolari
+
+  Belgeler
+    * proje_raporu.md, dil_referansi.md, native_compiler.md,
+      memory_model.md, runtime_platform_abstraction.md,
+      test_coverage.md, project_status.md
+
+Bilinen Sinirlar:
+
+  * Yalnizca Windows x64 hedefler. Linux ve macOS gelecek
+    surumlerde hedeflenir; tasarim notu mevcuttur.
+  * `derle` komutu Visual Studio Build Tools (`link.exe`) gerektirir.
+    Interpreter ve IDE Build Tools olmadan calisir.
+  * Heap allocation yoktur. Dizi, yapi (struct), dinamik metin,
+    string birlestirme V0.2 ile gelecek.
+  * Optimizasyon gecisi yoktur; kod uretici dogrudan AST gezerek
+    yazar.
+  * Native runtime hatalari satir/sutun bilgisi tasimaz.
+  * Debug bilgisi (PDB) uretilmez.
+  * Modul sistemi yoktur; tum program tek dosyada bulunur.
+
+Sonraki Surum (V0.2):
+
+  * Heap allocator ve referans sayma (RC) calisma zamani
+  * Length-prefixed dinamik metin, metin birlestirme
+  * dizi (array) ve yapi (struct) tipleri
+  * zayif<T> (weak reference) ve cycle yonetimi
+
+Daha detayli yol haritasi: docs/PROJE_RAPORU.md ve repodaki
+Docs/memory_model.md
