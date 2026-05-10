@@ -197,9 +197,10 @@ isler veya `Docs/handoff.md` icindeki sonraki is listesiyle ortusur.
   dosyalarini interpreter/native parity ile dogruluyor.
 - [x] `tests/native_edge_cases.rs` runtime hatasi, fonksiyon argumani,
   nested call ve I/O edge case'lerini iceriyor.
-- [ ] V0.1 oncesi son bosluk tarama gecisi: her dil kurali icin en az
-  bir interpreter+native parity ornegi var mi? (yukaridaki kalan ana
-  isler madde 2)
+- [x] V0.1 oncesi son bosluk tarama gecisi: her dil kurali icin en az
+  bir interpreter+native parity ornegi var mi? (sonuclar
+  `Docs/test_coverage.md` icindedir; `Docs/todo.md` "Test Bosluklari"
+  basligi altinda izlenecek dort yuksek oncelik test maddesi var.)
 - [x] `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`
   ve `cargo test` temiz makinede yesil.
 

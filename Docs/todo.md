@@ -22,6 +22,20 @@
 - [ ] Dosya explorer'da uzun proje ve alt klasor deneyimini tekrar kontrol et.
 - [ ] Son acilan proje/dosya state'inin bozuk path durumunda sessizce toparlandigini test et.
 
+## Test Bosluklari
+
+V0.1 kapsam tarama sonuclari `Docs/test_coverage.md` icinde. Yuksek oncelik
+ek testler:
+
+- [ ] Void (donus tipsiz) fonksiyon icin interpreter+native parity ornegi.
+- [ ] Recursive fonksiyon icin interpreter+native parity ornegi.
+- [ ] 6 parametreli fonksiyon icin interpreter+native parity ornegi.
+- [ ] `mantik` esitlik ve esitsizlik (`==`, `!=`) icin sema karari ve testi.
+
+Orta/dusuk oncelik bosluklar (sema diagnostic testleri, CLI alt komut testleri,
+parantez/yorum/unary edge'ler) `Docs/test_coverage.md` "Bulunan Bosluklar"
+basligi altinda listelenmistir.
+
 ## Native Compiler
 
 - [ ] Interpreter/native karsilastirmasini daha fazla ornekle genislet.
