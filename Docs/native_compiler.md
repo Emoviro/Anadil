@@ -236,7 +236,7 @@ anadil_runtime_strcmp(a, b) != 0 -> esit degil
 Native MVP sifira bolme icin interpreter'a benzer kontrollu hata davranisi uretir. Kodgen bu durumda `anadil_runtime_panic` helper'ini cagirir:
 
 ```text
-Sifira bolme hatasi
+Anadil runtime hatasi: Sifira bolme hatasi
 ```
 
 Bu durumda executable Enter bekledikten sonra Windows `ExitProcess(1)` ile biter. Kaynak satir/sutun bilgisi su an native executable icine gomulmez; IDE entegrasyonu icin compile-time lexer/parser/semantic hatalari CLI tarafinda caret'li diagnostic ve `kontrol --json` ile structured diagnostic olarak kalir.
@@ -309,7 +309,7 @@ Visual Studio native toolchain bulunamazsa native integration testi kendini skip
 - Heap allocation yoktur.
 - Garbage collector yoktur.
 - String literal disinda runtime metin uretimi yoktur.
-- Native runtime hatalari interpreter kadar ayrintili raporlanmaz.
+- Native runtime hatalari tek satir `Anadil runtime hatasi: ...` formatindadir, ancak henuz kaynak satir/sutun bilgisi tasimaz.
 - Optimizasyon yoktur.
 - Debug info uretilmez.
 

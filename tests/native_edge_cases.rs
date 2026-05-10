@@ -273,7 +273,7 @@ Ana() {\n\
         String::from_utf8_lossy(&run_output.stdout),
         String::from_utf8_lossy(&run_output.stderr)
     );
-    assert!(combined_output.contains("Sifira bolme"));
+    assert!(combined_output.contains("Anadil runtime hatasi: Sifira bolme hatasi"));
 }
 
 fn assert_native_output(name: &str, source: &str) {

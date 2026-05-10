@@ -13,6 +13,7 @@ extrn ExitProcess:proc
 
 .data
 newline db 10
+runtime_error_prefix db "Anadil runtime hatasi: ", 0
 text_dogru db 100, 111, 196, 159, 114, 117, 0
 text_yanlis db 121, 97, 110, 108, 196, 177, 197, 159, 0
 io_bytes_written dd 0
@@ -57,6 +58,28 @@ anadil_runtime_print_newline PROC
     pop rbp
     ret
 anadil_runtime_print_newline ENDP
+
+anadil_runtime_write_cstr PROC
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32
+
+    mov r8, rcx
+    xor edx, edx
+anadil_runtime_write_cstr_len:
+    cmp byte ptr [r8 + rdx], 0
+    je anadil_runtime_write_cstr_write
+    inc rdx
+    jmp anadil_runtime_write_cstr_len
+
+anadil_runtime_write_cstr_write:
+    mov rcx, r8
+    call anadil_runtime_write_bytes
+
+    add rsp, 32
+    pop rbp
+    ret
+anadil_runtime_write_cstr ENDP
 
 anadil_runtime_print_sayi PROC
     push rbp
@@ -115,16 +138,7 @@ anadil_runtime_print_metin PROC
     mov rbp, rsp
     sub rsp, 32
 
-    mov r8, rcx
-    xor edx, edx
-anadil_runtime_print_metin_len:
-    cmp byte ptr [r8 + rdx], 0
-    je anadil_runtime_print_metin_write
-    inc rdx
-    jmp anadil_runtime_print_metin_len
-
-anadil_runtime_print_metin_write:
-    call anadil_runtime_write_bytes
+    call anadil_runtime_write_cstr
     call anadil_runtime_print_newline
 
     add rsp, 32
@@ -195,8 +209,12 @@ anadil_runtime_wait_before_exit ENDP
 anadil_runtime_panic PROC
     push rbp
     mov rbp, rsp
-    sub rsp, 32
+    sub rsp, 48
 
+    mov qword ptr [rbp - 8], rcx
+    lea rcx, runtime_error_prefix
+    call anadil_runtime_write_cstr
+    mov rcx, qword ptr [rbp - 8]
     call anadil_runtime_print_metin
     call anadil_runtime_wait_before_exit
     mov ecx, 1

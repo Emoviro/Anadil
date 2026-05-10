@@ -724,6 +724,7 @@ Ana() {\n\
             "anadil_runtime_print_metin PROC",
             "anadil_runtime_print_mantik PROC",
             "anadil_runtime_strcmp PROC",
+            "anadil_runtime_write_cstr PROC",
             "anadil_runtime_wait_before_exit PROC",
             "anadil_runtime_panic PROC",
         ] {
