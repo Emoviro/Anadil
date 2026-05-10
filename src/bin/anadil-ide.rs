@@ -592,6 +592,7 @@ impl AnadilIde {
 
         let editor_id = ui.make_persistent_id("source_editor");
         let line_count = editor_line_count(&self.source);
+        let previous_source = self.source.clone();
         let editor_height = ui.available_height();
         let min_editor_height = editor_height.max(line_count.max(26) as f32 * 20.0);
         let editor_width = ui.available_width();
@@ -600,19 +601,44 @@ impl AnadilIde {
             .auto_shrink([false, false])
             .max_height(editor_height)
             .show(ui, |ui| {
-                TextEdit::multiline(&mut self.source)
-                    .id(editor_id)
-                    .font(FontId::new(15.0, FontFamily::Monospace))
-                    .desired_width(f32::INFINITY)
-                    .desired_rows(line_count.max(26))
-                    .min_size(egui::vec2(editor_width, min_editor_height))
-                    .lock_focus(true)
-                    .layouter(&mut layouter)
-                    .show(ui)
+                ui.horizontal_top(|ui| {
+                    ui.spacing_mut().item_spacing.x = 0.0;
+                    line_number_gutter(ui, line_count, min_editor_height);
+                    ui.add_space(10.0);
+                    TextEdit::multiline(&mut self.source)
+                        .id(editor_id)
+                        .font(FontId::new(15.0, FontFamily::Monospace))
+                        .desired_width(f32::INFINITY)
+                        .desired_rows(line_count.max(26))
+                        .min_size(egui::vec2(
+                            (editor_width - line_number_gutter_width(line_count) - 10.0).max(320.0),
+                            min_editor_height,
+                        ))
+                        .lock_focus(true)
+                        .layouter(&mut layouter)
+                        .show(ui)
+                })
+                .inner
             })
             .inner;
 
         if output.response.changed() {
+            if let Some(cursor_range) = output.cursor_range {
+                let cursor_index = cursor_range.primary.index;
+                if let Some(new_cursor) =
+                    apply_editor_smart_edit(&previous_source, &mut self.source, cursor_index)
+                {
+                    let mut state = output.state;
+                    state
+                        .cursor
+                        .set_char_range(Some(egui::text::CCursorRange::one(
+                            egui::text::CCursor::new(new_cursor),
+                        )));
+                    state.store(ui.ctx(), output.response.id);
+                    ui.ctx()
+                        .memory_mut(|memory| memory.request_focus(output.response.id));
+                }
+            }
             self.build_exe = None;
             self.build_output = "Build sonucu guncel degil.".to_string();
             self.status = "Degisiklik var".to_string();
@@ -1566,6 +1592,30 @@ fn vertical_divider(ui: &mut egui::Ui) {
     );
 }
 
+fn line_number_gutter(ui: &mut egui::Ui, line_count: usize, min_height: f32) {
+    let width = line_number_gutter_width(line_count);
+    ui.allocate_ui_with_layout(
+        egui::vec2(width, min_height),
+        egui::Layout::top_down(egui::Align::Max),
+        |ui| {
+            ui.set_width(width);
+            let font = FontId::new(15.0, FontFamily::Monospace);
+            for number in 1..=line_count {
+                ui.label(
+                    RichText::new(number.to_string())
+                        .font(font.clone())
+                        .color(FG_TERTIARY),
+                );
+            }
+        },
+    );
+}
+
+fn line_number_gutter_width(line_count: usize) -> f32 {
+    let digits = line_count.max(1).to_string().len() as f32;
+    (digits * 9.0 + 14.0).max(28.0)
+}
+
 fn horizontal_divider(ui: &mut egui::Ui) {
     let width = ui.available_width();
     let (_id, rect) = ui.allocate_space(egui::vec2(width, 1.0));
@@ -1755,6 +1805,141 @@ fn ensure_ana_extension(name: &str) -> String {
 
 fn editor_line_count(source: &str) -> usize {
     source.split('\n').count().max(1)
+}
+
+fn apply_editor_smart_edit(
+    previous_source: &str,
+    current_source: &mut String,
+    cursor_index: usize,
+) -> Option<usize> {
+    let (_start, inserted) = inserted_text(previous_source, current_source)?;
+
+    if inserted == "\n" {
+        return apply_auto_indent(current_source, cursor_index);
+    }
+
+    if inserted.chars().count() != 1 {
+        return None;
+    }
+
+    let closing = match inserted.chars().next()? {
+        '(' => ')',
+        '[' => ']',
+        '{' => '}',
+        '"' => '"',
+        '\'' => '\'',
+        _ => return None,
+    };
+
+    insert_char_at_char_index(current_source, cursor_index, closing);
+    Some(cursor_index)
+}
+
+fn apply_auto_indent(source: &mut String, cursor_index: usize) -> Option<usize> {
+    if cursor_index == 0 {
+        return None;
+    }
+
+    let before_cursor = slice_chars(source, 0, cursor_index);
+    if !before_cursor.ends_with('\n') {
+        return None;
+    }
+
+    let before_newline = before_cursor.trim_end_matches(['\r', '\n']);
+    let previous_line = before_newline.rsplit('\n').next().unwrap_or("");
+    let base_indent = leading_whitespace(previous_line);
+    let extra_indent = previous_line.trim_end().ends_with('{');
+    let next_char = source.chars().nth(cursor_index);
+
+    let mut insertion = base_indent.to_string();
+    if extra_indent {
+        insertion.push_str("    ");
+    }
+
+    let cursor_after_indent = cursor_index + insertion.chars().count();
+
+    if extra_indent && next_char == Some('}') {
+        insertion.push('\n');
+        insertion.push_str(base_indent);
+    }
+
+    if insertion.is_empty() {
+        return None;
+    }
+
+    insert_str_at_char_index(source, cursor_index, &insertion);
+    Some(cursor_after_indent)
+}
+
+fn inserted_text(previous: &str, current: &str) -> Option<(usize, String)> {
+    let previous_chars = previous.chars().collect::<Vec<_>>();
+    let current_chars = current.chars().collect::<Vec<_>>();
+
+    if current_chars.len() < previous_chars.len() {
+        return None;
+    }
+
+    let mut prefix = 0;
+    while prefix < previous_chars.len()
+        && prefix < current_chars.len()
+        && previous_chars[prefix] == current_chars[prefix]
+    {
+        prefix += 1;
+    }
+
+    let mut suffix = 0;
+    while suffix < previous_chars.len().saturating_sub(prefix)
+        && suffix < current_chars.len().saturating_sub(prefix)
+        && previous_chars[previous_chars.len() - 1 - suffix]
+            == current_chars[current_chars.len() - 1 - suffix]
+    {
+        suffix += 1;
+    }
+
+    if previous_chars.len() - prefix - suffix != 0 {
+        return None;
+    }
+
+    Some((
+        prefix,
+        current_chars[prefix..current_chars.len() - suffix]
+            .iter()
+            .collect(),
+    ))
+}
+
+fn leading_whitespace(line: &str) -> &str {
+    let end = line
+        .char_indices()
+        .find_map(|(index, ch)| (!ch.is_whitespace()).then_some(index))
+        .unwrap_or(line.len());
+    &line[..end]
+}
+
+fn slice_chars(source: &str, start: usize, end: usize) -> String {
+    source
+        .chars()
+        .skip(start)
+        .take(end.saturating_sub(start))
+        .collect()
+}
+
+fn insert_char_at_char_index(source: &mut String, char_index: usize, ch: char) {
+    let mut buffer = [0; 4];
+    insert_str_at_char_index(source, char_index, ch.encode_utf8(&mut buffer));
+}
+
+fn insert_str_at_char_index(source: &mut String, char_index: usize, text: &str) {
+    let byte_index = byte_index_for_char(source, char_index);
+    source.insert_str(byte_index, text);
+}
+
+fn byte_index_for_char(source: &str, char_index: usize) -> usize {
+    source
+        .char_indices()
+        .map(|(index, _)| index)
+        .nth(char_index)
+        .unwrap_or(source.len())
 }
 
 fn relative_component_depth(path: &str) -> usize {
@@ -2191,9 +2376,10 @@ Ana() {
 #[cfg(test)]
 mod tests {
     use super::{
-        char_index_for_line_column, editor_line_count, format_build_started, format_ide_state,
-        format_native_build_error, highlight_job, native_build_advice, parent_hint,
-        parse_ide_state, project_child_path, relative_component_depth, sibling_file_path,
+        apply_editor_smart_edit, char_index_for_line_column, editor_line_count,
+        format_build_started, format_ide_state, format_native_build_error, highlight_job,
+        native_build_advice, parent_hint, parse_ide_state, project_child_path,
+        relative_component_depth, sibling_file_path,
     };
     use std::path::Path;
 
@@ -2245,6 +2431,36 @@ mod tests {
         for source in ["", "Ana() {\n\n}", "Ana() {\r\n    yazdır(1);\r\n}\r\n"] {
             assert_eq!(highlight_job(source, &[]).text, source);
         }
+    }
+
+    #[test]
+    fn editor_smart_edit_closes_pairs() {
+        let previous = "Ana";
+        let mut current = "Ana(".to_string();
+        let cursor = apply_editor_smart_edit(previous, &mut current, 4);
+
+        assert_eq!(current, "Ana()");
+        assert_eq!(cursor, Some(4));
+    }
+
+    #[test]
+    fn editor_smart_edit_indents_after_newline() {
+        let previous = "Ana() {";
+        let mut current = "Ana() {\n".to_string();
+        let cursor = apply_editor_smart_edit(previous, &mut current, 8);
+
+        assert_eq!(current, "Ana() {\n    ");
+        assert_eq!(cursor, Some(12));
+    }
+
+    #[test]
+    fn editor_smart_edit_expands_brace_block() {
+        let previous = "Ana() {}";
+        let mut current = "Ana() {\n}".to_string();
+        let cursor = apply_editor_smart_edit(previous, &mut current, 8);
+
+        assert_eq!(current, "Ana() {\n    \n}");
+        assert_eq!(cursor, Some(12));
     }
 
     #[test]
