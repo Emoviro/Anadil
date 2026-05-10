@@ -152,6 +152,40 @@ Ana() {\n\
 }
 
 #[test]
+fn run_text_reports_output() {
+    let Some(anadil_bin) = anadil_binary() else {
+        eprintln!("cli diagnostic test skipped: anadil binary path is not available");
+        return;
+    };
+
+    let source_path = write_fixture(
+        "run_text_valid.ana",
+        "\
+Ana() {\n\
+    yazdir(12);\n\
+}\n",
+    );
+
+    let output = Command::new(anadil_bin)
+        .arg("calistir")
+        .arg(&source_path)
+        .output()
+        .expect("text run command should run");
+
+    if !output.status.success() && native_toolchain_missing(&output) {
+        eprintln!("text native run test skipped: Visual Studio native toolchain is not available");
+        return;
+    }
+
+    assert!(output.status.success(), "text run command should pass");
+    assert!(
+        output.stderr.is_empty(),
+        "text run success should not write stderr"
+    );
+    assert_eq!(normalize_stdout(&output.stdout), "12");
+}
+
+#[test]
 fn default_file_argument_runs_native_program() {
     let Some(anadil_bin) = anadil_binary() else {
         eprintln!("cli diagnostic test skipped: anadil binary path is not available");
@@ -184,6 +218,37 @@ Ana() {\n\
         "native run should not write stderr"
     );
     assert_eq!(normalize_stdout(&output.stdout), "41");
+}
+
+#[test]
+fn run_text_reports_runtime_error() {
+    let Some(anadil_bin) = anadil_binary() else {
+        eprintln!("cli diagnostic test skipped: anadil binary path is not available");
+        return;
+    };
+
+    let source_path = write_fixture(
+        "run_text_division_by_zero.ana",
+        "\
+Ana() {\n\
+    yazdir(10 / 0);\n\
+}\n",
+    );
+
+    let output = Command::new(anadil_bin)
+        .arg("calistir")
+        .arg(&source_path)
+        .output()
+        .expect("text run command should run");
+
+    if !output.status.success() && native_toolchain_missing(&output) {
+        eprintln!("text native run test skipped: Visual Studio native toolchain is not available");
+        return;
+    }
+
+    assert!(!output.status.success(), "text run command should fail");
+    assert!(normalize_stdout(&output.stdout).contains("Anadil runtime hatasi"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("Native program basarisiz bitti: 1"));
 }
 
 #[test]
@@ -226,6 +291,105 @@ Ana() {\n\
     assert!(stdout.contains("\"stage\":\"native\""));
     assert!(stdout.contains("\"message\":\"Native program basarisiz bitti: 1\""));
     assert!(stdout.contains("\"line\":null"));
+}
+
+#[test]
+fn interpret_text_reports_output() {
+    let Some(anadil_bin) = anadil_binary() else {
+        eprintln!("cli diagnostic test skipped: anadil binary path is not available");
+        return;
+    };
+
+    let source_path = write_fixture(
+        "interpret_text_valid.ana",
+        "\
+Ana() {\n\
+    yazdir(55);\n\
+}\n",
+    );
+
+    let output = Command::new(anadil_bin)
+        .arg("yorumla")
+        .arg(&source_path)
+        .output()
+        .expect("interpret command should run");
+
+    assert!(
+        output.status.success(),
+        "text interpret command should pass"
+    );
+    assert!(
+        output.stderr.is_empty(),
+        "text interpret success should not write stderr"
+    );
+    assert_eq!(normalize_stdout(&output.stdout), "55");
+}
+
+#[test]
+fn interpret_text_reports_runtime_error() {
+    let Some(anadil_bin) = anadil_binary() else {
+        eprintln!("cli diagnostic test skipped: anadil binary path is not available");
+        return;
+    };
+
+    let source_path = write_fixture(
+        "interpret_text_division_by_zero.ana",
+        "\
+Ana() {\n\
+    yazdir(10 / 0);\n\
+}\n",
+    );
+
+    let output = Command::new(anadil_bin)
+        .arg("yorumla")
+        .arg(&source_path)
+        .output()
+        .expect("interpret command should run");
+
+    assert!(
+        !output.status.success(),
+        "text interpret command should fail"
+    );
+    assert!(
+        output.stdout.is_empty(),
+        "text interpret failure should not write stdout"
+    );
+    assert!(String::from_utf8_lossy(&output.stderr).contains("Sifira bolme hatasi"));
+}
+
+#[test]
+fn interpret_json_reports_output() {
+    let Some(anadil_bin) = anadil_binary() else {
+        eprintln!("cli diagnostic test skipped: anadil binary path is not available");
+        return;
+    };
+
+    let source_path = write_fixture(
+        "interpret_json_valid.ana",
+        "\
+Ana() {\n\
+    yazdir(21);\n\
+}\n",
+    );
+
+    let output = Command::new(anadil_bin)
+        .arg("yorumla")
+        .arg("--json")
+        .arg(&source_path)
+        .output()
+        .expect("interpret command should run");
+
+    assert!(
+        output.status.success(),
+        "json interpret command should pass"
+    );
+    assert!(
+        output.stderr.is_empty(),
+        "json interpret success should not write stderr"
+    );
+
+    let stdout = normalize_stdout(&output.stdout);
+    assert_eq!(stdout, "{\"ok\":true,\"output\":\"21\",\"diagnostics\":[]}");
 }
 
 #[test]

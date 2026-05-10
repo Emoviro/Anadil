@@ -64,7 +64,19 @@ IDE Build Tools olmadan calisir.
 
 ## Calistirma
 
-Varsayilan calistirma native derle-ve-calistir yapar:
+V0.1'de ana yol native executable'dir. `calistir` ve ciplak dosya
+cagirmak kaynak dosyayi once `.exe` olarak derler, sonra uretilen
+programi calistirir. Interpreter sadece `yorumla` komutuyla acikca
+istenirse kullanilir.
+
+Komut ozeti:
+
+- `anadil <dosya.ana>`: native derle ve calistir.
+- `anadil calistir <dosya.ana>`: native derle ve calistir.
+- `anadil yorumla <dosya.ana>`: interpreter/debug yolu.
+- `anadil derle <dosya.ana>`: sadece native `.exe` uretir.
+
+Cargo uzerinden varsayilan calistirma:
 
 ```powershell
 cargo run -- examples\topla.ana
@@ -91,7 +103,7 @@ Basarili cikti:
 Runtime hatasi:
 
 ```json
-{"ok":false,"output":"","diagnostics":[{"severity":"error","stage":"runtime","message":"Sifira bolme hatasi","line":2,"column":12}]}
+{"ok":false,"output":"Anadil runtime hatasi: Sifira bolme hatasi","diagnostics":[{"severity":"error","stage":"native","message":"Native program basarisiz bitti: 1","line":null,"column":null}]}
 ```
 
 Native executable icindeki runtime hatalari su an kaynak satir/sutun bilgisi
@@ -228,13 +240,15 @@ Fonksiyon kaydedildi.
 
 Not: REPL cok satirli girisi destekler ve fonksiyon tanimlarini oturum boyunca saklar. Degiskenler satirlar arasinda saklanmaz.
 
-Lokal web IDE:
+Lokal web IDE (deneysel / ikincil):
 
 ```powershell
 cargo run -- ide
 ```
 
-Komut yerel web IDE baslatir ve adresi terminale yazar. IDE icinde ornek dosyalar yuklenebilir, `.ana` dosyasi acilip kaydedilebilir, syntax highlighting ve canli diagnostics kullanilabilir, `Kontrol`, `Calistir` ve `EXE Derle` butonlariyla mevcut compiler protokolu calistirilabilir.
+Bu komut eski yerel web IDE'yi baslatir ve adresi terminale yazar. V0.1
+icin birincil IDE `anadil-ide.exe` native desktop IDE'dir; web IDE yalnizca
+deneysel/ikincil arac olarak tutulur.
 
 Native executable IDE:
 

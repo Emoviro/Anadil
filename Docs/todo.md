@@ -2,19 +2,13 @@
 
 ## Hemen Sonraki Adim
 
-- ~~Native IDE kullanici akisini interpreter modundan arindir; `Yap`/`F5`
-  native EXE derleyip hemen calistirmali.~~
-- ~~CLI `calistir` ve ciplak dosya akisini native derle-ve-calistir yap;
-  interpreter'i `yorumla` komutuna tasi.~~
-- Runtime object cache icin native testleri calistir ve commit/push sonrasi ilk build davranisini izle.
-- Runtime `.lib` modelinin commit/push sonrasi ilk build davranisini izle.
-- Memory management notunu push sonrasi gozden gecir.
+- V0.1 RC paketini ve release yayini sonucunu izle.
 
 ## Sonraki Native Compiler Sprinti
 
-1. Runtime object cache ekle.
-2. Cache invalidation icin runtime asm timestamp kontrolu yap.
-3. Link hattini cached runtime objesiyle calistir ve mevcut native testleri koru.
+1. ~~Runtime object cache ekle.~~
+2. ~~Cache invalidation icin runtime asm timestamp kontrolu yap.~~
+3. ~~Link hattini cached runtime objesiyle calistir ve mevcut native testleri koru.~~
 4. ~~V0.1 compiler tamam kriterlerini yaz.~~ (project_status.md `V0.1 Tamam Kriterleri`)
 5. Runtime library yeterince sabitlenince paketleme modelini degerlendir.
 
@@ -56,7 +50,6 @@ basligi altinda listelenmistir.
 - [x] Runtime object cache ekle.
 - [x] Runtime objesini `.lib` modeline tasi.
 - [x] Windows API bagimli runtime katmanini ileride platform soyutlamasina bol. (tasarim notu: `Docs/runtime_platform_abstraction.md`)
-- [ ] Runtime helper objesini tekrar kullanilabilir kutuphane modeline tasarla.
 
 ## Dil Tasarimi
 

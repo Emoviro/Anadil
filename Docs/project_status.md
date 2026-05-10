@@ -101,12 +101,17 @@ target/native path cases/Turkce Klasor/deneme dosyasi.ana
 
 ### Lokal IDE
 
-- Lokal desktop IDE mevcut.
-- Editor, dosya explorer ve native build paneli uzerinde calisildi.
-- Satir numarasi, otomatik girinti, parantez/quote tamamlama gibi temel
-  editor kolayliklari eklendi.
-- IDE gorsel polish su an ikinci planda. Oncelik compiler ve runtime
-  omurgasinin V0.1 icin sabitlenmesi.
+- Native desktop IDE V0.1'in birincil IDE akisi olarak calisiyor.
+- `Yap`/`F5` aktif dosyayi kaydedip native `.exe` uretir ve hemen calistirir.
+- `EXE Derle` sadece artifact uretir; `EXE Calistir` son uretilen executable'i
+  tekrar kosar.
+- Build paneli executable yolunu, exit code'u, stdout/stderr detaylarini ve
+  toolchain hatalarinda kisa cozum notunu gosterir.
+- Build Tools yoksa native build aksiyonlari disable edilir ve kullaniciya
+  Build Tools gereksinimi aciklanir.
+- Editor, dosya explorer, son proje/dosya geri yukleme, diagnostics kartindan
+  editor konumuna gitme, satir numarasi ve temel editor kolayliklari V0.1
+  smoke testinden gecmistir.
 
 ## Alinan Kararlar
 
@@ -147,11 +152,11 @@ buyuk UI revizyonlari compiler omurgasi tamamlanmadan ana oncelik olmayacak.
 
 Compiler tarafinda V0.1'e "tamam" diyebilmek icin kalan ana isler:
 
-1. V0.1 compiler tamam kriterlerini yazmak.
-2. Native/interpreter test kapsaminda son bir bosluk taramasi yapmak.
-3. Runtime library modelinin ilk push sonrasi davranisini izlemek.
-4. Windows API bagimli runtime katmaninin ileride nasil soyutlanacagini
-   kisa not olarak eklemek.
+1. ~~V0.1 compiler tamam kriterlerini yazmak.~~
+2. ~~Native/interpreter test kapsaminda son bir bosluk taramasi yapmak.~~
+3. ~~Runtime library modelinin ilk push sonrasi davranisini izlemek.~~
+4. ~~Windows API bagimli runtime katmaninin ileride nasil soyutlanacagini
+   kisa not olarak eklemek.~~
 5. ~~README ve native compiler dokumanlarini son kapsamla hizalamak.~~
 
 Bu isler bittikten sonra compiler MVP V0.1 icin sabit kabul edilebilir.
