@@ -28,7 +28,8 @@
 
 [CmdletBinding()]
 param(
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$Installer
 )
 
 $ErrorActionPreference = "Stop"
@@ -250,13 +251,72 @@ Kaynak:  https://github.com/ArsenAlighieri/Anadil
     $sizeMb = [math]::Round($sizeBytes / 1MB, 2)
 
     Write-Host ""
-    Write-Host "==> Hazir." -ForegroundColor Green
+    Write-Host "==> ZIP hazir." -ForegroundColor Green
     Write-Host "    Klasor:  $distDir"
     Write-Host "    Arsiv:   $zipPath"
     Write-Host "    Boyut:   $sizeMb MB"
     Write-Host "    SHA256:  $($hash.Hash)"
+
+    # 7. Opsiyonel installer (NSIS)
+    if ($Installer) {
+        Write-Host ""
+        Write-Host "==> NSIS installer olusturuluyor..." -ForegroundColor Cyan
+
+        $makeNsis = Get-Command makensis.exe -ErrorAction SilentlyContinue
+        if (-not $makeNsis) {
+            $candidates = @(
+                "${env:ProgramFiles(x86)}\NSIS\makensis.exe",
+                "${env:ProgramFiles}\NSIS\makensis.exe"
+            )
+            foreach ($candidate in $candidates) {
+                if (Test-Path $candidate) {
+                    $makeNsis = Get-Item $candidate
+                    break
+                }
+            }
+        }
+        if (-not $makeNsis) {
+            throw "NSIS bulunamadi. Indirme: https://nsis.sourceforge.io/Download"
+        }
+        $makeNsisDisplay = if ($makeNsis.Source) { $makeNsis.Source } else { $makeNsis.FullName }
+        Write-Host "    makensis: $makeNsisDisplay"
+
+        $nsiScript = Join-Path $RepoRoot "installer.nsi"
+        if (-not (Test-Path $nsiScript)) {
+            throw "installer.nsi bulunamadi: $nsiScript"
+        }
+
+        # NSIS'e versiyonu ve dist klasorunu defines ile gec
+        $distRelative   = "target\dist\$distName"
+        $setupRelative  = "target\dist\Anadil-Setup-v$version.exe"
+        $defines = @(
+            "/DANADIL_VERSION=$version",
+            "/DANADIL_DIST_DIR=$distRelative",
+            "/DANADIL_OUTFILE=$setupRelative"
+        )
+
+        $makeNsisPath = if ($makeNsis.Source) { $makeNsis.Source } else { $makeNsis.FullName }
+        & $makeNsisPath @defines $nsiScript
+        if ($LASTEXITCODE -ne 0) {
+            throw "makensis basarisiz oldu (exit $LASTEXITCODE)."
+        }
+
+        $setupPath = Join-Path $RepoRoot $setupRelative
+        if (-not (Test-Path $setupPath)) {
+            throw "Setup uretimi tamamlanmadi: $setupPath"
+        }
+        $setupHash = Get-FileHash -Algorithm SHA256 $setupPath
+        $setupSizeMb = [math]::Round((Get-Item $setupPath).Length / 1MB, 2)
+
+        Write-Host ""
+        Write-Host "==> Setup hazir." -ForegroundColor Green
+        Write-Host "    Setup:   $setupPath"
+        Write-Host "    Boyut:   $setupSizeMb MB"
+        Write-Host "    SHA256:  $($setupHash.Hash)"
+    }
+
     Write-Host ""
-    Write-Host "GitHub Releases'a yuklerken release notes icine SHA256 ekleyin."
+    Write-Host "GitHub Releases'a yuklerken release notes icine SHA256(lari) ekleyin."
 }
 finally {
     Pop-Location
