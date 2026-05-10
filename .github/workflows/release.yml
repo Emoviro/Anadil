@@ -95,33 +95,44 @@ jobs:
         shell: powershell
         run: |
           $tag = "${{ github.ref_name }}"
-          $setupBlock = ""
-          if ("${{ steps.artifacts.outputs.setup_path }}" -ne "") {
-            $setupBlock = @"
+          $zipName = "${{ steps.artifacts.outputs.zip_name }}"
+          $zipSize = "${{ steps.artifacts.outputs.zip_size }}"
+          $zipSha  = "${{ steps.artifacts.outputs.zip_sha }}"
+          $setupPath = "${{ steps.artifacts.outputs.setup_path }}"
+          $setupName = "${{ steps.artifacts.outputs.setup_name }}"
+          $setupSize = "${{ steps.artifacts.outputs.setup_size }}"
+          $setupSha  = "${{ steps.artifacts.outputs.setup_sha }}"
 
-          Setup (kurulum sihirbazi):
-            Dosya:  ${{ steps.artifacts.outputs.setup_name }}
-            Boyut:  ${{ steps.artifacts.outputs.setup_size }}
-            SHA256: ${{ steps.artifacts.outputs.setup_sha }}
-          "@
+          $lines = @(
+            "Anadil $tag - Windows x64 release",
+            "",
+            "ZIP arsivi:",
+            "  Dosya:  $zipName",
+            "  Boyut:  $zipSize",
+            "  SHA256: $zipSha"
+          )
+
+          if ($setupPath -ne "") {
+            $lines += @(
+              "",
+              "Setup (kurulum sihirbazi):",
+              "  Dosya:  $setupName",
+              "  Boyut:  $setupSize",
+              "  SHA256: $setupSha"
+            )
           }
-          $notes = @"
-          Anadil $tag - Windows x64 release
 
-          ZIP arsivi:
-            Dosya:  ${{ steps.artifacts.outputs.zip_name }}
-            Boyut:  ${{ steps.artifacts.outputs.zip_size }}
-            SHA256: ${{ steps.artifacts.outputs.zip_sha }}
-          $setupBlock
+          $lines += @(
+            "",
+            "Kurulum talimatlari icin ZIP icindeki KURULUM.txt dosyasina bakin.",
+            "Surum notlari icin CHANGELOG.txt dosyasina bakin.",
+            "",
+            "Native derleme (anadil derle) Visual Studio Build Tools gerektirir.",
+            "Interpreter modu (anadil yorumla) ve native IDE Build Tools olmadan calisir."
+          )
 
-          Kurulum talimatlari icin ZIP icindeki KURULUM.txt dosyasina bakin.
-          Surum notlari icin CHANGELOG.txt dosyasina bakin.
-
-          Native derleme (anadil derle) Visual Studio Build Tools gerektirir.
-          Interpreter modu (anadil yorumla) ve native IDE Build Tools olmadan calisir.
-          "@
           $notesPath = Join-Path $env:RUNNER_TEMP "release_notes.txt"
-          Set-Content -Path $notesPath -Value $notes -Encoding UTF8
+          Set-Content -Path $notesPath -Value $lines -Encoding UTF8
           "notes_path=$notesPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Create GitHub Release
