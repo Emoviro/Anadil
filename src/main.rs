@@ -473,6 +473,7 @@ fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
         vcvars64.as_deref(),
     )?;
     let runtime_lib = ensure_runtime_lib(vcvars64.as_deref())?;
+    let runtime_lib_arg = runtime_tool_arg(&runtime_lib, &relative_runtime_lib());
     run_tool(
         "link",
         &[
@@ -481,7 +482,7 @@ fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
             "/ENTRY:main".to_string(),
             format!("/OUT:{}", build_paths.exe.display()),
             build_paths.obj.display().to_string(),
-            runtime_lib.display().to_string(),
+            runtime_lib_arg,
             "kernel32.lib".to_string(),
         ],
         vcvars64.as_deref(),
@@ -538,14 +539,21 @@ fn ensure_runtime_lib(vcvars64: Option<&Path>) -> Result<PathBuf, String> {
     let runtime_obj = runtime_obj_cache_path()?;
     let runtime_lib = runtime_lib_cache_path()?;
 
+    // Tools'a Turkce karakterli absolute path gondermemek icin once
+    // cwd-relative ASCII path dene; cwd proje koku ise bu calisir,
+    // degilse absolute fallback. Bkz `runtime_tool_arg`.
+    let runtime_asm_arg = runtime_tool_arg(&runtime_asm, &relative_runtime_asm());
+    let runtime_obj_arg = runtime_tool_arg(&runtime_obj, &relative_runtime_obj());
+    let runtime_lib_arg = runtime_tool_arg(&runtime_lib, &relative_runtime_lib());
+
     if runtime_obj_needs_rebuild(&runtime_asm, &runtime_obj)? {
         run_tool(
             "ml64",
             &[
                 "/nologo".to_string(),
                 "/c".to_string(),
-                format!("/Fo{}", runtime_obj.display()),
-                runtime_asm.display().to_string(),
+                format!("/Fo{runtime_obj_arg}"),
+                runtime_asm_arg,
             ],
             vcvars64,
         )?;
@@ -556,14 +564,58 @@ fn ensure_runtime_lib(vcvars64: Option<&Path>) -> Result<PathBuf, String> {
             "lib",
             &[
                 "/nologo".to_string(),
-                format!("/OUT:{}", runtime_lib.display()),
-                runtime_obj.display().to_string(),
+                format!("/OUT:{runtime_lib_arg}"),
+                runtime_obj_arg,
             ],
             vcvars64,
         )?;
     }
 
     Ok(runtime_lib)
+}
+
+fn relative_runtime_asm() -> PathBuf {
+    PathBuf::from("runtime").join("anadil_runtime.asm")
+}
+
+fn relative_runtime_obj() -> PathBuf {
+    PathBuf::from("target")
+        .join("native-runtime")
+        .join("anadil_runtime.obj")
+}
+
+fn relative_runtime_lib() -> PathBuf {
+    PathBuf::from("target")
+        .join("native-runtime")
+        .join("anadil_runtime.lib")
+}
+
+/// Tool cagrilarinda kullanilacak path string'ini secer:
+/// - Eger relative path cwd'den gercek dosyaya/dizine erisebiliyorsa
+///   onu doner (saf ASCII; ml64/lib/link'e Turkce karakterli absolute
+///   path gitmez).
+/// - Aksi halde absolute path string'ini doner (eski davranis).
+fn runtime_tool_arg(absolute: &Path, relative: &Path) -> String {
+    if relative_path_is_usable(absolute, relative) {
+        relative.display().to_string()
+    } else {
+        absolute.display().to_string()
+    }
+}
+
+fn relative_path_is_usable(absolute: &Path, relative: &Path) -> bool {
+    let Ok(absolute_canon) = fs::canonicalize(absolute) else {
+        // Absolute hedef yoksa (henuz olusturulmamis cikti dosyasi gibi),
+        // relative parent dizininin var olup olmadigina bakariz.
+        return relative
+            .parent()
+            .map(|parent| parent.as_os_str().is_empty() || parent.is_dir())
+            .unwrap_or(false);
+    };
+
+    fs::canonicalize(relative)
+        .map(|relative_canon| relative_canon == absolute_canon)
+        .unwrap_or(false)
 }
 
 struct RuntimeCacheLock {
