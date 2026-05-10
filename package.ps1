@@ -159,12 +159,15 @@ try {
     New-Item -ItemType Directory -Force -Path $runtimeBuildDir | Out-Null
     $runtimeObj = Join-Path $runtimeBuildDir "anadil_runtime.obj"
     $runtimeLib = Join-Path $runtimeBuildDir "anadil_runtime.lib"
+    $runtimeAsmArg = "runtime\anadil_runtime.asm"
+    $runtimeObjArg = "target\release-runtime\anadil_runtime.obj"
+    $runtimeLibArg = "target\release-runtime\anadil_runtime.lib"
 
     Invoke-MsvcTool -Tool "ml64" -VcVars64 $vcVars64 -ToolArgs @(
-        "/nologo", "/c", "/Fo$runtimeObj", $runtimeAsm
+        "/nologo", "/c", "/Fo$runtimeObjArg", $runtimeAsmArg
     )
     Invoke-MsvcTool -Tool "lib" -VcVars64 $vcVars64 -ToolArgs @(
-        "/nologo", "/OUT:$runtimeLib", $runtimeObj
+        "/nologo", "/OUT:$runtimeLibArg", $runtimeObjArg
     )
     if (-not (Test-Path $runtimeLib)) { throw "Runtime lib uretilemedi: $runtimeLib" }
 
@@ -184,8 +187,22 @@ try {
     Copy-Item $runtimeAsm   (Join-Path $distDir "runtime\anadil_runtime.asm")
     Copy-Item $runtimeLib   (Join-Path $distDir "runtime\anadil_runtime.lib")
 
-    Get-ChildItem (Join-Path $RepoRoot "examples") -Filter "*.ana" |
-        Copy-Item -Destination (Join-Path $distDir "examples")
+    $trackedExamples = @()
+    if (Get-Command git.exe -ErrorAction SilentlyContinue) {
+        $trackedExamples = @(git -C $RepoRoot ls-files "examples/*.ana" 2>$null)
+        if ($LASTEXITCODE -ne 0) {
+            $trackedExamples = @()
+        }
+    }
+
+    if ($trackedExamples.Count -gt 0) {
+        foreach ($relativeExample in $trackedExamples) {
+            Copy-Item (Join-Path $RepoRoot $relativeExample) -Destination (Join-Path $distDir "examples")
+        }
+    } else {
+        Get-ChildItem (Join-Path $RepoRoot "examples") -Filter "*.ana" |
+            Copy-Item -Destination (Join-Path $distDir "examples")
+    }
 
     $docMappings = @{
         "Docs\proje_raporu.md"   = "docs\PROJE_RAPORU.md"

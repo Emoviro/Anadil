@@ -537,16 +537,19 @@ fn write_native_asm(path: &str, source: &str) -> Result<PathBuf, String> {
 }
 
 fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
-    let vcvars64 =
-        if command_available("ml64") && command_available("link") && command_available("lib") {
-            None
-        } else {
-            Some(find_vcvars64().ok_or_else(|| {
-                "Native derleme icin Visual Studio Build Tools C++ araclari gerekli. \
-             `ml64`, `link`, `lib` veya `vcvars64.bat` bulunamadi."
-                    .to_string()
-            })?)
-        };
+    let has_packaged_runtime = packaged_runtime_lib_path().is_some();
+    let vcvars64 = if command_available("ml64")
+        && command_available("link")
+        && (has_packaged_runtime || command_available("lib"))
+    {
+        None
+    } else {
+        Some(find_vcvars64().ok_or_else(|| {
+            "Native derleme icin Visual Studio Build Tools C++ araclari gerekli. \
+             `ml64`, `link` veya `vcvars64.bat` bulunamadi."
+                .to_string()
+        })?)
+    };
 
     let exe_path = output_path(path, "exe");
     let build_paths = create_native_build_paths(path)?;
@@ -630,6 +633,10 @@ fn create_native_build_paths(source_path: &str) -> Result<NativeBuildPaths, Stri
 }
 
 fn ensure_runtime_lib(vcvars64: Option<&Path>) -> Result<PathBuf, String> {
+    if let Some(runtime_lib) = packaged_runtime_lib_path() {
+        return Ok(runtime_lib);
+    }
+
     let _lock = acquire_runtime_cache_lock()?;
     let runtime_asm = runtime_asm_path()?;
     let runtime_obj = runtime_obj_cache_path()?;
@@ -668,6 +675,21 @@ fn ensure_runtime_lib(vcvars64: Option<&Path>) -> Result<PathBuf, String> {
     }
 
     Ok(runtime_lib)
+}
+
+fn packaged_runtime_lib_path() -> Option<PathBuf> {
+    let exe_path = env::current_exe().ok()?;
+    let runtime_lib = packaged_runtime_lib_path_from_exe(&exe_path)?;
+    runtime_lib.is_file().then_some(runtime_lib)
+}
+
+fn packaged_runtime_lib_path_from_exe(exe_path: &Path) -> Option<PathBuf> {
+    Some(
+        exe_path
+            .parent()?
+            .join("runtime")
+            .join("anadil_runtime.lib"),
+    )
 }
 
 fn relative_runtime_asm() -> PathBuf {
@@ -1141,8 +1163,8 @@ mod tests {
     use std::{fs, path::PathBuf};
 
     use super::{
-        parse_args, runtime_lib_needs_rebuild, runtime_obj_needs_rebuild, sanitize_build_name,
-        Command, ParsedArgs,
+        packaged_runtime_lib_path_from_exe, parse_args, runtime_lib_needs_rebuild,
+        runtime_obj_needs_rebuild, sanitize_build_name, Command, ParsedArgs,
     };
 
     #[test]
@@ -1193,6 +1215,18 @@ mod tests {
 
         assert!(runtime_lib_needs_rebuild(&runtime_obj, &runtime_lib)
             .expect("runtime lib cache state should be checked"));
+    }
+
+    #[test]
+    fn packaged_runtime_lib_is_resolved_next_to_executable() {
+        let exe = PathBuf::from(r"C:\Anadil\anadil.exe");
+        let runtime_lib =
+            packaged_runtime_lib_path_from_exe(&exe).expect("exe parent should resolve");
+
+        assert_eq!(
+            runtime_lib,
+            PathBuf::from(r"C:\Anadil\runtime\anadil_runtime.lib")
+        );
     }
 
     #[test]

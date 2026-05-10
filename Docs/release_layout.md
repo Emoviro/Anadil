@@ -1,6 +1,6 @@
 # Anadil V0.1 Release Layout
 
-Bu belge `Anadil-v0.1.0-windows-x64.zip` arsiviniin ic yapisini, hangi
+Bu belge `Anadil-v0.1.0-windows-x64.zip` arsivinin ic yapisini, hangi
 dosyanin nereden geldigini ve hangi adimda uretildigini tanimlar. Hem
 elle paketleme hem GitHub Actions otomatik release icin tek dogruluk
 kaynagidir.
@@ -46,7 +46,7 @@ Anadil-v0.1.0/
 ├── KURULUM.txt                      (kullanici icin kurulum talimati)
 ├── CHANGELOG.txt                    (release notes)
 ├── README.txt                       (5-6 satirlik baslangic)
-└── LICENSE.txt                      (TODO: lisans karari verilmeli)
+└── LICENSE.txt                      (MIT lisansi)
 ```
 
 ## Dosya kaynaklari
@@ -64,7 +64,7 @@ Anadil-v0.1.0/
 | `KURULUM.txt` | `KURULUM.txt` (repo root, packaging icin yazildi) | direkt kopya |
 | `CHANGELOG.txt` | `CHANGELOG.txt` (repo root) | direkt kopya |
 | `README.txt` | inline package script icinde uretilir | dinamik |
-| `LICENSE.txt` | `LICENSE` (henuz yok, TODO) | direkt kopya |
+| `LICENSE.txt` | `LICENSE` | direkt kopya |
 
 ## Bagimliliklar
 
@@ -84,20 +84,26 @@ ZIP'i indirip kullanan son kullanicinin ihtiyaclari:
 
 `anadil.exe`'nin Build Tools kontrolu sirasi:
 
-1. `link.exe` PATH'te varsa veya `vcvars64.bat` bulunabiliyorsa → `derle`
-   calisir, pre-built `runtime/anadil_runtime.lib`'i kullanir.
-2. Yoksa kullaniciya net hata mesaji + Build Tools indirme linki.
+1. `ml64.exe` ve `link.exe` PATH'te varsa veya `vcvars64.bat`
+   bulunabiliyorsa `derle` calisir.
+2. Paketlenmis release'de exe yanindaki `runtime/anadil_runtime.lib`
+   dogrudan kullanilir; runtime yeniden assemble edilmez.
+3. Kaynak agacindan gelistirme calismasinda pre-built lib yoksa runtime
+   cache'i `ml64 + lib` ile yeniden uretilir.
+4. Build Tools yoksa kullaniciya net hata mesaji + Build Tools indirme
+   linki.
 
-Pre-built `.lib` shipping `ml64`/`lib` adimini atlatir. Sadece `link.exe`
-yeterlidir. Kullanici opsiyonel olarak `runtime_asm` source'undan
-yeniden build etmek isterse `runtime/anadil_runtime.asm`'a erisimi var.
+Pre-built `.lib` shipping runtime icin `ml64`/`lib` adimini atlatir.
+Program assembly'si icin `ml64.exe`, final executable icin `link.exe`
+gerekir. Kullanici opsiyonel olarak `runtime_asm` source'undan yeniden
+build etmek isterse `runtime/anadil_runtime.asm`'a erisimi var.
 
 ## Paketleme akisi (`package.ps1`)
 
 ```
 1. cargo build --release --bin anadil
 2. cargo build --release --bin anadil-ide
-3. ml64 + lib ile target/release/anadil_runtime.lib uret
+3. ml64 + lib ile target/release-runtime/anadil_runtime.lib uret
 4. target/dist/Anadil-v0.1.0/ klasorunu temizle ve olustur
 5. Tum dosyalari yukaridaki layout'a kopyala
 6. README.txt'yi ic icerikten uret (sürüm, tarih, kisa baslangic)
@@ -162,16 +168,6 @@ Release oncesi temiz makinede dogrulanmasi gerekenler:
 
 ## Acik Konular
 
-Bu dosya yazildiginda bekleyen konular:
-
-1. **LICENSE** secimi — MIT, Apache-2.0, GPL-3.0 vb. arasindan secilmeli.
-   ZIP icinde olmasi gereken bir dosya; release'den once eklenmeli.
-2. **`runtime_asm_path()` exe-relative arama** — Codex tarafinda
-   bekleyen iş; bu yapilmadan ZIP shipping anlamli olmaz (`derle`
-   komutu kullanicinin makinesinde yanlis path aratir).
-3. **Build Tools algilama mesaji iyilestirmesi** — Codex tarafinda
-   bekleyen iş; KURULUM.txt'in soracagi metin ile uyumlu olmali.
-
-Bu uc madde release tarihini belirler. `LICENSE` lisans tercihi olarak
-kullanicidan beklenir; diger ikisi Codex'in development track'ine
-baglidir.
+Release oncesi kalan dogrulama isi temiz makine uzerinde ZIP ve Setup
+smoke testidir. Kod tarafinda release'i bloklayan bilinen paketleme
+konusu yoktur.
