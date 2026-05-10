@@ -256,6 +256,10 @@ impl AnadilIde {
             return;
         };
 
+        self.apply_saved_state(state);
+    }
+
+    fn apply_saved_state(&mut self, state: IdeSavedState) {
         if let Some(root) = state.project_root.filter(|path| path.is_dir()) {
             self.project_root = Some(root);
             self.refresh_project_files();
@@ -2286,10 +2290,11 @@ mod tests {
     use super::{
         apply_editor_smart_edit, char_index_for_line_column, editor_line_count,
         format_build_started, format_ide_state, format_native_build_error, highlight_job,
-        native_build_advice, parent_hint, parse_ide_state, project_child_path,
-        relative_component_depth, sibling_file_path,
+        list_project_files, native_build_advice, parent_hint, parse_ide_state, project_child_path,
+        relative_component_depth, sibling_file_path, AnadilIde, IdeSavedState, BOTTOM_PANEL_MIN,
+        LEFT_PANEL_MAX,
     };
-    use std::path::Path;
+    use std::{fs, path::Path};
 
     #[test]
     fn project_child_path_adds_extension_and_stays_in_project() {
@@ -2390,6 +2395,48 @@ mod tests {
         assert_eq!(relative_component_depth(r"src\main.ana"), 2);
         assert_eq!(parent_hint(r"src\main.ana"), "(src)");
         assert_eq!(parent_hint("main.ana"), "");
+    }
+
+    #[test]
+    fn project_file_list_recurses_and_skips_ignored_dirs() {
+        let root = Path::new("target").join("native_ide_project_files_test");
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("src").join("nested")).unwrap();
+        fs::create_dir_all(root.join(".git")).unwrap();
+        fs::create_dir_all(root.join("target")).unwrap();
+        fs::write(root.join("src").join("main.ana"), "").unwrap();
+        fs::write(root.join("src").join("nested").join("lib.ana"), "").unwrap();
+        fs::write(root.join(".git").join("hidden.ana"), "").unwrap();
+        fs::write(root.join("target").join("generated.ana"), "").unwrap();
+
+        let files = list_project_files(&root)
+            .into_iter()
+            .map(|path| path.strip_prefix(&root).unwrap().display().to_string())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            files,
+            vec![
+                r"src\main.ana".to_string(),
+                r"src\nested\lib.ana".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn saved_state_ignores_missing_paths_and_clamps_sizes() {
+        let mut ide = AnadilIde::default();
+        ide.apply_saved_state(IdeSavedState {
+            project_root: Some(Path::new("target").join("does-not-exist")),
+            current_path: Some(Path::new("target").join("missing.ana")),
+            left_panel_width: Some(9999.0),
+            bottom_panel_height: Some(1.0),
+        });
+
+        assert!(ide.project_root.is_none());
+        assert_eq!(ide.current_path, "yeni.ana");
+        assert_eq!(ide.left_panel_width, LEFT_PANEL_MAX);
+        assert_eq!(ide.bottom_panel_height, BOTTOM_PANEL_MIN);
     }
 
     #[test]

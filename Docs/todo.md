@@ -25,8 +25,8 @@
 - [x] Manuel GUI smoke akisini uygula.
 - [x] Satir numarasi gutter'ini editor yazma erisimini bozmadan geri getir.
 - [x] Build panelindeki hata metinlerini kart/bolum olarak daha okunur yap.
-- [ ] Dosya explorer'da uzun proje ve alt klasor deneyimini tekrar kontrol et.
-- [ ] Son acilan proje/dosya state'inin bozuk path durumunda sessizce toparlandigini test et.
+- [x] Dosya explorer'da uzun proje ve alt klasor deneyimini tekrar kontrol et.
+- [x] Son acilan proje/dosya state'inin bozuk path durumunda sessizce toparlandigini test et.
 
 ## Test Bosluklari
 
