@@ -106,6 +106,7 @@ struct AnadilIde {
     pending_editor_jump: Option<(usize, usize)>,
     left_panel_width: f32,
     bottom_panel_height: f32,
+    build_tools_available: bool,
 }
 
 const LEFT_PANEL_MIN: f32 = 220.0;
@@ -135,6 +136,7 @@ impl Default for AnadilIde {
             pending_editor_jump: None,
             left_panel_width: 290.0,
             bottom_panel_height: 220.0,
+            build_tools_available: detect_build_tools(),
         }
     }
 }
@@ -313,10 +315,24 @@ impl AnadilIde {
             let run_button = egui::Button::new(RichText::new("▶  Yap").color(BG_BASE).strong())
                 .fill(ACCENT)
                 .corner_radius(egui::CornerRadius::same(6));
-            if ui.add(run_button).on_hover_text("F5").clicked() {
+            let run_response = ui.add_enabled(self.build_tools_available, run_button);
+            let run_response = if self.build_tools_available {
+                run_response.on_hover_text("F5")
+            } else {
+                run_response.on_hover_text("Visual Studio Build Tools gerekli")
+            };
+            if run_response.clicked() {
                 self.build_and_run();
             }
-            if ui.button("EXE Derle").on_hover_text("Ctrl+B").clicked() {
+
+            let build_response =
+                ui.add_enabled(self.build_tools_available, egui::Button::new("EXE Derle"));
+            let build_response = if self.build_tools_available {
+                build_response.on_hover_text("Ctrl+B")
+            } else {
+                build_response.on_hover_text("Visual Studio Build Tools gerekli")
+            };
+            if build_response.clicked() {
                 self.build();
             }
             if ui
@@ -336,6 +352,10 @@ impl AnadilIde {
                 ui.label(RichText::new(label_text).small().color(label_color));
                 ui.label(RichText::new("●").size(10.0).color(dot_color));
                 ui.add_space(8.0);
+                if !self.build_tools_available {
+                    ui.label(RichText::new("Build Tools yok").small().color(STATUS_WARN));
+                    ui.add_space(8.0);
+                }
                 ui.label(RichText::new(&self.status).small().color(FG_SECONDARY));
             });
         });
@@ -860,13 +880,34 @@ impl AnadilIde {
     }
 
     fn build(&mut self) {
+        if !self.ensure_build_tools_available_for_action() {
+            return;
+        }
         let _ = self.build_native();
     }
 
     fn build_and_run(&mut self) {
+        if !self.ensure_build_tools_available_for_action() {
+            return;
+        }
         if self.build_native() {
             self.run_built_exe();
         }
+    }
+
+    fn ensure_build_tools_available_for_action(&mut self) -> bool {
+        if self.build_tools_available {
+            true
+        } else {
+            self.report_build_tools_missing();
+            false
+        }
+    }
+
+    fn report_build_tools_missing(&mut self) {
+        self.status = "Build Tools gerekli".to_string();
+        self.build_output = "Visual Studio Build Tools gerekli\n\nEXE Derle ve Yap/F5 native executable uretir. Native derleme icin Visual Studio Build Tools kurulmalidir.".to_string();
+        self.selected_tab = Tab::Build;
     }
 
     fn build_native(&mut self) -> bool {
@@ -1326,10 +1367,18 @@ impl AnadilIde {
             self.save_current_path();
         }
         if context.input_mut(|input| input.consume_key(egui::Modifiers::NONE, egui::Key::F5)) {
-            self.build_and_run();
+            if self.build_tools_available {
+                self.build_and_run();
+            } else {
+                self.report_build_tools_missing();
+            }
         }
         if context.input_mut(|input| input.consume_key(egui::Modifiers::CTRL, egui::Key::B)) {
-            self.build();
+            if self.build_tools_available {
+                self.build();
+            } else {
+                self.report_build_tools_missing();
+            }
         }
         if context.input_mut(|input| {
             input.consume_key(
@@ -1908,6 +1957,57 @@ fn collect_project_files(dir: &Path, files: &mut Vec<PathBuf>) {
             files.push(path);
         }
     }
+}
+
+fn detect_build_tools() -> bool {
+    (command_available("ml64") && command_available("link") && command_available("lib"))
+        || find_vcvars64().is_some()
+}
+
+fn command_available(command: &str) -> bool {
+    env::var_os("PATH")
+        .map(|paths| {
+            env::split_paths(&paths).any(|dir| {
+                command_candidates(command)
+                    .iter()
+                    .any(|candidate| dir.join(candidate).is_file())
+            })
+        })
+        .unwrap_or(false)
+}
+
+fn command_candidates(command: &str) -> Vec<String> {
+    if Path::new(command).extension().is_some() {
+        return vec![command.to_string()];
+    }
+
+    vec![
+        command.to_string(),
+        format!("{command}.exe"),
+        format!("{command}.cmd"),
+        format!("{command}.bat"),
+    ]
+}
+
+fn find_vcvars64() -> Option<PathBuf> {
+    [
+        r"C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat",
+        r"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat",
+        r"C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat",
+        r"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat",
+        r"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat",
+        r"C:\Program Files (x86)\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat",
+        r"C:\Program Files (x86)\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat",
+        r"C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat",
+    ]
+    .into_iter()
+    .map(PathBuf::from)
+    .find(|path| {
+        path.is_file()
+            && path
+                .parent()
+                .is_some_and(|parent| parent.join("vcvarsall.bat").is_file())
+    })
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

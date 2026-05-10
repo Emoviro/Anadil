@@ -544,11 +544,7 @@ fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
     {
         None
     } else {
-        Some(find_vcvars64().ok_or_else(|| {
-            "Native derleme icin Visual Studio Build Tools C++ araclari gerekli. \
-             `ml64`, `link` veya `vcvars64.bat` bulunamadi."
-                .to_string()
-        })?)
+        Some(find_vcvars64().ok_or_else(build_tools_missing_message)?)
     };
 
     let exe_path = output_path(path, "exe");
@@ -596,6 +592,10 @@ fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
     })?;
 
     Ok(exe_path)
+}
+
+fn build_tools_missing_message() -> String {
+    "Visual Studio Build Tools bulunamadi.\nIndirme: https://visualstudio.microsoft.com/visual-cpp-build-tools/\nInterpreter ile calistirmak icin: anadil yorumla <dosya>.ana".to_string()
 }
 
 #[derive(Debug)]
@@ -1288,6 +1288,15 @@ mod tests {
             runtime_lib,
             PathBuf::from(r"C:\Anadil\runtime\anadil_runtime.lib")
         );
+    }
+
+    #[test]
+    fn build_tools_missing_message_guides_user_to_download_and_interpret() {
+        let message = super::build_tools_missing_message();
+
+        assert!(message.contains("Visual Studio Build Tools bulunamadi."));
+        assert!(message.contains("https://visualstudio.microsoft.com/visual-cpp-build-tools/"));
+        assert!(message.contains("anadil yorumla <dosya>.ana"));
     }
 
     #[test]
