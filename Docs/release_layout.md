@@ -8,6 +8,9 @@ kaynagidir.
 ## Hedefler
 
 - Tek `.zip` arsivi indir → cikart → calistir.
+- Alternatif olarak NSIS Setup sihirbazi (`Anadil-Setup-vX.Y.Z.exe`):
+  per-user kurulum, opsiyonel PATH ekleme, file association, kaldirma
+  sihirbazi.
 - Microsoft Build Tools dogrudan kullaniciya yuk; redistribute edilmez.
 - ZIP icindeki dosyalar self-explanatory; KURULUM.txt yeterli olmali.
 - ZIP boyutu makul (~10-20 MB hedef). Pre-built `.lib` dahil; `.exe`
@@ -102,16 +105,36 @@ yeniden build etmek isterse `runtime/anadil_runtime.asm`'a erisimi var.
 8. SHA256 hash uret (release sayfasinda gosterilir)
 ```
 
+### Installer (opsiyonel, `-Installer` flag'i)
+
+`-Installer` flag'i ile script ek olarak NSIS setup sihirbazi uretir:
+
+```
+9. installer.nsi'yi makensis ile derle
+10. target/dist/Anadil-Setup-v0.1.0.exe olarak yaz
+11. Setup SHA256 hash uret
+```
+
+NSIS, Anadil'in `dist` klasorunu okur ve dosyalari bu klasorden alir;
+yani Setup uretimi her zaman ZIP uretiminden sonra calistirilmali. Setup
+hedefi: per-user kurulum, opsiyonel PATH/Start menu/file association,
+standart kaldirma sihirbazi.
+
 ## CI/CD akisi (`.github/workflows/release.yml`)
 
 GitHub Actions tag push'unda (`v*`) tetiklenir:
 
 ```
-1. windows-latest runner kullan (Build Tools varsayilan kurulu)
-2. Rust toolchain setup (`actions-rs` veya `dtolnay/rust-toolchain`)
-3. package.ps1 calistir
-4. Cikan ZIP'i actions/upload-release-asset ile release'e ekle
-5. SHA256 hash'i release notes'a ekle
+1. windows-2022 runner
+2. Rust toolchain (dtolnay/rust-toolchain@stable)
+3. MSVC env (ilammy/msvc-dev-cmd@v1) — ml64/lib/link aktif
+4. cargo test --release
+5. choco install nsis -y
+6. pwsh -File .\package.ps1 -Installer
+7. ZIP ve Setup yollarini step output'una yaz
+8. softprops/action-gh-release@v2 ile release olustur
+   - hem ZIP hem Setup yuklenir
+   - release notes ZIP+Setup boyutu ve SHA256 ile uretilir
 ```
 
 ## Sürüm numarasi semantigi

@@ -16,8 +16,42 @@ Anadil'in interpreter modu ve native IDE Build Tools olmadan calisir;
 yalnizca `derle` komutu ve IDE'deki `EXE Derle` butonu Build Tools'a
 ihtiyac duyar.
 
+Iki kurulum yolu var:
+
+  A) Setup sihirbazi (kolay yol)        - asagida 1.A
+  B) ZIP'i elle cikartma                - asagida 1.B
+
+Setup sihirbazi PATH eklemesi, Baslat menusu kisayollari ve .ana dosya
+eslemesini sizin icin yapar. ZIP yolu daha esnektir; tasinabilir
+(portable) kullanim istiyorsaniz tercih edilir.
+
 Kurulum Adimlari
 ----------------
+
+1.A SETUP SIHIRBAZI ILE KURULUM
+
+   1. `Anadil-Setup-vX.Y.Z.exe` dosyasina cift tiklayin.
+   2. Windows SmartScreen ilk acilista uyari verirse "Daha fazla bilgi"
+      -> "Yine de calistir" ile devam edin (binary imzasiz).
+   3. Sihirbazda lisansi okuyun, kabul edin.
+   4. Kurulacak bilesenleri secin:
+        - Anadil cekirdek (zorunlu)
+        - Baslat menusu kisayollari (onerilir)
+        - PATH'e ekle (cmd'den `anadil` yazabilmek icin onerilir)
+        - .ana dosyalarini IDE ile esle (cift tiklamayla acmak icin)
+   5. Kurulum yolunu sectigin gibi birakabilir veya degistirebilirsin
+      (varsayilan: %LOCALAPPDATA%\Programs\Anadil).
+   6. "Kur" -> bitir.
+   7. Sihirbaz Visual Studio Build Tools'u kontrol eder; yoksa
+      indirme sayfasini acmayi teklif eder.
+
+   Kaldirmak icin Baslat menusunden "Anadil" -> "Kaldir", veya Denetim
+   Masasi -> "Programlari kaldir" -> Anadil.
+
+   Setup admin yetkisi istemez (per-user kurulum); kayit defteri
+   degisiklikleri yalnizca HKEY_CURRENT_USER altina yapilir.
+
+1.B ZIP'I ELLE CIKARTMA
 
 1. Bu ZIP arsivini bir klasore cikartin. Tavsiye edilen yer:
 
@@ -135,8 +169,15 @@ Daha fazla belge ve kaynak kodu icin:
 Kaldirma
 --------
 
-Anadil bir kayit defteri veya Program Files girisi olusturmaz; sadece
-cikarttiginiz klasor ve PATH'e ekledigi yol vardir. Kaldirmak icin:
+Setup ile kurduysaniz:
+
+   - Baslat menusunden "Anadil" -> "Kaldir", veya
+   - Denetim Masasi -> "Programlari kaldir" -> Anadil
+
+   Kaldirma sihirbazi dosyalari, kayit defteri girislerini ve PATH
+   eklemesini geri alir.
+
+ZIP'i elle cikartip kullandiysaniz:
 
    1. PATH'ten Anadil klasor yolunu silin (eklemediyseniz atlayin).
    2. Anadil klasorunu silin.
@@ -145,7 +186,8 @@ Anadil bir cache klasoru olusturabilir:
 
    %LOCALAPPDATA%\Anadil\cache\
 
-Bu klasor de manuel olarak silinebilir.
+Bu klasor her iki kurulum yolunda da otomatik silinmez; manuel olarak
+temizlenebilir.
 
 Lisans
 ------

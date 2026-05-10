@@ -57,6 +57,18 @@ Eklenenler:
     * `--json` formatinda makine okur diagnostic ciktisi: kontrol,
       calistir, yorumla, derle
 
+  Dagitim ve Kurulum
+    * GitHub Releases'tan indirilebilir Windows x64 ZIP arsivi
+    * NSIS Setup sihirbazi (`Anadil-Setup-vX.Y.Z.exe`):
+      - Per-user kurulum (admin yetkisi gerekmiyor)
+      - Opsiyonel Baslat menusu kisayollari
+      - Opsiyonel kullanici PATH eklemesi
+      - Opsiyonel `.ana` dosya eslemesi (cift tikla -> IDE)
+      - Build Tools algilamasi ve indirme yonlendirmesi
+      - Standart Windows kaldirma sihirbazi
+    * GitHub Actions ile etiket push'unda otomatik release uretimi
+    * MIT lisans
+
   Native IDE (anadil-ide.exe)
     * Editor, dosya gezgini, derleme paneli, tanilama paneli
     * Sozdizim renklendirme, satir numarasi, parantez/tirnak
