@@ -61,7 +61,7 @@ impl<'a> NativeEmitter<'a> {
         out.push_str("extrn anadil_runtime_panic:proc\n\n");
         out.push_str(".data\n");
         out.push_str("error_div_zero db \"Sifira bolme hatasi\", 0\n");
-        out.push_str("\n");
+        out.push('\n');
         out.push_str(".code\n");
         out.push_str("main PROC\n");
         out.push_str("    sub rsp, 40\n");

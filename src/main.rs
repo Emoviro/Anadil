@@ -772,17 +772,28 @@ fn acquire_runtime_cache_lock() -> Result<RuntimeCacheLock, String> {
 }
 
 fn runtime_asm_path() -> Result<PathBuf, String> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("runtime")
-        .join("anadil_runtime.asm");
-    if path.is_file() {
-        Ok(path)
-    } else {
-        Err(format!(
-            "Anadil runtime assembly dosyasi bulunamadi `{}`",
-            path.display()
-        ))
+    let mut tried = Vec::new();
+    if let Some(path) = exe_relative_runtime_asm_path() {
+        tried.push(path.clone());
+        if path.is_file() {
+            return Ok(path);
+        }
     }
+
+    let dev_path = dev_runtime_asm_path();
+    tried.push(dev_path.clone());
+    if dev_path.is_file() {
+        return Ok(dev_path);
+    }
+
+    let tried_paths = tried
+        .iter()
+        .map(|path| format!("`{}`", path.display()))
+        .collect::<Vec<_>>()
+        .join(", ");
+    Err(format!(
+        "Anadil runtime assembly dosyasi bulunamadi. Denenen yollar: {tried_paths}"
+    ))
 }
 
 fn runtime_obj_cache_path() -> Result<PathBuf, String> {
@@ -794,9 +805,7 @@ fn runtime_lib_cache_path() -> Result<PathBuf, String> {
 }
 
 fn runtime_cache_dir() -> Result<PathBuf, String> {
-    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("target")
-        .join("native-runtime");
+    let dir = runtime_cache_dir_candidate()?;
     fs::create_dir_all(&dir).map_err(|error| {
         format!(
             "Native runtime cache klasoru olusturulamadi `{}`: {error}",
@@ -804,6 +813,58 @@ fn runtime_cache_dir() -> Result<PathBuf, String> {
         )
     })?;
     Ok(dir)
+}
+
+fn exe_relative_runtime_asm_path() -> Option<PathBuf> {
+    let exe_path = env::current_exe().ok()?;
+    Some(
+        exe_path
+            .parent()?
+            .join("runtime")
+            .join("anadil_runtime.asm"),
+    )
+}
+
+fn dev_runtime_asm_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("runtime")
+        .join("anadil_runtime.asm")
+}
+
+fn runtime_cache_dir_candidate() -> Result<PathBuf, String> {
+    let dev_dir = dev_runtime_cache_dir();
+    if is_development_executable() && dev_dir.parent().is_some_and(|target| target.is_dir()) {
+        return Ok(dev_dir);
+    }
+
+    let local_app_data = env::var_os("LOCALAPPDATA").ok_or_else(|| {
+        "LOCALAPPDATA ortam degiskeni bulunamadi; native runtime cache klasoru secilemedi."
+            .to_string()
+    })?;
+    Ok(PathBuf::from(local_app_data).join("Anadil").join("cache"))
+}
+
+fn dev_runtime_cache_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("target")
+        .join("native-runtime")
+}
+
+fn is_development_executable() -> bool {
+    let Ok(exe_path) = env::current_exe() else {
+        return false;
+    };
+    is_development_executable_path(&exe_path)
+}
+
+fn is_development_executable_path(exe_path: &Path) -> bool {
+    let dev_target = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target");
+    let Ok(exe_path) = fs::canonicalize(exe_path) else {
+        return false;
+    };
+    fs::canonicalize(dev_target)
+        .map(|target| exe_path.starts_with(target))
+        .unwrap_or(false)
 }
 
 fn runtime_obj_needs_rebuild(runtime_asm: &Path, runtime_obj: &Path) -> Result<bool, String> {

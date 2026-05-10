@@ -1999,13 +1999,10 @@ fn format_exe_run_output(path: &Path, output: &std::process::Output) -> String {
     let stderr = stderr.trim_end();
 
     format!(
-        "{}\n{}\n\n{}\n{}\n\n{}\n{}",
+        "{}\nDosya: {}\nExit: {}\n\n{}\n{}\n\n{}\n{}",
         section_header_text("Program"),
-        format!(
-            "Dosya: {}\nExit: {}",
-            path.display(),
-            exit_code_label(&output.status)
-        ),
+        path.display(),
+        exit_code_label(&output.status),
         section_header_text("stdout"),
         empty_label(stdout),
         section_header_text("stderr"),
