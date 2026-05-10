@@ -1,12 +1,14 @@
 # Anadil — Proje Raporu
 
-**Ders:** Bilgisayar Mühendisliği Proje 2
-**Üniversite:** Kırıkkale Üniversitesi — Bilgisayar Mühendisliği Bölümü
-**Hazırlayan:** 
-Emir Canbaz 233205046    
-Akif Buğra Karslı 233205007
-**Sürüm:** Anadil V0.1
+**Ders:** Bilgisayar Mühendisliği Proje 2  
+**Üniversite:** Kırıkkale Üniversitesi — Bilgisayar Mühendisliği Bölümü  
+**Sürüm:** Anadil V0.1  
 **Tarih:** Mayıs 2026
+
+**Hazırlayanlar:**
+
+- **Emir Canbaz** — 233205046 — [GitHub](https://github.com/Emoviro) · [LinkedIn](https://www.linkedin.com/in/emir-canbaz/)
+- **Akif Buğra Karslı** — 233205007 — [GitHub](https://github.com/ArsenAlighieri) · [LinkedIn](https://www.linkedin.com/in/akif-bugra-karsli/)
 
 ---
 
