@@ -4,17 +4,16 @@
 
 - Runtime object cache icin native testleri calistir ve commit/push sonrasi ilk build davranisini izle.
 - Sonra bu modeli `.lib` paketine tasima kararini ver.
-- Native runtime hata mesajlari ve Windows path/Turkce karakter build testlerini tamamla.
+- Native runtime hata mesajlarini tek formatta netlestir.
 
 ## Sonraki Native Compiler Sprinti
 
 1. Runtime object cache ekle.
 2. Cache invalidation icin runtime asm timestamp kontrolu yap.
 3. Link hattini cached runtime objesiyle calistir ve mevcut native testleri koru.
-4. Windows path, OneDrive ve Turkce karakter iceren kaynak yolu icin build testi ekle.
-5. Runtime hata ciktilarini tek formatta netlestir.
-6. Memory management notunu yaz: MVP'de stack/static, sonraki hedefte heap allocator.
-7. Runtime objesi yeterince sabitlenince `.lib` modeline gec.
+4. Runtime hata ciktilarini tek formatta netlestir.
+5. Memory management notunu yaz: MVP'de stack/static, sonraki hedefte heap allocator.
+6. Runtime objesi yeterince sabitlenince `.lib` modeline gec.
 
 ## Native IDE
 
@@ -29,7 +28,7 @@
 - [ ] Interpreter/native karsilastirmasini daha fazla ornekle genislet.
 - [x] String ve bool `yazdir` davranisini native tarafta smoke test et.
 - [ ] Runtime hatalarini native executable ciktilarinda daha net raporla.
-- [ ] Windows path/OneDrive/Turkce karakter senaryolarini build testlerine ekle.
+- [x] Windows path/OneDrive/Turkce karakter senaryolarini build testlerine ekle.
 - [x] Runtime helper'larini ayri obje olarak linkleme yolunu tasarla.
 - [x] Metin karsilastirmayi C `strcmp` yerine Anadil runtime icinde uygula.
 - [x] Runtime panic cikisini C `exit` yerine Windows process cikisina bagla.

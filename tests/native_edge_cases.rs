@@ -169,6 +169,68 @@ Ana() {\n\
 }
 
 #[test]
+fn native_build_handles_spaces_and_turkish_paths() {
+    let Some(anadil_bin) = anadil_binary() else {
+        eprintln!("native path case skipped: anadil binary path is not available");
+        return;
+    };
+
+    let source = "\
+Ana() {\n\
+    yazdir(\"path tamam\");\n\
+    yazdir(42);\n\
+}\n";
+    let expected = run_source(source).expect("source should run with interpreter");
+    let source_path = PathBuf::from("target")
+        .join("native path cases")
+        .join("T\u{00fc}rk\u{00e7}e Klas\u{00f6}r")
+        .join("deneme dosyas\u{0131}.ana");
+    let parent = source_path
+        .parent()
+        .expect("path case source path should have a parent");
+    fs::create_dir_all(parent).expect("path case directory should be created");
+    fs::write(&source_path, source).expect("path case source should be written");
+
+    let compile_output = Command::new(&anadil_bin)
+        .arg("derle")
+        .arg(&source_path)
+        .output()
+        .expect("native compile command should run");
+
+    if !compile_output.status.success() && native_toolchain_missing(&compile_output) {
+        eprintln!("native path case skipped: Visual Studio native toolchain is not available");
+        return;
+    }
+
+    assert!(
+        compile_output.status.success(),
+        "native compile failed for path case\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile_output.stdout),
+        String::from_utf8_lossy(&compile_output.stderr)
+    );
+
+    let exe_path = source_path.with_extension("exe");
+    assert!(
+        exe_path.is_file(),
+        "native compile should create exe at `{}`",
+        exe_path.display()
+    );
+
+    let run_output = Command::new(&exe_path)
+        .output()
+        .expect("native executable should run");
+
+    assert!(
+        run_output.status.success(),
+        "native executable failed for path case\nstderr:\n{}",
+        String::from_utf8_lossy(&run_output.stderr)
+    );
+
+    let actual = normalize_output(&run_output.stdout);
+    assert_eq!(actual, expected, "native output differs for path case");
+}
+
+#[test]
 fn native_division_by_zero_reports_runtime_error() {
     let Some(anadil_bin) = anadil_binary() else {
         eprintln!("native edge case skipped: anadil binary path is not available");
