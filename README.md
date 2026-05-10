@@ -134,7 +134,7 @@ Build veya toolchain hatasi:
 {"ok":false,"exe":null,"diagnostics":[{"severity":"error","stage":"native","message":"...","line":null,"column":null}]}
 ```
 
-Not: Native derleme Windows x64 hedefler ve Visual Studio Build Tools C++ araclarini kullanir. `derle` komutu `ml64`/`link` PATH icinde yoksa kurulu Build Tools icindeki `vcvars64.bat` dosyasini otomatik bulmaya calisir.
+Not: Native derleme Windows x64 hedefler ve Visual Studio Build Tools C++ araclarini kullanir. `derle` komutu `ml64`/`link`/`lib` PATH icinde yoksa kurulu Build Tools icindeki `vcvars64.bat` dosyasini otomatik bulmaya calisir.
 
 Ornek dosyalari listeleme:
 
@@ -275,7 +275,7 @@ anadil::emit_native_asm_source(source)
 Native compiler hatti:
 
 ```text
-.ana -> lexer -> parser -> semantic analiz -> typed AST -> Windows x64 assembly -> obj + Anadil runtime obj -> exe
+.ana -> lexer -> parser -> semantic analiz -> typed AST -> Windows x64 assembly -> obj + Anadil runtime lib -> exe
 ```
 
 Desteklenenler:
@@ -288,7 +288,7 @@ Desteklenenler:
 - `kir`, `devam`, `don`
 - Fonksiyon tanimlama ve fonksiyon cagirma
 - `yazdır` (`yazdir` alias'i desteklenir)
-- `yazdir`, metin karsilastirma ve runtime hata cikislari ayri Anadil runtime objesi uzerinden linklenir.
+- `yazdir`, metin karsilastirma ve runtime hata cikislari ayri Anadil runtime kutuphanesi uzerinden linklenir.
 
 Sinirlar:
 

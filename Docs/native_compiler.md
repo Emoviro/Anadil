@@ -14,6 +14,7 @@ Native derleme hatti su sekildedir:
   -> Typed AST
   -> Windows x64 MASM assembly
   -> ml64 ile .obj
+  -> lib ile runtime .lib
   -> link ile .exe
 ```
 
@@ -94,7 +95,7 @@ cargo run -- derle examples\topla.ana
 examples\topla.exe
 ```
 
-`derle` komutu once program assembly'sini uretir ve `ml64` ile program object file'ini olusturur. Anadil runtime object file'i `target/native-runtime/anadil_runtime.obj` altinda cache'lenir; obje yoksa veya `runtime/anadil_runtime.asm` daha yeniyse yeniden assemble edilir. `link`, program objesi ile cached runtime objesini birlestirerek executable olusturur. `ml64` ve `link` PATH icinde yoksa Visual Studio Build Tools altindaki `vcvars64.bat` dosyasini otomatik bulmaya calisir. Uretilen executable program sonunda runtime helper uzerinden Enter bekler; bu, dosyaya Explorer'dan cift tiklandiginda terminal penceresinin hemen kapanmamasini saglar.
+`derle` komutu once program assembly'sini uretir ve `ml64` ile program object file'ini olusturur. Anadil runtime object file'i `target/native-runtime/anadil_runtime.obj` altinda cache'lenir; obje yoksa veya `runtime/anadil_runtime.asm` daha yeniyse yeniden assemble edilir. Ardindan `lib`, `target/native-runtime/anadil_runtime.lib` dosyasini olusturur veya object file daha yeniyse gunceller. `link`, program objesi ile cached runtime kutuphanesini birlestirerek executable olusturur. `ml64`, `lib` ve `link` PATH icinde yoksa Visual Studio Build Tools altindaki `vcvars64.bat` dosyasini otomatik bulmaya calisir. Uretilen executable program sonunda runtime helper uzerinden Enter bekler; bu, dosyaya Explorer'dan cift tiklandiginda terminal penceresinin hemen kapanmamasini saglar.
 
 ## Hedef Platform
 
@@ -103,6 +104,7 @@ Su anki MVP yalnizca Windows x64 hedefler.
 Kullanilan araclar:
 
 - Microsoft Macro Assembler: `ml64`
+- Microsoft Library Manager: `lib`
 - Microsoft linker: `link`
 - Visual Studio Build Tools C++ toolchain
 - Windows import library: `kernel32.lib`
@@ -252,7 +254,7 @@ anadil_runtime_wait_before_exit()
 anadil_runtime_panic(rcx=message_ptr) -> process exit 1
 ```
 
-Bu helper'lar program assembly'sinden ayri bir cached runtime object file olarak linklenir. Runtime I/O, bekleme ve process sonlandirma Windows `kernel32` API'lerine baglidir; C runtime import'u artik native executable link hattinda gerekli degildir.
+Bu helper'lar program assembly'sinden ayri bir cached runtime library olarak linklenir. Runtime I/O, bekleme ve process sonlandirma Windows `kernel32` API'lerine baglidir; C runtime import'u artik native executable link hattinda gerekli degildir.
 
 ## Memory Management
 

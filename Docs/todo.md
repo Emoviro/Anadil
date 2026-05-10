@@ -3,7 +3,7 @@
 ## Hemen Sonraki Adim
 
 - Runtime object cache icin native testleri calistir ve commit/push sonrasi ilk build davranisini izle.
-- Sonra bu modeli `.lib` paketine tasima kararini ver.
+- Runtime `.lib` modelinin commit/push sonrasi ilk build davranisini izle.
 - Native runtime hata mesajlarini tek formatta netlestir.
 
 ## Sonraki Native Compiler Sprinti
@@ -13,7 +13,7 @@
 3. Link hattini cached runtime objesiyle calistir ve mevcut native testleri koru.
 4. Runtime hata ciktilarini tek formatta netlestir.
 5. Memory management notunu yaz: MVP'de stack/static, sonraki hedefte heap allocator.
-6. Runtime objesi yeterince sabitlenince `.lib` modeline gec.
+6. Runtime library yeterince sabitlenince paketleme modelini degerlendir.
 
 ## Native IDE
 
@@ -35,7 +35,7 @@
 - [x] `printf` ve `getchar` bagimliliklarini runtime I/O katmaniyla azalt.
 - [x] Native runtime I/O icin sayi, bos metin ve UTF-8 edge testleri ekle.
 - [x] Runtime object cache ekle.
-- [ ] Runtime objesini `.lib` modeline tasimayi degerlendir.
+- [x] Runtime objesini `.lib` modeline tasi.
 - [ ] Windows API bagimli runtime katmanini ileride platform soyutlamasina bol.
 - [ ] Runtime helper objesini tekrar kullanilabilir kutuphane modeline tasarla.
 
