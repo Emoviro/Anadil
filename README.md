@@ -1,7 +1,8 @@
 # Anadil
 
 Anadil, Turkce anahtar kelimelerle yazilan kucuk bir programlama dili denemesidir.
-V1 hedefi sade, statik tipli ve genisletilebilir bir cekirdek olusturmaktir.
+V0.1 hedefi lokal IDE, interpreter ve Windows x64 native executable compiler
+hattini guvenilir hale getirmektir.
 
 Proje su anda kaynak dosyayi okuyabilen, lexer/parser/semantic analiz yapan, typed AST uzerinden programi calistiran bir interpreter ve Windows x64 icin native compiler MVP'si icerir.
 
@@ -23,6 +24,8 @@ Yapilanlar:
 - `//` satir yorumlari
 - CLI komutlari: `calistir`, `kontrol`, `ast`, `typed`, `asm`, `asm-yaz`, `derle`, `ide`, `ornekler`, `surum`, `yardim`
 - Etkilesimli REPL komutu: `repl`
+
+Bu CLI yuzeyi V0.1 icin sabit kabul edilir.
 
 Henuz yapilmayanlar:
 
@@ -60,6 +63,10 @@ Runtime hatasi:
 ```json
 {"ok":false,"output":"","diagnostics":[{"severity":"error","stage":"runtime","message":"Sifira bolme hatasi","line":2,"column":12}]}
 ```
+
+Bu ornek interpreter runtime diagnostic formatidir. Native executable
+icindeki runtime hatalari su an kaynak satir/sutun bilgisi tasimaz; hata
+metnini standart output/stderr uzerinden raporlar ve exit code `1` ile biter.
 
 Program gecerli mi kontrol etme:
 
@@ -135,6 +142,14 @@ Build veya toolchain hatasi:
 ```
 
 Not: Native derleme Windows x64 hedefler ve Visual Studio Build Tools C++ araclarini kullanir. `derle` komutu `ml64`/`link`/`lib` PATH icinde yoksa kurulu Build Tools icindeki `vcvars64.bat` dosyasini otomatik bulmaya calisir.
+
+Native build hatti program object'ini cached Anadil runtime library ile linkler.
+Runtime artifact'leri `target/native-runtime/anadil_runtime.obj` ve
+`target/native-runtime/anadil_runtime.lib` altinda tutulur; `runtime/anadil_runtime.asm`
+degismediyse sonraki derlemelerde runtime yeniden assemble edilmez. Link
+satirinda yalnizca program object'i, `anadil_runtime.lib` ve `kernel32.lib`
+bulunur; C runtime kutuphaneleri (`msvcrt`, `ucrt`, `vcruntime`,
+`legacy_stdio_definitions`) artik gerekli degildir.
 
 Ornek dosyalari listeleme:
 
@@ -255,11 +270,11 @@ Proje iki parcaya ayrilmistir:
 - `src/lib.rs`: Dil motoru. Lexer, parser, semantic analiz, typed AST ve interpreter burada kutuphane olarak disari acilir.
 - `src/main.rs`: CLI katmani. Dosya okur, komutlari yorumlar ve `lib.rs` icindeki pipeline fonksiyonlarini cagirir.
 - `src/native.rs`: Typed AST'den Windows x64 MASM assembly ureten native compiler MVP katmani.
-- `runtime/anadil_runtime.asm`: Native executable'lara linklenen Anadil runtime helper modulu.
+- `runtime/anadil_runtime.asm`: Native executable'lara cached `.lib` olarak linklenen Anadil runtime helper modulu.
 - `src/ide.rs`: `ide` komutuyla calisan lokal web IDE server'i ve arayuzu.
 - `src/bin/anadil-ide.rs`: Native executable IDE.
 
-Kutuphane tarafinda uc ana giris fonksiyonu vardir:
+Kutuphane tarafinda ana giris fonksiyonlari:
 
 ```rust
 anadil::parse_source(source)
@@ -275,7 +290,7 @@ anadil::emit_native_asm_source(source)
 Native compiler hatti:
 
 ```text
-.ana -> lexer -> parser -> semantic analiz -> typed AST -> Windows x64 assembly -> obj + Anadil runtime lib -> exe
+.ana -> lexer -> parser -> semantic analiz -> typed AST -> Windows x64 assembly -> program obj + Anadil runtime lib -> exe
 ```
 
 Desteklenenler:
@@ -289,12 +304,16 @@ Desteklenenler:
 - Fonksiyon tanimlama ve fonksiyon cagirma
 - `yazdır` (`yazdir` alias'i desteklenir)
 - `yazdir`, metin karsilastirma ve runtime hata cikislari ayri Anadil runtime kutuphanesi uzerinden linklenir.
+- Runtime kutuphanesi `target/native-runtime/anadil_runtime.lib` olarak cache'lenir ve `runtime/anadil_runtime.asm` timestamp'iyle invalidate edilir.
+- Native/interpreter paritesi ornek programlar ve edge-case testleriyle korunur.
 
 Sinirlar:
 
 - Sadece Windows x64 hedeflenir.
 - Visual Studio Build Tools C++ araclari gerekir.
 - Native runtime I/O ve process cikisi Windows `kernel32` API'leri uzerinden calisir.
+- Runtime helper'lari `GetStdHandle`, `WriteFile`, `ReadFile` ve `ExitProcess` kullanir; `printf`, `getchar`, `strcmp` veya C `exit` cagrisi yoktur.
+- Link satirinda Anadil runtime library ve `kernel32.lib` disinda CRT kutuphanesi yoktur.
 - Ilk 4 fonksiyon parametresi register ile, sonraki parametreler stack uzerinden tasinir.
 - Runtime hatalari interpreter kadar ayrintili raporlanmaz.
 - Sifira bolme native executable icinde kontrollu hata ve process exit code `1` ile raporlanir.
@@ -318,7 +337,7 @@ Testler:
 cargo test
 ```
 
-Bu komut unit testleri, CLI testlerini, `examples/` altindaki interpreter testlerini ve Visual Studio Build Tools varsa native executable ornek testlerini calistirir.
+Bu komut unit testleri, CLI testlerini, `examples/` altindaki interpreter testlerini ve Visual Studio Build Tools varsa native executable ornek/parity testlerini calistirir.
 
 Clippy:
 
@@ -330,10 +349,12 @@ cargo clippy --all-targets --all-features -- -D warnings
 
 - Guncel dil referansi: [Docs/dil_referansi.md](Docs/dil_referansi.md)
 - Proje durum ozeti: [Docs/project_status.md](Docs/project_status.md)
-- Claude handoff talimatlari: [Docs/claude_handoff.md](Docs/handoff.md)
+- Claude handoff talimatlari: [Docs/handoff.md](Docs/handoff.md)
 - Native compiler notlari: [Docs/native_compiler.md](Docs/native_compiler.md)
 - Bellek modeli notlari: [Docs/memory_model.md](Docs/memory_model.md)
+- Runtime platform soyutlama notlari: [Docs/runtime_platform_abstraction.md](Docs/runtime_platform_abstraction.md)
 - Local IDE notlari: [Docs/local_ide.md](Docs/local_ide.md)
 - Native IDE smoke test: [Docs/ide_smoke_test.md](Docs/ide_smoke_test.md)
+- Test kapsam ve bosluk analizi: [Docs/test_coverage.md](Docs/test_coverage.md)
 - Yapilacaklar: [Docs/todo.md](Docs/todo.md)
 - Ornek programlar: [examples/README.md](examples/README.md)

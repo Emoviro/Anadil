@@ -148,7 +148,7 @@ Compiler tarafinda V0.1'e "tamam" diyebilmek icin kalan ana isler:
 3. Runtime library modelinin ilk push sonrasi davranisini izlemek.
 4. Windows API bagimli runtime katmaninin ileride nasil soyutlanacagini
    kisa not olarak eklemek.
-5. README ve native compiler dokumanlarini son kapsamla hizalamak.
+5. ~~README ve native compiler dokumanlarini son kapsamla hizalamak.~~
 
 Bu isler bittikten sonra compiler MVP V0.1 icin sabit kabul edilebilir.
 
@@ -218,9 +218,9 @@ isler veya `Docs/handoff.md` icindeki sonraki is listesiyle ortusur.
 
 - [x] `Docs/memory_model.md` V0.1'in heap/RC icermedigini ve V0.2+
   yolunu acikca anlatiyor.
-- [ ] `README.md` mevcut runtime library modelini, kaldirilmis CRT
+- [x] `README.md` mevcut runtime library modelini, kaldirilmis CRT
   bagimliligini ve sabitlenmis CLI komutlarini yansitiyor.
-  (kalan ana isler madde 5)
+  (tamamlandi)
 - [x] `Docs/native_compiler.md` runtime cache ve `.lib` paketleme
   modelini son haliyle iceriyor (`Runtime Library Paketleme` basligi).
 - [x] Windows API bagimli runtime katmaninin platform soyutlamasi icin
@@ -281,4 +281,3 @@ Bu yolda su prensipler korunacak:
 - IDE polish'i compiler kararliligindan sonra yapmak.
 - C'ye donmeden native toolchain modelini buyutmek.
 - V0.1 kapsam disini net soylemek, V0.2+ yolunu ise tasarimla hazirlamak.
-
