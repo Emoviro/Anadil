@@ -40,17 +40,9 @@ Ana() {
 - `yazdır` ana builtin olarak calismali.
 - `yazdir` ASCII alias olarak calismali.
 
-## Interpret
-
-- Run mode `Interpret et` sec.
-- `Yap` veya `F5` calistir.
-- `Cikti` sekmesinde `10` gorunmeli.
-- Hata yoksa `Diagnostics` sekmesi bos olmali.
-
 ## Compile
 
-- Run mode `Compile et` sec.
-- `Yap` veya `Ctrl+B` calistir.
+- `Yap`, `F5` veya `Ctrl+B` calistir.
 - `Build` sekmesi sunlari gostermeli:
   - kaynak `.ana` yolu
   - uretilen `.exe` yolu
@@ -62,13 +54,6 @@ Ana() {
 - `EXE Calistir` dugmesine bas.
 - `Build` sekmesinde exit code ve stdout gorunmeli.
 - Explorer'dan `.exe` cift tiklaninca terminal hemen kapanmadan Enter beklemeli.
-
-## Karsilastir
-
-- Run mode `Karsilastir` sec.
-- `Yap` veya `F5` calistir.
-- Interpreter stdout ve native stdout ayniysa sonuc `AYNI` olmali.
-- Fark varsa `Diagnostics` native farki gostermeli.
 
 ## Hata Senaryolari
 
@@ -92,8 +77,7 @@ Ana() {
 }
 ```
 
-- Interpret runtime hatasini Diagnostics sekmesinde gostermeli.
-- Native build veya run hatasi varsa Build sekmesi ham stdout/stderr ve kisa cozum notu gostermeli.
+- Native run hatasi varsa Build sekmesi ham stdout/stderr ve kisa cozum notu gostermeli.
 
 ## Gecici Notlar
 

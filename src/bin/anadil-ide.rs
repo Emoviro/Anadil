@@ -4,7 +4,7 @@ use std::{
     process::Command,
 };
 
-use anadil::{check_source, diagnostics::Diagnostic, run_source_diagnostic};
+use anadil::{check_source, diagnostics::Diagnostic};
 use eframe::egui::{
     self, text::LayoutJob, text_edit::TextEditState, Color32, FontFamily, FontId, RichText,
     ScrollArea, TextEdit, TextFormat,
@@ -86,23 +86,6 @@ enum Tab {
     Build,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum RunMode {
-    Interpret,
-    Compile,
-    Compare,
-}
-
-impl RunMode {
-    fn label(self) -> &'static str {
-        match self {
-            Self::Interpret => "Yorumla",
-            Self::Compile => "EXE Derle",
-            Self::Compare => "Yorumla + EXE",
-        }
-    }
-}
-
 #[derive(Debug)]
 struct AnadilIde {
     source: String,
@@ -117,7 +100,6 @@ struct AnadilIde {
     examples: Vec<PathBuf>,
     selected_tab: Tab,
     build_exe: Option<String>,
-    run_mode: RunMode,
     new_file_name: String,
     rename_file_name: String,
     selected_diagnostic: Option<usize>,
@@ -147,7 +129,6 @@ impl Default for AnadilIde {
             examples: list_examples(),
             selected_tab: Tab::Output,
             build_exe: None,
-            run_mode: RunMode::Interpret,
             new_file_name: "yeni.ana".to_string(),
             rename_file_name: "yeni.ana".to_string(),
             selected_diagnostic: None,
@@ -325,32 +306,11 @@ impl AnadilIde {
                 self.check();
             }
 
-            egui::ComboBox::from_id_salt("run_mode")
-                .selected_text(self.run_mode.label())
-                .width(126.0)
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(
-                        &mut self.run_mode,
-                        RunMode::Interpret,
-                        RunMode::Interpret.label(),
-                    );
-                    ui.selectable_value(
-                        &mut self.run_mode,
-                        RunMode::Compile,
-                        RunMode::Compile.label(),
-                    );
-                    ui.selectable_value(
-                        &mut self.run_mode,
-                        RunMode::Compare,
-                        RunMode::Compare.label(),
-                    );
-                });
-
             let run_button = egui::Button::new(RichText::new("▶  Yap").color(BG_BASE).strong())
                 .fill(ACCENT)
                 .corner_radius(egui::CornerRadius::same(6));
             if ui.add(run_button).on_hover_text("F5").clicked() {
-                self.run_selected_mode();
+                self.build();
             }
             if ui
                 .add_enabled(self.build_exe.is_some(), egui::Button::new("EXE Çalıştır"))
@@ -892,35 +852,6 @@ impl AnadilIde {
         self.selected_diagnostic = None;
     }
 
-    fn run(&mut self) {
-        match run_source_diagnostic(&self.source) {
-            Ok(output) => {
-                self.output = if output.is_empty() {
-                    "Yorumla modu\n\nProgram cikti uretmedi.".to_string()
-                } else {
-                    format!("Yorumla modu\n\nstdout:\n{}", output.trim_end())
-                };
-                self.diagnostics.clear();
-                self.status = "Calistirildi".to_string();
-                self.selected_tab = Tab::Output;
-            }
-            Err(diagnostic) => {
-                self.output.clear();
-                self.diagnostics = vec![diagnostic];
-                self.status = "Calisma zamani hatasi".to_string();
-                self.selected_tab = Tab::Diagnostics;
-            }
-        }
-    }
-
-    fn run_selected_mode(&mut self) {
-        match self.run_mode {
-            RunMode::Interpret => self.run(),
-            RunMode::Compile => self.build(),
-            RunMode::Compare => self.compare_interpreter_and_native(),
-        }
-    }
-
     fn build(&mut self) {
         self.check_silent();
         if !self.diagnostics.is_empty() {
@@ -981,72 +912,6 @@ impl AnadilIde {
                 self.build_output = message.clone();
                 self.diagnostics = vec![Diagnostic::native(message)];
                 self.status = "EXE calistirilamadi".to_string();
-                self.selected_tab = Tab::Diagnostics;
-            }
-        }
-    }
-
-    fn compare_interpreter_and_native(&mut self) {
-        let interpreter_output = match run_source_diagnostic(&self.source) {
-            Ok(output) => output,
-            Err(diagnostic) => {
-                self.output.clear();
-                self.diagnostics = vec![diagnostic];
-                self.status = "Interpreter hatasi".to_string();
-                self.selected_tab = Tab::Diagnostics;
-                return;
-            }
-        };
-
-        if self.build_exe.is_none() || self.is_dirty() {
-            self.build();
-        }
-
-        let Some(exe) = self.build_exe.clone() else {
-            if self.selected_tab != Tab::Diagnostics {
-                self.status = "Karsilastirma iptal edildi".to_string();
-                self.selected_tab = Tab::Build;
-            }
-            return;
-        };
-
-        let exe_path = PathBuf::from(&exe);
-        match run_executable(&exe_path) {
-            Ok(native_output) => {
-                let native_stdout = String::from_utf8_lossy(&native_output.stdout);
-                let native_stderr = String::from_utf8_lossy(&native_output.stderr);
-                let interpreter_text = interpreter_output.trim_end();
-                let native_text = native_stdout.trim_end();
-
-                self.build_output = format_comparison_output(
-                    interpreter_text,
-                    native_text,
-                    native_stderr.trim_end(),
-                    &native_output.status,
-                );
-                self.selected_tab = Tab::Build;
-
-                if native_output.status.success() && interpreter_text == native_text {
-                    self.status = "Interpreter/native ayni".to_string();
-                    self.diagnostics.clear();
-                } else {
-                    let message = if native_output.status.success() {
-                        "Interpreter ve native ciktilari farkli".to_string()
-                    } else {
-                        format!(
-                            "Native executable basarisiz bitti: {}",
-                            exit_code_label(&native_output.status)
-                        )
-                    };
-                    self.status = "Karsilastirma fark buldu".to_string();
-                    self.diagnostics = vec![Diagnostic::native(message)];
-                }
-            }
-            Err(error) => {
-                let message = format!("Native executable calistirilamadi `{}`: {error}", exe);
-                self.build_output = message.clone();
-                self.diagnostics = vec![Diagnostic::native(message)];
-                self.status = "Karsilastirma calisamadi".to_string();
                 self.selected_tab = Tab::Diagnostics;
             }
         }
@@ -1437,10 +1302,9 @@ impl AnadilIde {
             self.save_current_path();
         }
         if context.input_mut(|input| input.consume_key(egui::Modifiers::NONE, egui::Key::F5)) {
-            self.run_selected_mode();
+            self.build();
         }
         if context.input_mut(|input| input.consume_key(egui::Modifiers::CTRL, egui::Key::B)) {
-            self.run_mode = RunMode::Compile;
             self.build();
         }
         if context.input_mut(|input| {
@@ -2098,27 +1962,6 @@ fn format_exe_run_output(path: &Path, output: &std::process::Output) -> String {
         path.display(),
         exit_code_label(&output.status),
         empty_label(stdout),
-        empty_label(stderr),
-    )
-}
-
-fn format_comparison_output(
-    interpreter: &str,
-    native: &str,
-    stderr: &str,
-    status: &std::process::ExitStatus,
-) -> String {
-    let result = if status.success() && interpreter == native {
-        "AYNI"
-    } else {
-        "FARKLI"
-    };
-
-    format!(
-        "Yorumla + EXE\n\nSonuc:\n{result}\n\nNative exit:\n{}\n\nYorumla stdout:\n{}\n\nNative stdout:\n{}\n\nNative stderr:\n{}",
-        exit_code_label(status),
-        empty_label(interpreter),
-        empty_label(native),
         empty_label(stderr),
     )
 }

@@ -2,6 +2,8 @@
 
 ## Hemen Sonraki Adim
 
+- ~~Native IDE kullanici akisini interpreter modundan arindir; `Yap`/`F5`
+  dogrudan native EXE derlemeli.~~
 - Runtime object cache icin native testleri calistir ve commit/push sonrasi ilk build davranisini izle.
 - Runtime `.lib` modelinin commit/push sonrasi ilk build davranisini izle.
 - Memory management notunu push sonrasi gozden gecir.
@@ -16,6 +18,7 @@
 
 ## Native IDE
 
+- [x] `Yap`/`F5` akisini dogrudan `EXE Derle` yap.
 - [x] Smoke test sonucunu kaydet. (2026-05-10 otomatik build/test sonucu `Docs/ide_smoke_test.md` icinde)
 - [ ] Manuel GUI smoke akisini uygula.
 - [x] Satir numarasi gutter'ini editor yazma erisimini bozmadan geri getir.
@@ -39,7 +42,7 @@ basligi altinda listelenmistir.
 
 ## Native Compiler
 
-- [ ] Interpreter/native karsilastirmasini daha fazla ornekle genislet.
+- [ ] Native compiler regresyon orneklerini interpreter disi beklenen cikti modeliyle genislet.
 - [x] String ve bool `yazdir` davranisini native tarafta smoke test et.
 - [x] Runtime hatalarini native executable ciktilarinda daha net raporla.
 - [x] Windows path/OneDrive/Turkce karakter senaryolarini build testlerine ekle.

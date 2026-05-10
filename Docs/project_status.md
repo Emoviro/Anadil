@@ -24,13 +24,16 @@ Compiler tarafinda tercih edilen yon:
 
 Anadil C'ye transpile etmez. V0.1 native backend Windows x64 assembly uretir
 ve Microsoft Build Tools (`ml64`, `lib`, `link`) ile executable olusturur.
+V0.1 kullanici akisi interpreter'a degil, dogrudan native derlemeye dayanir;
+interpreter gecici dogrulama ve test oracle'i olarak tutulur.
 
 ## Su Ana Kadar Yapilanlar
 
 ### Dil Cekirdegi
 
 - Lexer, parser, semantic analiz ve typed AST hatti kuruldu.
-- Interpreter mevcut dil alt kumesini calistiriyor.
+- Interpreter mevcut dil alt kumesini calistiriyor; V0.1'de kullanici akisi
+  degil, dogrulama/test araci olarak konumlanir.
 - `sayi`, `mantik`, `metin` temel tipleri destekleniyor.
 - Degisken tanimlama, atama, fonksiyon, `don`, `eger/degilse`, dongu,
   `kir`, `devam` gibi temel yapilar mevcut.
@@ -97,8 +100,7 @@ target/native path cases/Turkce Klasor/deneme dosyasi.ana
 ### Lokal IDE
 
 - Lokal desktop IDE mevcut.
-- Editor, dosya explorer, build paneli ve interpreter/native karsilastirma
-  akislari uzerinde calisildi.
+- Editor, dosya explorer ve native build paneli uzerinde calisildi.
 - Satir numarasi, otomatik girinti, parantez/quote tamamlama gibi temel
   editor kolayliklari eklendi.
 - IDE gorsel polish su an ikinci planda. Oncelik compiler ve runtime
@@ -174,8 +176,8 @@ isler veya `Docs/handoff.md` icindeki sonraki is listesiyle ortusur.
 ### Native build hatti
 
 - [x] `cargo run -- derle <dosya>.ana` calisan `.exe` uretiyor.
-- [x] Native exe interpreter ile ayni `stdout`'u uretiyor;
-  parite `tests/native_examples.rs` ile korunuyor.
+- [x] Native exe beklenen `stdout`'u uretiyor; gecici olarak interpreter
+  oracle'i kullanan parite testleri `tests/native_examples.rs` ile korunuyor.
 - [x] Linker satiri yalnizca `kernel32.lib` ve `anadil_runtime.lib`
   kullaniyor; CRT (`msvcrt`, `ucrt`, `vcruntime`,
   `legacy_stdio_definitions`) bagimliligi yok.
@@ -209,8 +211,8 @@ isler veya `Docs/handoff.md` icindeki sonraki is listesiyle ortusur.
 - [x] CLI komut yuzeyi sabit: `calistir`, `kontrol`, `ast`, `typed`,
   `asm`, `asm-yaz`, `derle`, `ide`, `ornekler`, `surum`, `yardim`,
   `repl`.
-- [x] `kontrol --json`, `calistir --json` ve `derle --json` IDE icin
-  kararli diagnostic semasi uretiyor.
+- [x] `kontrol --json` ve `derle --json` IDE icin kararli diagnostic semasi
+  uretiyor. `calistir --json` gecici interpreter/test protokolu olarak kalir.
 - [x] CLI hata ciktisi `tests/cli_diagnostics.rs` ile regresyondan
   korunuyor.
 
@@ -260,7 +262,7 @@ guvenilir hale getirmek icin alindi.
 Kisa vadede hedef:
 
 ```text
-Anadil V0.1 = lokal IDE + interpreter + native Windows executable compiler
+Anadil V0.1 = lokal IDE + native Windows executable compiler
 ```
 
 Orta vadede hedef:

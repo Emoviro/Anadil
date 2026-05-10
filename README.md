@@ -1,10 +1,13 @@
 # Anadil
 
 Anadil, Turkce anahtar kelimelerle yazilan kucuk bir programlama dili denemesidir.
-V0.1 hedefi lokal IDE, interpreter ve Windows x64 native executable compiler
-hattini guvenilir hale getirmektir.
+V0.1 hedefi lokal IDE'de ve CLI'da ana calistirma yolunu Windows x64 native
+executable compiler hattina tasimaktir. Interpreter bu surecte gecici
+dogrulama/test araci olarak kalir; kullanici akisi derleme odaklidir.
 
-Proje su anda kaynak dosyayi okuyabilen, lexer/parser/semantic analiz yapan, typed AST uzerinden programi calistiran bir interpreter ve Windows x64 icin native compiler MVP'si icerir.
+Proje su anda kaynak dosyayi okuyabilen, lexer/parser/semantic analiz yapan,
+typed AST uzerinden Windows x64 native executable uretebilen bir compiler
+MVP'si icerir. Interpreter hatti dogrulama ve test destegi icin korunur.
 
 ## Durum
 
@@ -214,14 +217,14 @@ cargo build --release --bin anadil-ide
 target\release\anadil-ide.exe
 ```
 
-Native IDE browser veya localhost kullanmaz. Compiler API'lerini dogrudan cagirir; `EXE Derle` icin mevcut `anadil derle --json` protokolunu kullanir.
+Native IDE browser veya localhost kullanmaz. Compiler API'lerini dogrudan cagirir; build icin mevcut `anadil derle --json` protokolunu kullanir.
 
 Native IDE kisayollari:
 
 ```text
 Ctrl+O  Dosya ac
 Ctrl+S  Kaydet
-F5      Secili modu calistir
+F5      EXE Derle
 Ctrl+B  EXE Derle
 Ctrl+Shift+F5  EXE Calistir
 ```
@@ -237,11 +240,9 @@ Native IDE proje akisi:
 - Aktif dosya sol panelden yeniden adlandirilabilir veya onay penceresiyle silinebilir.
 - Son acilan proje klasoru ve dosya bir sonraki IDE acilisinda geri yuklenir.
 - Kaydedilmemis degisiklik varken baska dosya acmaya calisilirsa IDE onay ister.
-- Ust bardaki mod seciciden `Interpret et`, `Compile et` veya `Karsilastir` secilir; `Yap` veya `F5` secili modu calistirir.
-- `EXE Derle`, gerekiyorsa aktif dosyayi kaydeder ve `.exe` dosyasini aktif `.ana` dosyasinin yanina uretir.
+- `Yap`, `F5` veya `Ctrl+B`, gerekiyorsa aktif dosyayi kaydeder ve `.exe` dosyasini aktif `.ana` dosyasinin yanina uretir.
 - Build sekmesi derlenen kaynak dosyayi, uretilen `.exe` yolunu, exit/stdout/stderr detaylarini ve toolchain hatalarinda kisa cozum notunu gosterir.
 - `EXE Calistir`, son uretilen native executable'i calistirir ve stdout/stderr/exit code bilgisini `Build` sekmesinde gosterir.
-- `Karsilastir`, ayni kaynak kodu interpreter ve native executable olarak calistirir; stdout farklarini `Build` sekmesinde gosterir.
 - Native executable, Explorer'dan cift tiklaninca terminal penceresi kapanmadan once Enter bekler.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri vardir.
 - `Diagnostics` sekmesindeki satir/sutun bilgili hata kartlarina tiklaninca editor ilgili konuma odaklanir.
@@ -267,7 +268,7 @@ Ana() {
 
 Proje iki parcaya ayrilmistir:
 
-- `src/lib.rs`: Dil motoru. Lexer, parser, semantic analiz, typed AST ve interpreter burada kutuphane olarak disari acilir.
+- `src/lib.rs`: Dil motoru. Lexer, parser, semantic analiz, typed AST, native compiler API'leri ve gecici interpreter dogrulama API'leri burada kutuphane olarak disari acilir.
 - `src/main.rs`: CLI katmani. Dosya okur, komutlari yorumlar ve `lib.rs` icindeki pipeline fonksiyonlarini cagirir.
 - `src/native.rs`: Typed AST'den Windows x64 MASM assembly ureten native compiler MVP katmani.
 - `runtime/anadil_runtime.asm`: Native executable'lara cached `.lib` olarak linklenen Anadil runtime helper modulu.
@@ -305,7 +306,7 @@ Desteklenenler:
 - `yazdır` (`yazdir` alias'i desteklenir)
 - `yazdir`, metin karsilastirma ve runtime hata cikislari ayri Anadil runtime kutuphanesi uzerinden linklenir.
 - Runtime kutuphanesi `target/native-runtime/anadil_runtime.lib` olarak cache'lenir ve `runtime/anadil_runtime.asm` timestamp'iyle invalidate edilir.
-- Native/interpreter paritesi ornek programlar ve edge-case testleriyle korunur.
+- Native cikti dogrulugu su an interpreter oracle'i kullanan ornek programlar ve edge-case testleriyle korunur.
 
 Sinirlar:
 

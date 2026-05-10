@@ -39,7 +39,7 @@ Kisayollar:
 ```text
 Ctrl+O  Dosya ac
 Ctrl+S  Kaydet
-F5      Secili modu calistir
+F5      EXE Derle
 Ctrl+B  EXE Derle
 Ctrl+Shift+F5  EXE Calistir
 ```
@@ -56,11 +56,9 @@ Proje akisi:
 - `Yeniden Adlandir` ve `Sil`, aktif dosya uzerinde calisir; silme islemi onay ister.
 - Son acilan proje klasoru ve dosya bir sonraki native IDE acilisinda geri yuklenir.
 - Kaydedilmemis degisiklik varken dosya degistirme veya yeni dosya acma onay ister.
-- Ust bardaki mod secici `Interpret et`, `Compile et` ve `Karsilastir` modlarini tasir; `Yap` veya `F5` secili modu calistirir.
-- `EXE Derle`, build oncesi aktif dosyayi kaydeder ve executable'i kaynak dosyanin yanina uretir.
+- `Yap`, `F5` veya `Ctrl+B`, build oncesi aktif dosyayi kaydeder ve executable'i kaynak dosyanin yanina uretir.
 - Build sekmesi derlenen kaynak dosyayi, uretilen `.exe` yolunu, exit/stdout/stderr detaylarini ve toolchain hatalarinda kisa cozum notunu gosterir.
 - `EXE Calistir`, son uretilen executable'i calistirir ve stdout/stderr/exit code bilgisini `Build` sekmesine yazar.
-- `Karsilastir`, interpreter ve native executable stdout sonuclarini ayni panelde karsilastirir.
 - Native executable, Explorer'dan cift tiklaninca terminal penceresi kapanmadan once Enter bekler.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri bulunur.
 - `Diagnostics` sekmesindeki satir/sutun bilgili hata kartlarina tiklaninca editor ilgili konuma odaklanir.
@@ -75,7 +73,7 @@ Proje akisi:
 - Kaydedilmemis degisiklik gostergesi
 - Kod editoru ve syntax highlighting
 - Web IDE'de satir numaralari, cursor konumu, canli diagnostics ve uzun dosyalar icin sona gitme dugmesi
-- Native IDE'de dogrudan compiler API ile `Kontrol`, `Calistir` ve `EXE Derle`
+- Native IDE'de dogrudan compiler API ile `Kontrol`, `EXE Derle` ve `EXE Calistir`
 - Web IDE'de `Kontrol`, `Calistir` ve `EXE Derle` mevcut JSON API endpoint'lerini kullanir
 - Alt panelde output, diagnostics ve build gorunumu
 
