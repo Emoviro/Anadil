@@ -256,6 +256,94 @@ anadil_runtime_panic(rcx=message_ptr) -> process exit 1
 
 Bu helper'lar program assembly'sinden ayri bir cached runtime library olarak linklenir. Runtime I/O, bekleme ve process sonlandirma Windows `kernel32` API'lerine baglidir; C runtime import'u artik native executable link hattinda gerekli degildir.
 
+## Runtime Library Paketleme
+
+Anadil runtime'i her `derle` cagrisinda yeniden assemble edilmez. Compiler
+runtime'i ayri bir `.lib` dosyasi olarak cache'ler ve programlari bu
+kutuphane ile linkler.
+
+### Dosya Yerlesimi
+
+| Yol | Aciklama |
+|---|---|
+| `runtime/anadil_runtime.asm` | Tek dogruluk kaynagi olan runtime asm modulu. Repo icinde versiyonlanir. |
+| `target/native-runtime/anadil_runtime.obj` | Cache'lenen runtime object file. `ml64` ciktisi. |
+| `target/native-runtime/anadil_runtime.lib` | Cache'lenen runtime library. `lib` ciktisi. Programa link edilen artifact. |
+| `target/native-runtime/anadil_runtime.lock` | `mkdir`-bazli cache lock klasoru. Paralel build'leri serilemek icin. |
+
+### Build Adimlari
+
+Compiler `derle` cagrisinda su sirayi takip eder:
+
+1. Cache lock'unu al (`mkdir target/native-runtime/anadil_runtime.lock`).
+   Klasor zaten varsa baska bir build koşuyor demektir; 25 ms araliklarla
+   200 deneme yapilir (~5 sn timeout).
+2. `runtime/anadil_runtime.asm` mtime'i `anadil_runtime.obj` mtime'inden
+   yeniyse veya `obj` yoksa `ml64 /c /Fo<obj> <asm>` ile yeniden assemble
+   edilir.
+3. `anadil_runtime.obj` mtime'i `anadil_runtime.lib` mtime'inden yeniyse
+   veya `lib` yoksa `lib /OUT:<lib> <obj>` ile library yeniden uretilir.
+4. Lock klasoru `Drop` ile silinir; yarisli paralel build sonraki adima
+   gecer.
+
+Cache temiz ve kaynak `.asm` degismediyse hicbir `ml64`/`lib` cagrisi
+yapilmaz; sadece program `.obj`'si uretilir ve dogrudan linkleme yapilir.
+
+### Linker Cagrisi
+
+Program object'i ve cached runtime library'si su komutla birlestirilir:
+
+```text
+link /NOLOGO /SUBSYSTEM:CONSOLE /ENTRY:main /OUT:<exe>
+     <program.obj>
+     target/native-runtime/anadil_runtime.lib
+     kernel32.lib
+```
+
+Link satirinda **yalnizca** Anadil runtime library ve `kernel32.lib`
+gozukur. Eski hattaki `msvcrt.lib`, `ucrt.lib`, `vcruntime.lib` ve
+`legacy_stdio_definitions.lib` artik gerekli degildir; eklenmesi
+istenmeyen davranis olarak kabul edilir.
+
+### Build Tool Gereksinimleri
+
+`derle` icin PATH icinde veya Visual Studio Build Tools `vcvars64.bat`
+icinden ulasilabilir olmasi gerekenler:
+
+- `ml64` (MASM)
+- `lib` (Library Manager)
+- `link` (Microsoft linker)
+
+Hicbiri PATH icinde bulunamazsa compiler `vcvars64.bat`'i otomatik bulup
+ucunu birden ayni shell ortamindan cagirir. Ucu de bulunamazsa
+diagnostic stage `native` ile su mesaji raporlar:
+
+```text
+Native derleme icin Visual Studio Build Tools C++ araclari gerekli.
+`ml64`, `link`, `lib` veya `vcvars64.bat` bulunamadi.
+```
+
+### Cache Invalidation Davranisi
+
+Cache su olaylar disinda mtime'a guvenir:
+
+- Lock acquire timeout: tek mesaj olarak `Native runtime cache lock
+  beklerken zaman asimi` ile diagnostic'e duser.
+- Mtime okunamazsa (izinler, silme yarisi vb.): cache invalid kabul
+  edilir, yeniden uretilir.
+- `runtime/anadil_runtime.asm` repo'da yoksa derleme hata ile durur:
+  `Anadil runtime assembly dosyasi bulunamadi`.
+
+Cache'i elle sifirlamak icin `target/native-runtime/` klasorunu silmek
+yeterlidir; bir sonraki `derle` cagrisinda runtime yeniden uretilir.
+
+### Test Kapsami
+
+`tests/native_examples.rs` ve `tests/native_edge_cases.rs` `derle` komutunu
+gercek `ml64`/`lib`/`link` zincirinde calistirir; cache hem ilk yaratim
+hem reuse senaryosunu kapsar. `tests/cli_diagnostics.rs` runtime
+artifact'leri olmadan da CLI hata yolunun calistigini dogrular.
+
 ## Memory Management
 
 Su an native backend'de heap allocation yoktur.

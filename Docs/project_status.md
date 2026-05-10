@@ -221,8 +221,8 @@ isler veya `Docs/handoff.md` icindeki sonraki is listesiyle ortusur.
 - [ ] `README.md` mevcut runtime library modelini, kaldirilmis CRT
   bagimliligini ve sabitlenmis CLI komutlarini yansitiyor.
   (kalan ana isler madde 5)
-- [ ] `Docs/native_compiler.md` runtime cache ve `.lib` paketleme
-  modelini son haliyle iceriyor. (kalan ana isler madde 5)
+- [x] `Docs/native_compiler.md` runtime cache ve `.lib` paketleme
+  modelini son haliyle iceriyor (`Runtime Library Paketleme` basligi).
 - [ ] Windows API bagimli runtime katmaninin platform soyutlamasi icin
   kisa tasarim notu yazilmis. (kalan ana isler madde 4)
 
