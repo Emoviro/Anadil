@@ -1,0 +1,104 @@
+name: Release
+
+# Anadil release otomasyonu.
+#
+# Tetikleyici: vX.Y.Z formatinda bir tag push'u.
+# Sonuc: GitHub Releases sayfasina ZIP + SHA256 yuklenir.
+#
+# Yerel paketleme: package.ps1 (manuel calistirma).
+# Bu workflow ayni script'i Windows runner'da otomatik calistirir.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and package
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo registry and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Setup MSVC environment (ml64, lib, link)
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Verify toolchain
+        run: |
+          cargo --version
+          rustc --version
+          ml64 /? > nul && echo "ml64 OK"
+          lib /? > nul && echo "lib OK"
+          link /? > nul && echo "link OK"
+
+      - name: Run tests
+        run: cargo test --release
+        shell: powershell
+
+      - name: Run packaging script
+        run: pwsh -File .\package.ps1
+        shell: powershell
+
+      - name: Locate artifacts
+        id: artifacts
+        shell: powershell
+        run: |
+          $zip = Get-ChildItem -Path target\dist -Filter *.zip | Select-Object -First 1
+          if (-not $zip) { throw "ZIP bulunamadi (target\dist altinda)." }
+          $hash = (Get-FileHash -Algorithm SHA256 $zip.FullName).Hash
+          $size = "{0:N2} MB" -f ($zip.Length / 1MB)
+          "zip_path=$($zip.FullName)"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "zip_name=$($zip.Name)"      | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "zip_sha=$hash"              | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "zip_size=$size"             | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Compose release notes
+        id: notes
+        shell: powershell
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $notes = @"
+Anadil $tag — Windows x64 release
+
+Indirme:    ${{ steps.artifacts.outputs.zip_name }}
+Boyut:      ${{ steps.artifacts.outputs.zip_size }}
+SHA256:     ${{ steps.artifacts.outputs.zip_sha }}
+
+Kurulum talimatlari icin ZIP icindeki KURULUM.txt dosyasina bakin.
+Surum notlari icin CHANGELOG.txt dosyasina bakin.
+
+Native derleme (anadil derle) Visual Studio Build Tools gerektirir.
+Interpreter modu (anadil yorumla) ve native IDE Build Tools olmadan calisir.
+"@
+          $notesPath = Join-Path $env:RUNNER_TEMP "release_notes.txt"
+          Set-Content -Path $notesPath -Value $notes -Encoding UTF8
+          "notes_path=$notesPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Anadil ${{ github.ref_name }}
+          body_path: ${{ steps.notes.outputs.notes_path }}
+          files: ${{ steps.artifacts.outputs.zip_path }}
+          fail_on_unmatched_files: true
