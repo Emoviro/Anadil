@@ -40,13 +40,21 @@ Ana() {
 - `yazdır` ana builtin olarak calismali.
 - `yazdir` ASCII alias olarak calismali.
 
-## Compile
+## Native Calistir
 
-- `Yap`, `F5` veya `Ctrl+B` calistir.
+- `Yap` veya `F5` calistir.
+- IDE aktif dosyayi kaydetmeli, native `.exe` uretmeli ve hemen calistirmali.
 - `Build` sekmesi sunlari gostermeli:
   - kaynak `.ana` yolu
   - uretilen `.exe` yolu
-  - stdout/stderr bolumleri
+  - exit code
+  - program stdout/stderr bolumleri
+- `.exe` dosyasi kaynak dosyanin yaninda olusmali.
+
+## Compile
+
+- `EXE Derle` veya `Ctrl+B` calistir.
+- `Build` sekmesi kaynak `.ana` yolunu, uretilen `.exe` yolunu ve derleyici stdout/stderr bolumlerini gostermeli.
 - `.exe` dosyasi kaynak dosyanin yaninda olusmali.
 
 ## EXE Calistir

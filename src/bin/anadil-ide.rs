@@ -310,6 +310,9 @@ impl AnadilIde {
                 .fill(ACCENT)
                 .corner_radius(egui::CornerRadius::same(6));
             if ui.add(run_button).on_hover_text("F5").clicked() {
+                self.build_and_run();
+            }
+            if ui.button("EXE Derle").on_hover_text("Ctrl+B").clicked() {
                 self.build();
             }
             if ui
@@ -853,15 +856,27 @@ impl AnadilIde {
     }
 
     fn build(&mut self) {
+        let _ = self.build_native();
+    }
+
+    fn build_and_run(&mut self) {
+        if self.build_native() {
+            self.run_built_exe();
+        }
+    }
+
+    fn build_native(&mut self) -> bool {
         self.check_silent();
         if !self.diagnostics.is_empty() {
+            self.build_exe = None;
             self.status = "Build once compile hatasini duzeltmeli".to_string();
             self.selected_tab = Tab::Diagnostics;
-            return;
+            return false;
         }
 
         let Some(path) = self.prepare_build_source_path() else {
-            return;
+            self.build_exe = None;
+            return false;
         };
 
         self.build_output = format_build_started(&path);
@@ -873,12 +888,15 @@ impl AnadilIde {
                 self.build_output = format_build_success(&path, &build);
                 self.status = "EXE derlendi".to_string();
                 self.selected_tab = Tab::Build;
+                true
             }
             Err(message) => {
+                self.build_exe = None;
                 self.build_output = message.clone();
                 self.diagnostics = vec![Diagnostic::native(message)];
                 self.status = "Native build hatasi".to_string();
                 self.selected_tab = Tab::Diagnostics;
+                false
             }
         }
     }
@@ -1302,7 +1320,7 @@ impl AnadilIde {
             self.save_current_path();
         }
         if context.input_mut(|input| input.consume_key(egui::Modifiers::NONE, egui::Key::F5)) {
-            self.build();
+            self.build_and_run();
         }
         if context.input_mut(|input| input.consume_key(egui::Modifiers::CTRL, egui::Key::B)) {
             self.build();

@@ -224,7 +224,7 @@ Native IDE kisayollari:
 ```text
 Ctrl+O  Dosya ac
 Ctrl+S  Kaydet
-F5      EXE Derle
+F5      Native derle ve calistir
 Ctrl+B  EXE Derle
 Ctrl+Shift+F5  EXE Calistir
 ```
@@ -240,9 +240,10 @@ Native IDE proje akisi:
 - Aktif dosya sol panelden yeniden adlandirilabilir veya onay penceresiyle silinebilir.
 - Son acilan proje klasoru ve dosya bir sonraki IDE acilisinda geri yuklenir.
 - Kaydedilmemis degisiklik varken baska dosya acmaya calisilirsa IDE onay ister.
-- `Yap`, `F5` veya `Ctrl+B`, gerekiyorsa aktif dosyayi kaydeder ve `.exe` dosyasini aktif `.ana` dosyasinin yanina uretir.
+- `Yap` veya `F5`, gerekiyorsa aktif dosyayi kaydeder, native `.exe` uretir ve hemen calistirir.
+- `EXE Derle` veya `Ctrl+B`, sadece `.exe` dosyasini aktif `.ana` dosyasinin yanina uretir.
 - Build sekmesi derlenen kaynak dosyayi, uretilen `.exe` yolunu, exit/stdout/stderr detaylarini ve toolchain hatalarinda kisa cozum notunu gosterir.
-- `EXE Calistir`, son uretilen native executable'i calistirir ve stdout/stderr/exit code bilgisini `Build` sekmesinde gosterir.
+- `EXE Calistir`, son uretilen native executable'i tekrar calistirir ve stdout/stderr/exit code bilgisini `Build` sekmesinde gosterir.
 - Native executable, Explorer'dan cift tiklaninca terminal penceresi kapanmadan once Enter bekler.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri vardir.
 - `Diagnostics` sekmesindeki satir/sutun bilgili hata kartlarina tiklaninca editor ilgili konuma odaklanir.

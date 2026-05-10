@@ -24,8 +24,9 @@ Compiler tarafinda tercih edilen yon:
 
 Anadil C'ye transpile etmez. V0.1 native backend Windows x64 assembly uretir
 ve Microsoft Build Tools (`ml64`, `lib`, `link`) ile executable olusturur.
-V0.1 kullanici akisi interpreter'a degil, dogrudan native derlemeye dayanir;
-interpreter gecici dogrulama ve test oracle'i olarak tutulur.
+V0.1 kullanici akisi interpreter'a degil, dogrudan native derle-ve-calistir
+akisi uzerine kuruludur; interpreter gecici dogrulama ve test oracle'i olarak
+tutulur.
 
 ## Su Ana Kadar Yapilanlar
 
@@ -232,7 +233,7 @@ isler veya `Docs/handoff.md` icindeki sonraki is listesiyle ortusur.
 
 - [x] Native IDE acilip kapaniyor; klasor ve dosya acilabiliyor.
 - [x] Build paneli native exe yolunu, exit code'u ve `stdout`/`stderr`
-  raporluyor.
+  raporluyor; `Yap`/`F5` akisi native derleyip hemen calistiriyor.
 - [x] Diagnostics karti tikla-git ile editor konumuna gidiyor.
 - [ ] Native IDE smoke test (`Docs/ide_smoke_test.md`) kontrolden
   gecmis ve sonuclar kaydedilmis. Otomatik build/test sonucu kaydedildi;
