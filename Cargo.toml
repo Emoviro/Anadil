@@ -3,6 +3,9 @@ name = "anadil"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+authors = ["Emir Canbaz", "Akif Bugra Karsli"]
+description = "Turkce sozdizimine sahip kucuk bir programlama dili."
+repository = "https://github.com/ArsenAlighieri/Anadil"
 resolver = "2"
 
 [dependencies]
