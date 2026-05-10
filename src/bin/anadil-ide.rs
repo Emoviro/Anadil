@@ -137,7 +137,7 @@ impl Default for AnadilIde {
         Self {
             saved_source: source.clone(),
             source,
-            current_path: "adsiz.ana".to_string(),
+            current_path: "yeni.ana".to_string(),
             project_root: None,
             project_files: Vec::new(),
             status: "Hazir".to_string(),
@@ -149,7 +149,7 @@ impl Default for AnadilIde {
             build_exe: None,
             run_mode: RunMode::Interpret,
             new_file_name: "yeni.ana".to_string(),
-            rename_file_name: "adsiz.ana".to_string(),
+            rename_file_name: "yeni.ana".to_string(),
             selected_diagnostic: None,
             pending_editor_jump: None,
             left_panel_width: 290.0,
@@ -174,101 +174,94 @@ impl eframe::App for AnadilIde {
                     .frame(panel_frame(BG_PANEL, 14, 6))
                     .show_inside(ui, |ui| self.top_bar(ui));
 
-                // Sol panel: egui'nin resize'ini kullanmiyoruz, exact_size + kendi handle.
-                self.left_panel_width = self
-                    .left_panel_width
-                    .clamp(LEFT_PANEL_MIN, LEFT_PANEL_MAX);
-                egui::Panel::left("anadil_left_v3")
-                    .resizable(false)
-                    .show_separator_line(false)
-                    .exact_size(self.left_panel_width)
-                    .frame(panel_frame(BG_PANEL, 12, 12))
-                    .show_inside(ui, |ui| self.left_panel(ui));
-                self.draw_left_resize_handle(ui);
-
-                // Alt panel: aynisi.
                 self.bottom_panel_height = self
                     .bottom_panel_height
                     .clamp(BOTTOM_PANEL_MIN, BOTTOM_PANEL_MAX);
-                egui::Panel::bottom("anadil_bottom_v3")
-                    .resizable(false)
-                    .show_separator_line(false)
-                    .exact_size(self.bottom_panel_height)
+                let bottom_panel = egui::Panel::bottom("anadil_bottom_v3")
+                    .resizable(true)
+                    .show_separator_line(true)
+                    .default_size(self.bottom_panel_height)
+                    .min_size(BOTTOM_PANEL_MIN)
+                    .max_size(BOTTOM_PANEL_MAX)
                     .frame(panel_frame(BG_EDITOR, 14, 8))
                     .show_inside(ui, |ui| self.bottom_panel(ui));
-                self.draw_bottom_resize_handle(ui);
+                self.bottom_panel_height = bottom_panel
+                    .response
+                    .rect
+                    .height()
+                    .clamp(BOTTOM_PANEL_MIN, BOTTOM_PANEL_MAX);
 
                 egui::CentralPanel::default()
                     .frame(panel_frame(BG_EDITOR, 14, 10))
-                    .show_inside(ui, |ui| self.editor_panel(ui));
+                    .show_inside(ui, |ui| self.workspace_panel(ui));
             });
     }
 }
 
 impl AnadilIde {
-    fn draw_left_resize_handle(&mut self, ui: &mut egui::Ui) {
-        // Sol panelin sag kenarinda 6px genisliginde dikey draggable strip.
-        let outer = ui.max_rect();
-        let top_y = outer.top() + 52.0; // top bar yuksekligi
-        let bottom_y = outer.bottom() - self.bottom_panel_height;
-        let handle_x = outer.left() + self.left_panel_width;
-        let handle_rect = egui::Rect::from_min_max(
-            egui::pos2(handle_x - 3.0, top_y),
-            egui::pos2(handle_x + 3.0, bottom_y),
-        );
-        let handle_id = ui.make_persistent_id("anadil_left_resize");
-        let response = ui.interact(handle_rect, handle_id, egui::Sense::drag());
+    fn workspace_panel(&mut self, ui: &mut egui::Ui) {
+        let available = ui.available_size();
+        let grip_width = 6.0;
+        let min_editor_width = 320.0;
+        let max_left =
+            LEFT_PANEL_MAX.min((available.x - grip_width - min_editor_width).max(LEFT_PANEL_MIN));
+        self.left_panel_width = self.left_panel_width.clamp(LEFT_PANEL_MIN, max_left);
+
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 0.0;
+
+            ui.allocate_ui_with_layout(
+                egui::vec2(self.left_panel_width, available.y),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    egui::Frame::new()
+                        .fill(BG_PANEL)
+                        .inner_margin(egui::Margin::symmetric(12, 12))
+                        .show(ui, |ui| {
+                            ui.set_width(ui.available_width());
+                            ui.set_height(ui.available_height());
+                            self.left_panel(ui);
+                        });
+                },
+            );
+
+            self.draw_left_resize_handle(ui, available.y, max_left);
+
+            ui.allocate_ui_with_layout(
+                ui.available_size(),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    egui::Frame::new()
+                        .fill(BG_EDITOR)
+                        .inner_margin(egui::Margin::symmetric(14, 10))
+                        .show(ui, |ui| {
+                            ui.set_width(ui.available_width());
+                            ui.set_height(ui.available_height());
+                            self.editor_panel(ui);
+                        });
+                },
+            );
+        });
+    }
+
+    fn draw_left_resize_handle(&mut self, ui: &mut egui::Ui, height: f32, max_left: f32) {
+        let (rect, response) = ui.allocate_exact_size(egui::vec2(6.0, height), egui::Sense::drag());
         if response.hovered() || response.dragged() {
             ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeHorizontal);
         }
         if response.dragged() {
-            if let Some(pos) = response.interact_pointer_pos() {
-                self.left_panel_width = (pos.x - outer.left())
-                    .clamp(LEFT_PANEL_MIN, LEFT_PANEL_MAX);
-            }
+            self.left_panel_width =
+                (self.left_panel_width + response.drag_delta().x).clamp(LEFT_PANEL_MIN, max_left);
         }
-        let stroke_color = if response.hovered() || response.dragged() {
-            ACCENT
-        } else {
-            BORDER
-        };
-        ui.painter().vline(
-            handle_x,
-            handle_rect.y_range(),
-            egui::Stroke::new(1.0, stroke_color),
-        );
-    }
 
-    fn draw_bottom_resize_handle(&mut self, ui: &mut egui::Ui) {
-        // Alt panelin ust kenarinda 6px yuksekligindeki yatay draggable strip.
-        let outer = ui.max_rect();
-        let handle_y = outer.bottom() - self.bottom_panel_height;
-        let left_x = outer.left() + self.left_panel_width;
-        let handle_rect = egui::Rect::from_min_max(
-            egui::pos2(left_x, handle_y - 3.0),
-            egui::pos2(outer.right(), handle_y + 3.0),
-        );
-        let handle_id = ui.make_persistent_id("anadil_bottom_resize");
-        let response = ui.interact(handle_rect, handle_id, egui::Sense::drag());
-        if response.hovered() || response.dragged() {
-            ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeVertical);
-        }
-        if response.dragged() {
-            if let Some(pos) = response.interact_pointer_pos() {
-                self.bottom_panel_height = (outer.bottom() - pos.y)
-                    .clamp(BOTTOM_PANEL_MIN, BOTTOM_PANEL_MAX);
-            }
-        }
-        let stroke_color = if response.hovered() || response.dragged() {
-            ACCENT
+        let (fill, stroke) = if response.hovered() || response.dragged() {
+            (BG_RAISED, egui::Stroke::new(1.0, ACCENT))
         } else {
-            BORDER
+            (BG_EDITOR, egui::Stroke::new(1.0, BORDER))
         };
-        ui.painter().hline(
-            handle_rect.x_range(),
-            handle_y,
-            egui::Stroke::new(1.0, stroke_color),
-        );
+        ui.painter()
+            .rect_filled(rect, egui::CornerRadius::ZERO, fill);
+        ui.painter().vline(rect.center().x, rect.y_range(), stroke);
     }
 
     fn new() -> Self {
@@ -304,17 +297,8 @@ impl AnadilIde {
             ui.add_space(2.0);
             ui.label(RichText::new("◆").size(15.0).color(ACCENT));
             ui.add_space(2.0);
-            ui.label(
-                RichText::new("Anadil")
-                    .strong()
-                    .size(19.0)
-                    .color(ACCENT),
-            );
-            ui.label(
-                RichText::new("IDE")
-                    .size(13.0)
-                    .color(FG_TERTIARY),
-            );
+            ui.label(RichText::new("Anadil").strong().size(19.0).color(ACCENT));
+            ui.label(RichText::new("IDE").size(13.0).color(FG_TERTIARY));
 
             ui.add_space(10.0);
             vertical_divider(ui);
@@ -362,11 +346,9 @@ impl AnadilIde {
                     );
                 });
 
-            let run_button = egui::Button::new(
-                RichText::new("▶  Yap").color(BG_BASE).strong(),
-            )
-            .fill(ACCENT)
-            .corner_radius(egui::CornerRadius::same(6));
+            let run_button = egui::Button::new(RichText::new("▶  Yap").color(BG_BASE).strong())
+                .fill(ACCENT)
+                .corner_radius(egui::CornerRadius::same(6));
             if ui.add(run_button).on_hover_text("F5").clicked() {
                 self.run_selected_mode();
             }
@@ -387,11 +369,7 @@ impl AnadilIde {
                 ui.label(RichText::new(label_text).small().color(label_color));
                 ui.label(RichText::new("●").size(10.0).color(dot_color));
                 ui.add_space(8.0);
-                ui.label(
-                    RichText::new(&self.status)
-                        .small()
-                        .color(FG_SECONDARY),
-                );
+                ui.label(RichText::new(&self.status).small().color(FG_SECONDARY));
             });
         });
     }
@@ -530,11 +508,8 @@ impl AnadilIde {
                             .and_then(|name| name.to_str())
                             .unwrap_or("ornek.ana");
                         let selected = self.current_path == path.display().to_string();
-                        let text = RichText::new(name).color(if selected {
-                            ACCENT
-                        } else {
-                            FG_PRIMARY
-                        });
+                        let text =
+                            RichText::new(name).color(if selected { ACCENT } else { FG_PRIMARY });
                         if ui.selectable_label(selected, text).clicked() {
                             self.open_path_with_guard(&path);
                         }
@@ -617,14 +592,25 @@ impl AnadilIde {
 
         let editor_id = ui.make_persistent_id("source_editor");
         let line_count = editor_line_count(&self.source);
-        let output = TextEdit::multiline(&mut self.source)
-            .id(editor_id)
-            .font(FontId::new(15.0, FontFamily::Monospace))
-            .desired_width(f32::INFINITY)
-            .desired_rows(line_count.max(26))
-            .lock_focus(true)
-            .layouter(&mut layouter)
-            .show(ui);
+        let editor_height = ui.available_height();
+        let min_editor_height = editor_height.max(line_count.max(26) as f32 * 20.0);
+        let editor_width = ui.available_width();
+        let output = ScrollArea::vertical()
+            .id_salt("source_editor_scroll")
+            .auto_shrink([false, false])
+            .max_height(editor_height)
+            .show(ui, |ui| {
+                TextEdit::multiline(&mut self.source)
+                    .id(editor_id)
+                    .font(FontId::new(15.0, FontFamily::Monospace))
+                    .desired_width(f32::INFINITY)
+                    .desired_rows(line_count.max(26))
+                    .min_size(egui::vec2(editor_width, min_editor_height))
+                    .lock_focus(true)
+                    .layouter(&mut layouter)
+                    .show(ui)
+            })
+            .inner;
 
         if output.response.changed() {
             self.build_exe = None;
@@ -730,14 +716,20 @@ impl AnadilIde {
         };
 
         if active || hovered {
-            let fill = if active { BG_RAISED } else { BG_RAISED.gamma_multiply(0.6) };
-            ui.painter().rect_filled(rect, egui::CornerRadius::same(4), fill);
+            let fill = if active {
+                BG_RAISED
+            } else {
+                BG_RAISED.gamma_multiply(0.6)
+            };
+            ui.painter()
+                .rect_filled(rect, egui::CornerRadius::same(4), fill);
         }
 
         let galley = ui
             .painter()
             .layout_no_wrap(label.to_string(), font, label_color);
-        ui.painter().galley(rect.left_top() + padding, galley, label_color);
+        ui.painter()
+            .galley(rect.left_top() + padding, galley, label_color);
 
         if active {
             let underline_y = rect.bottom() - 1.0;
@@ -761,10 +753,7 @@ impl AnadilIde {
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new("✓").size(22.0).color(STATUS_OK));
                 ui.add_space(4.0);
-                ui.label(
-                    RichText::new("Tanılama temiz — hata yok.")
-                        .color(FG_SECONDARY),
-                );
+                ui.label(RichText::new("Tanılama temiz — hata yok.").color(FG_SECONDARY));
             });
             return;
         }
@@ -800,11 +789,8 @@ impl AnadilIde {
                     ui.horizontal(|ui| {
                         // Sol kenarda severity stripe
                         let (_id, stripe_rect) = ui.allocate_space(egui::vec2(3.0, 38.0));
-                        ui.painter().rect_filled(
-                            stripe_rect,
-                            egui::CornerRadius::same(2),
-                            stripe,
-                        );
+                        ui.painter()
+                            .rect_filled(stripe_rect, egui::CornerRadius::same(2), stripe);
                         ui.add_space(8.0);
                         ui.vertical(|ui| {
                             ui.horizontal(|ui| {
@@ -814,33 +800,21 @@ impl AnadilIde {
                                         .small()
                                         .color(stripe),
                                 );
-                                ui.label(
-                                    RichText::new("·")
-                                        .color(FG_TERTIARY),
-                                );
+                                ui.label(RichText::new("·").color(FG_TERTIARY));
                                 ui.label(
                                     RichText::new(diagnostic.stage.as_str())
                                         .small()
                                         .color(FG_SECONDARY),
                                 );
                                 ui.add_space(6.0);
-                                ui.label(
-                                    RichText::new(place)
-                                        .small()
-                                        .color(FG_TERTIARY),
-                                );
+                                ui.label(RichText::new(place).small().color(FG_TERTIARY));
                             });
                             ui.add_space(2.0);
-                            ui.label(
-                                RichText::new(&diagnostic.message)
-                                    .color(FG_PRIMARY),
-                            );
+                            ui.label(RichText::new(&diagnostic.message).color(FG_PRIMARY));
                             if diagnostic.span.is_some() {
                                 ui.add_space(2.0);
                                 ui.label(
-                                    RichText::new("→ tıkla: editöre git")
-                                        .small()
-                                        .color(ACCENT),
+                                    RichText::new("→ tıkla: editöre git").small().color(ACCENT),
                                 );
                             }
                         });
@@ -1207,9 +1181,9 @@ impl AnadilIde {
         self.current_path = self
             .project_root
             .as_ref()
-            .map(|root| root.join("adsiz.ana").display().to_string())
-            .unwrap_or_else(|| "adsiz.ana".to_string());
-        self.rename_file_name = "adsiz.ana".to_string();
+            .map(|root| root.join("yeni.ana").display().to_string())
+            .unwrap_or_else(|| "yeni.ana".to_string());
+        self.rename_file_name = "yeni.ana".to_string();
         self.output = "Yeni dosya olusturuldu.".to_string();
         self.build_output = "Henuz build yok.".to_string();
         self.status = "Yeni dosya".to_string();
@@ -1579,12 +1553,7 @@ fn panel_frame(fill: Color32, x_margin: i8, y_margin: i8) -> egui::Frame {
 }
 
 fn section_header(ui: &mut egui::Ui, label: &str) {
-    ui.label(
-        RichText::new(label)
-            .strong()
-            .size(11.0)
-            .color(FG_TERTIARY),
-    );
+    ui.label(RichText::new(label).strong().size(11.0).color(FG_TERTIARY));
 }
 
 fn vertical_divider(ui: &mut egui::Ui) {
@@ -2208,13 +2177,8 @@ fn format(color: Color32, background: Color32) -> TextFormat {
 
 fn starter_source() -> String {
     "\
-Topla(a: sayı, b: sayı) -> sayı {
-    dön a + b;
-}
-
 Ana() {
-    sonuc: sayı = Topla(10, 20);
-    yazdır(sonuc);
+
 }
 "
     .to_string()
