@@ -330,7 +330,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 
 - Guncel dil referansi: [Docs/dil_referansi.md](Docs/dil_referansi.md)
 - Proje durum ozeti: [Docs/project_status.md](Docs/project_status.md)
-- Claude handoff talimatlari: [Docs/claude_handoff.md](Docs/claude_handoff.md)
+- Claude handoff talimatlari: [Docs/claude_handoff.md](Docs/handoff.md)
 - Native compiler notlari: [Docs/native_compiler.md](Docs/native_compiler.md)
 - Bellek modeli notlari: [Docs/memory_model.md](Docs/memory_model.md)
 - Local IDE notlari: [Docs/local_ide.md](Docs/local_ide.md)
