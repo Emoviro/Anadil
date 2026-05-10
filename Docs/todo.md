@@ -21,6 +21,10 @@
 - [ ] Runtime hatalarini native executable ciktilarinda daha net raporla.
 - [ ] Windows path/OneDrive/Turkce karakter senaryolarini build testlerine ekle.
 - [x] Runtime helper'larini ayri obje olarak linkleme yolunu tasarla.
+- [x] Metin karsilastirmayi C `strcmp` yerine Anadil runtime icinde uygula.
+- [x] Runtime panic cikisini C `exit` yerine Windows process cikisina bagla.
+- [x] `printf` ve `getchar` bagimliliklarini runtime I/O katmaniyla azalt.
+- [ ] Windows API bagimli runtime katmanini ileride platform soyutlamasina bol.
 - [ ] Runtime helper objesini tekrar kullanilabilir kutuphane modeline tasarla.
 
 ## Dil Tasarimi

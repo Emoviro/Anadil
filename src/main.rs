@@ -489,10 +489,7 @@ fn compile_native(path: &str, source: &str) -> Result<PathBuf, String> {
             format!("/OUT:{}", build_paths.exe.display()),
             build_paths.obj.display().to_string(),
             build_paths.runtime_obj.display().to_string(),
-            "msvcrt.lib".to_string(),
-            "ucrt.lib".to_string(),
-            "vcruntime.lib".to_string(),
-            "legacy_stdio_definitions.lib".to_string(),
+            "kernel32.lib".to_string(),
         ],
         vcvars64.as_deref(),
     )?;

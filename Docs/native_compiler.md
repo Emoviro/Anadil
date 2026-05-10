@@ -105,7 +105,7 @@ Kullanilan araclar:
 - Microsoft Macro Assembler: `ml64`
 - Microsoft linker: `link`
 - Visual Studio Build Tools C++ toolchain
-- MSVC/UCRT import library'leri: `msvcrt.lib`, `ucrt.lib`, `vcruntime.lib`, `legacy_stdio_definitions.lib`
+- Windows import library: `kernel32.lib`
 
 ## Assembly Modeli
 
@@ -204,7 +204,7 @@ lea rax, str_0
 
 ## yazdır Runtime Modeli
 
-`yazdır` native backend'de Anadil runtime helper'larina dusurulur. `yazdir` ASCII alias'i da ayni builtin'e baglanir. Helper'lar `runtime/anadil_runtime.asm` icinde ayri assemble edilir ve altta simdilik C runtime `printf` fonksiyonunu cagirir.
+`yazdır` native backend'de Anadil runtime helper'larina dusurulur. `yazdir` ASCII alias'i da ayni builtin'e baglanir. Helper'lar `runtime/anadil_runtime.asm` icinde ayri assemble edilir ve Windows `WriteFile` uzerinden stdout'a byte yazar.
 
 Kullanilan formatlar:
 
@@ -222,11 +222,11 @@ false -> "yanlis" UTF-8: yanlış
 
 ## Metin Karsilastirma
 
-`metin == metin` ve `metin != metin` islemleri `anadil_runtime_strcmp` helper'i ile uretilir. Bu helper su an C runtime `strcmp` fonksiyonuna delege eder.
+`metin == metin` ve `metin != metin` islemleri `anadil_runtime_strcmp` helper'i ile uretilir. Bu helper runtime icinde byte byte karsilastirma yapar; C runtime `strcmp` cagrisi kullanmaz.
 
 ```text
-strcmp(a, b) == 0 -> esit
-strcmp(a, b) != 0 -> esit degil
+anadil_runtime_strcmp(a, b) == 0 -> esit
+anadil_runtime_strcmp(a, b) != 0 -> esit degil
 ```
 
 ## Runtime Hatalari
@@ -237,11 +237,11 @@ Native MVP sifira bolme icin interpreter'a benzer kontrollu hata davranisi ureti
 Sifira bolme hatasi
 ```
 
-Bu durumda executable Enter bekledikten sonra `exit(1)` ile biter. Kaynak satir/sutun bilgisi su an native executable icine gomulmez; IDE entegrasyonu icin compile-time lexer/parser/semantic hatalari CLI tarafinda caret'li diagnostic ve `kontrol --json` ile structured diagnostic olarak kalir.
+Bu durumda executable Enter bekledikten sonra Windows `ExitProcess(1)` ile biter. Kaynak satir/sutun bilgisi su an native executable icine gomulmez; IDE entegrasyonu icin compile-time lexer/parser/semantic hatalari CLI tarafinda caret'li diagnostic ve `kontrol --json` ile structured diagnostic olarak kalir.
 
 ## Runtime Helper ABI
 
-Compiler artik kullanici kodundan dogrudan `printf`, `strcmp`, `getchar` veya `exit` cagrisi uretmek yerine kendi runtime helper'larini cagirir:
+Compiler kullanici kodundan dogrudan platform API'si veya C runtime cagrisi uretmek yerine kendi runtime helper'larini cagirir:
 
 ```text
 anadil_runtime_print_sayi(rcx=sayi)
@@ -249,10 +249,10 @@ anadil_runtime_print_metin(rcx=metin_ptr)
 anadil_runtime_print_mantik(rcx=0/1)
 anadil_runtime_strcmp(rcx=left_ptr, rdx=right_ptr) -> eax
 anadil_runtime_wait_before_exit()
-anadil_runtime_panic(rcx=message_ptr) -> exit(1)
+anadil_runtime_panic(rcx=message_ptr) -> process exit 1
 ```
 
-Bu helper'lar program assembly'sinden ayri bir runtime object file olarak linklenir. Sonraki asamada bu object dosyasi kutuphane haline getirilebilir ve icindeki C runtime bagimliliklari azaltilabilir.
+Bu helper'lar program assembly'sinden ayri bir runtime object file olarak linklenir. Runtime I/O, bekleme ve process sonlandirma Windows `kernel32` API'lerine baglidir; C runtime import'u artik native executable link hattinda gerekli degildir.
 
 ## Memory Management
 

@@ -294,9 +294,10 @@ Sinirlar:
 
 - Sadece Windows x64 hedeflenir.
 - Visual Studio Build Tools C++ araclari gerekir.
+- Native runtime I/O ve process cikisi Windows `kernel32` API'leri uzerinden calisir.
 - Ilk 4 fonksiyon parametresi register ile, sonraki parametreler stack uzerinden tasinir.
 - Runtime hatalari interpreter kadar ayrintili raporlanmaz.
-- Sifira bolme native executable icinde kontrollu hata ve `exit(1)` ile raporlanir.
+- Sifira bolme native executable icinde kontrollu hata ve process exit code `1` ile raporlanir.
 - Native executable program sonunda ve runtime hata cikisinda terminalin kapanmamasi icin Enter bekler.
 - CLI compile-time hatalari satir/sutun ve caret bilgisiyle basilir; bu cikti mini IDE tarafindan diagnostics paneline baglanabilecek durumdadir.
 - `kontrol --json` IDE icin makine okunabilir diagnostic protokolu saglar.

@@ -732,5 +732,13 @@ Ana() {\n\
                 "missing runtime helper: {helper}"
             );
         }
+        assert!(!RUNTIME_ASM.contains("extrn printf:proc"));
+        assert!(!RUNTIME_ASM.contains("extrn strcmp:proc"));
+        assert!(!RUNTIME_ASM.contains("extrn getchar:proc"));
+        assert!(!RUNTIME_ASM.contains("extrn exit:proc"));
+        assert!(RUNTIME_ASM.contains("extrn GetStdHandle:proc"));
+        assert!(RUNTIME_ASM.contains("extrn WriteFile:proc"));
+        assert!(RUNTIME_ASM.contains("extrn ReadFile:proc"));
+        assert!(RUNTIME_ASM.contains("extrn ExitProcess:proc"));
     }
 }
