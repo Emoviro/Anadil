@@ -94,7 +94,7 @@ Beklenen cikti:
 
 ```text
 Merhaba Anadil
-Codex
+Yerel Derleyici
 doğru
 ```
 

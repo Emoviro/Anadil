@@ -37,7 +37,7 @@ fn runs_mantik_example() {
 fn runs_metin_example() {
     assert_example_output(
         include_str!("../examples/metin.ana"),
-        "Merhaba Anadil\nCodex\ndo\u{011f}ru",
+        "Merhaba Anadil\nYerel Derleyici\ndo\u{011f}ru",
     );
 }
 

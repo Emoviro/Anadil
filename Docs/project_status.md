@@ -161,7 +161,7 @@ Bu isler bittikten sonra compiler MVP V0.1 icin sabit kabul edilebilir.
 V0.1 compiler MVP'sini "tamam" kabul edebilmek icin asagidaki kriterler
 saglanmali. Cogu kriter su anda saglanmis durumda; isaretsiz olanlar
 yukaridaki "V0.1 Icin Kalan Ana Isler" basliginda listelenen kalan
-isler veya `Docs/handoff.md` icindeki sonraki is listesiyle ortusur.
+islerle ortusur.
 
 ### Dil ve compiler
 
