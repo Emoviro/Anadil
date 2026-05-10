@@ -140,6 +140,35 @@ Ana() {\n\
 }
 
 #[test]
+fn native_runtime_prints_integer_edge_values() {
+    assert_native_output(
+        "runtime_integer_edges",
+        "\
+Ana() {\n\
+    yazdir(0);\n\
+    yazdir(-1);\n\
+    yazdir(123456789012345678);\n\
+    yazdir(-123456789012345678);\n\
+}\n",
+    );
+}
+
+#[test]
+fn native_runtime_prints_empty_and_utf8_strings() {
+    assert_native_output(
+        "runtime_string_edges",
+        "\
+Ana() {\n\
+    yazdir(\"ilk\");\n\
+    yazdir(\"\");\n\
+    yazdir(\"Merhaba, d\u{00fc}nya\");\n\
+    yazdir(\"ayn\u{0131}\" == \"ayn\u{0131}\");\n\
+    yazdir(\"a\" != \"\");\n\
+}\n",
+    );
+}
+
+#[test]
 fn native_division_by_zero_reports_runtime_error() {
     let Some(anadil_bin) = anadil_binary() else {
         eprintln!("native edge case skipped: anadil binary path is not available");

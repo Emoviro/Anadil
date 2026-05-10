@@ -24,6 +24,7 @@
 - [x] Metin karsilastirmayi C `strcmp` yerine Anadil runtime icinde uygula.
 - [x] Runtime panic cikisini C `exit` yerine Windows process cikisina bagla.
 - [x] `printf` ve `getchar` bagimliliklarini runtime I/O katmaniyla azalt.
+- [x] Native runtime I/O icin sayi, bos metin ve UTF-8 edge testleri ekle.
 - [ ] Windows API bagimli runtime katmanini ileride platform soyutlamasina bol.
 - [ ] Runtime helper objesini tekrar kullanilabilir kutuphane modeline tasarla.
 
