@@ -903,7 +903,7 @@ impl AnadilIde {
 
     fn run_built_exe(&mut self) {
         let Some(exe) = self.build_exe.clone() else {
-            self.build_output = "EXE calistir\n\nCalistirilacak executable yok.\nOnce `EXE Derle` ile native executable uret.".to_string();
+            self.build_output = format_no_exe_to_run();
             self.status = "Calistirilacak EXE yok".to_string();
             self.selected_tab = Tab::Build;
             return;
@@ -912,18 +912,20 @@ impl AnadilIde {
         let exe_path = PathBuf::from(&exe);
         match run_executable(&exe_path) {
             Ok(output) => {
+                self.output = format_program_output(&output);
                 self.build_output = format_exe_run_output(&exe_path, &output);
                 if output.status.success() {
                     self.status = "EXE calistirildi".to_string();
                     self.diagnostics.clear();
+                    self.selected_tab = Tab::Output;
                 } else {
                     let code = exit_code_label(&output.status);
                     self.status = "EXE hata ile bitti".to_string();
                     self.diagnostics = vec![Diagnostic::native(format!(
                         "Native executable basarisiz bitti: {code}"
                     ))];
+                    self.selected_tab = Tab::Build;
                 }
-                self.selected_tab = Tab::Build;
             }
             Err(error) => {
                 let message = format!("Native executable calistirilamadi `{}`: {error}", exe);
@@ -1969,6 +1971,23 @@ fn run_executable(path: &Path) -> Result<std::process::Output, std::io::Error> {
     command.output()
 }
 
+fn format_program_output(output: &std::process::Output) -> String {
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = stdout.trim_end();
+    let stderr = stderr.trim_end();
+
+    if stdout.is_empty() && stderr.is_empty() {
+        "Program cikti uretmedi.".to_string()
+    } else if stderr.is_empty() {
+        stdout.to_string()
+    } else if stdout.is_empty() {
+        format!("stderr:\n{stderr}")
+    } else {
+        format!("{stdout}\n\nstderr:\n{stderr}")
+    }
+}
+
 fn format_exe_run_output(path: &Path, output: &std::process::Output) -> String {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -1976,27 +1995,50 @@ fn format_exe_run_output(path: &Path, output: &std::process::Output) -> String {
     let stderr = stderr.trim_end();
 
     format!(
-        "EXE calistir\n\nDosya:\n{}\n\nExit:\n{}\n\nstdout:\n{}\n\nstderr:\n{}",
-        path.display(),
-        exit_code_label(&output.status),
+        "{}\n{}\n\n{}\n{}\n\n{}\n{}",
+        section_header_text("Program"),
+        format!(
+            "Dosya: {}\nExit: {}",
+            path.display(),
+            exit_code_label(&output.status)
+        ),
+        section_header_text("stdout"),
         empty_label(stdout),
+        section_header_text("stderr"),
         empty_label(stderr),
     )
 }
 
+fn format_no_exe_to_run() -> String {
+    format!(
+        "{}\n{}\n\n{}",
+        section_header_text("EXE Calistir"),
+        "Calistirilacak executable yok.",
+        "Once `EXE Derle` ile native executable uret."
+    )
+}
+
+fn section_header_text(title: &str) -> String {
+    format!("{title}\n{}", "-".repeat(title.chars().count()))
+}
+
 fn format_build_started(path: &Path) -> String {
     format!(
-        "EXE Derle\n\nKaynak:\n{}\n\nDurum:\nDerleme baslatildi...",
-        path.display()
+        "{}\nKaynak: {}\nDurum: Derleme baslatildi...",
+        section_header_text("EXE Derle"),
+        path.display(),
     )
 }
 
 fn format_build_success(path: &Path, build: &NativeBuildOutput) -> String {
     format!(
-        "EXE Derle\n\nDurum:\nBasarili\n\nKaynak:\n{}\n\nExecutable:\n{}\n\nDerleyici stdout:\n{}\n\nDerleyici stderr:\n{}",
+        "{}\nDurum: Basarili\nKaynak: {}\nExecutable: {}\n\n{}\n{}\n\n{}\n{}",
+        section_header_text("EXE Derle"),
         path.display(),
         build.exe,
+        section_header_text("Derleyici stdout"),
         empty_label(build.stdout.trim_end()),
+        section_header_text("Derleyici stderr"),
         empty_label(build.stderr.trim_end()),
     )
 }
@@ -2009,12 +2051,17 @@ fn format_native_build_error(
     stderr: &str,
 ) -> String {
     format!(
-        "EXE Derle\n\nDurum:\nBasarisiz\n\nKaynak:\n{}\n\nKomut:\n{}\n\nHata:\n{}\n\nNe yapmali:\n{}\n\nDerleyici stdout:\n{}\n\nDerleyici stderr:\n{}",
+        "{}\nDurum: Basarisiz\nKaynak: {}\nKomut: {}\n\n{}\n{}\n\n{}\n{}\n\n{}\n{}\n\n{}\n{}",
+        section_header_text("EXE Derle"),
         path.display(),
         command,
+        section_header_text("Hata"),
         empty_label(message.trim()),
+        section_header_text("Ne yapmali"),
         native_build_advice(message),
+        section_header_text("Derleyici stdout"),
         empty_label(stdout.trim_end()),
+        section_header_text("Derleyici stderr"),
         empty_label(stderr.trim_end()),
     )
 }
@@ -2359,9 +2406,10 @@ mod tests {
             "",
             "stderr",
         );
-        assert!(error.contains("Durum:\nBasarisiz"));
+        assert!(error.contains("Durum: Basarisiz"));
+        assert!(error.contains("Hata\n----"));
         assert!(error.contains("Ne yapmali"));
-        assert!(error.contains("stdout"));
+        assert!(error.contains("Derleyici stdout"));
     }
 
     #[test]

@@ -58,8 +58,9 @@ Proje akisi:
 - Kaydedilmemis degisiklik varken dosya degistirme veya yeni dosya acma onay ister.
 - `Yap` veya `F5`, build oncesi aktif dosyayi kaydeder, executable'i kaynak dosyanin yanina uretir ve hemen calistirir.
 - `EXE Derle` veya `Ctrl+B`, sadece executable'i kaynak dosyanin yanina uretir.
-- Build sekmesi derlenen kaynak dosyayi, uretilen `.exe` yolunu, exit/stdout/stderr detaylarini ve toolchain hatalarinda kisa cozum notunu gosterir.
-- `EXE Calistir`, son uretilen executable'i tekrar calistirir ve stdout/stderr/exit code bilgisini `Build` sekmesine yazar.
+- `Yap`/`F5` basariliysa program stdout/stderr sonucu `Cikti` sekmesine yazilir.
+- Build sekmesi derlenen kaynak dosyayi, uretilen `.exe` yolunu, exit/stdout/stderr detaylarini ve toolchain hatalarinda baslikli bolumler halinde kisa cozum notunu gosterir.
+- `EXE Calistir`, son uretilen executable'i tekrar calistirir ve stdout/stderr/exit code bilgisini `Cikti` ve `Build` sekmelerine yazar.
 - Native executable, Explorer'dan cift tiklaninca terminal penceresi kapanmadan once Enter bekler.
 - Alt panelde `Cikti`, `Diagnostics` ve `Build` sekmeleri bulunur.
 - `Diagnostics` sekmesindeki satir/sutun bilgili hata kartlarina tiklaninca editor ilgili konuma odaklanir.

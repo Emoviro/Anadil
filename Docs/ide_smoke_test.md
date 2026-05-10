@@ -44,6 +44,7 @@ Ana() {
 
 - `Yap` veya `F5` calistir.
 - IDE aktif dosyayi kaydetmeli, native `.exe` uretmeli ve hemen calistirmali.
+- Basarili calismada `Cikti` sekmesinde program stdout'u gorunmeli.
 - `Build` sekmesi sunlari gostermeli:
   - kaynak `.ana` yolu
   - uretilen `.exe` yolu
@@ -60,7 +61,7 @@ Ana() {
 ## EXE Calistir
 
 - `EXE Calistir` dugmesine bas.
-- `Build` sekmesinde exit code ve stdout gorunmeli.
+- `Cikti` sekmesinde program stdout'u, `Build` sekmesinde exit code ve stdout/stderr bolumleri gorunmeli.
 - Explorer'dan `.exe` cift tiklaninca terminal hemen kapanmadan Enter beklemeli.
 
 ## Hata Senaryolari
