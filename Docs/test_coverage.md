@@ -43,7 +43,7 @@ test edilebilir bir yuzey degil.
 | `==`, `!=` (sayi) | ✓ | ✓ | ✓ numeric_comparisons |
 | `<`, `<=`, `>`, `>=` (sayi) | ✓ kosul | ✓ | ✓ numeric_comparisons |
 | `==`, `!=` (metin) | · | · | ✓ string_compare, runtime_string_edges |
-| `==`, `!=` (mantik) | · | · | · |
+| `==`, `!=` (mantik) | · | · | ✓ boolean_equality |
 | Parantezli karmasik ifade `(a + b) * c` | (implicit) | (implicit) | · |
 
 ### Kontrol akisi
@@ -69,12 +69,12 @@ test edilebilir bir yuzey degil.
 | 3 parametre | · | · | (nested_calls_preserve_args icinde Topla3) |
 | 4 parametre (son register arg) | · | · | ✓ four_params |
 | 5 parametre (ilk stack arg) | · | · | ✓ five_params |
-| 6 parametre | · | · | · |
+| 6 parametre | · | · | ✓ six_params |
 | 7 parametre | · | · | ✓ seven_params |
 | Donus tipli (`-> sayi`) ile `don` | ✓ topla, fonksiyon | ✓ | (her yerde) |
-| Donus tipsiz (void) fonksiyon | · | · | · |
+| Donus tipsiz (void) fonksiyon | · | · | ✓ void_function |
 | Erken `don` (icli kosul icinden) | ✓ native_mvp PozitifMi | ✓ | · |
-| Recursive call | · | · | · |
+| Recursive call | · | · | ✓ recursive_function |
 | Nested call (deger arguman olarak fonksiyon cagri) | · | · | ✓ nested_calls_preserve_args |
 | Kapsam shadowing (ayni isim, ic kapsam) | ✓ kapsam | ✓ | ✓ scope_shadowing |
 
@@ -83,7 +83,7 @@ test edilebilir bir yuzey degil.
 | Ozellik | Interpreter | Native parity | Native edge |
 |---|---|---|---|
 | `yazdir(sayi)` | ✓ | ✓ | ✓ runtime_integer_edges |
-| `yazdir(mantik)` | ✓ mantik | ✓ | · |
+| `yazdir(mantik)` | ✓ mantik | ✓ | ✓ boolean_equality |
 | `yazdir(metin)` | ✓ metin | ✓ | ✓ runtime_string_edges |
 | ASCII alias `yazdir` | · | · | ✓ runtime_integer/string_edges |
 
@@ -136,19 +136,22 @@ Onceliklendirme acidan onemli (yuksek riski olanlar uste).
 
 ### Yuksek oncelik (V0.1 kapatilmadan duzeltilmesi onerilir)
 
-1. **Donus tipsiz (void) fonksiyon**: `YazdirDeger(x: sayi) { yazdir(x) }`
+Durum: Tamamlandi. Bu dort madde `tests/native_edge_cases.rs` icinde
+inline parity testleriyle kapatildi.
+
+1. ~~**Donus tipsiz (void) fonksiyon**~~: `YazdirDeger(x: sayi) { yazdir(x) }`
    gibi `-> tip` belirtmeyen fonksiyonlar dilde mevcut ancak test yok.
    Native backend stack ayarinin dogru oldugu test edilmemis.
 
-2. **Recursive fonksiyon**: Faktoriyel veya basit recursive Fibonacci
+2. ~~**Recursive fonksiyon**~~: Faktoriyel veya basit recursive Fibonacci
    ornegi yok. Native backend stack frame ve recursion derinligi
    davranisini test etmiyor.
 
-3. **6 parametreli fonksiyon**: 4 register + 2 stack arg sinir durumu;
+3. ~~**6 parametreli fonksiyon**~~: 4 register + 2 stack arg sinir durumu;
    five_params ve seven_params var ama 6 atlanmis. Stack alignment
    regresyon riskini kapatir.
 
-4. **`mantik` esitlik (`==`, `!=`)**: `dogru == dogru`, `yanlis != dogru`
+4. ~~**`mantik` esitlik (`==`, `!=`)**~~: `dogru == dogru`, `yanlis != dogru`
    parser/sema/native testi yok. Sema'nin bunu kabul edip etmedigi de
    acik degil; davranis netlestirilmeli.
 
@@ -192,10 +195,10 @@ V0.1 kapatma kriterini hizlamak icin minimum set:
 
 | # | Eklenecek test | Hedef dosya |
 |---|---|---|
-| 1 | Void fonksiyon parity | `tests/native_examples.rs` (yeni `examples/void_fn.ana`) veya inline edge |
-| 2 | Recursive fonksiyon parity (kucuk derinlik) | `tests/native_edge_cases.rs` (inline) |
-| 3 | 6 parametre fonksiyon parity | `tests/native_edge_cases.rs` (inline) |
-| 4 | `mantik` esitlik parity ve sema durumu | Sema karari netlestir, testle dondur |
+| 1 | Void fonksiyon parity | Tamamlandi: `native_void_function_matches_interpreter` |
+| 2 | Recursive fonksiyon parity (kucuk derinlik) | Tamamlandi: `native_recursive_function_matches_interpreter` |
+| 3 | 6 parametre fonksiyon parity | Tamamlandi: `native_six_parameter_function_matches_interpreter` |
+| 4 | `mantik` esitlik parity ve sema durumu | Tamamlandi: `native_boolean_equality_matches_interpreter` |
 
 Bu dort ek V0.1 dil yuzeyini test acidan kapatir. Diger
 bosluklar V0.2+ ile birlikte kademeli ele alinabilir.

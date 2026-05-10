@@ -34,6 +34,57 @@ Ana() {\n\
 }
 
 #[test]
+fn native_void_function_matches_interpreter() {
+    assert_native_output(
+        "void_function",
+        "\
+Selamla(ad: metin) {\n\
+    yazdir(\"Merhaba\");\n\
+    yazdir(ad);\n\
+}\n\
+\n\
+Ana() {\n\
+    Selamla(\"Anadil\");\n\
+    yazdir(42);\n\
+}\n",
+    );
+}
+
+#[test]
+fn native_recursive_function_matches_interpreter() {
+    assert_native_output(
+        "recursive_function",
+        "\
+Faktoriyel(n: say\u{0131}) -> say\u{0131} {\n\
+    e\u{011f}er (n <= 1) {\n\
+        d\u{00f6}n 1;\n\
+    }\n\
+    d\u{00f6}n n * Faktoriyel(n - 1);\n\
+}\n\
+\n\
+Ana() {\n\
+    yazdir(Faktoriyel(5));\n\
+}\n",
+    );
+}
+
+#[test]
+fn native_boolean_equality_matches_interpreter() {
+    assert_native_output(
+        "boolean_equality",
+        "\
+Ana() {\n\
+    a: mant\u{0131}k = do\u{011f}ru;\n\
+    b: mant\u{0131}k = yanl\u{0131}\u{015f};\n\
+    yazdir(a == do\u{011f}ru);\n\
+    yazdir(a != b);\n\
+    yazdir((1 < 2) == do\u{011f}ru);\n\
+    yazdir((2 < 1) != b);\n\
+}\n",
+    );
+}
+
+#[test]
 fn native_nested_if_loop_matches_interpreter() {
     assert_native_output(
         "nested_if_loop",
@@ -82,6 +133,21 @@ Besli(a: say\u{0131}, b: say\u{0131}, c: say\u{0131}, d: say\u{0131}, e: say\u{0
 \n\
 Ana() {\n\
     yazdır(Besli(1, 2, 3, 4, 5));\n\
+}\n",
+    );
+}
+
+#[test]
+fn native_six_parameter_function_matches_interpreter() {
+    assert_native_output(
+        "six_params",
+        "\
+Altili(a: say\u{0131}, b: say\u{0131}, c: say\u{0131}, d: say\u{0131}, e: say\u{0131}, f: say\u{0131}) -> say\u{0131} {\n\
+    d\u{00f6}n a + b + c + d + e + f;\n\
+}\n\
+\n\
+Ana() {\n\
+    yazdir(Altili(1, 2, 3, 4, 5, 6));\n\
 }\n",
     );
 }

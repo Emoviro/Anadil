@@ -27,10 +27,10 @@
 V0.1 kapsam tarama sonuclari `Docs/test_coverage.md` icinde. Yuksek oncelik
 ek testler:
 
-- [ ] Void (donus tipsiz) fonksiyon icin interpreter+native parity ornegi.
-- [ ] Recursive fonksiyon icin interpreter+native parity ornegi.
-- [ ] 6 parametreli fonksiyon icin interpreter+native parity ornegi.
-- [ ] `mantik` esitlik ve esitsizlik (`==`, `!=`) icin sema karari ve testi.
+- [x] Void (donus tipsiz) fonksiyon icin interpreter+native parity ornegi.
+- [x] Recursive fonksiyon icin interpreter+native parity ornegi.
+- [x] 6 parametreli fonksiyon icin interpreter+native parity ornegi.
+- [x] `mantik` esitlik ve esitsizlik (`==`, `!=`) icin sema karari ve testi.
 
 Orta/dusuk oncelik bosluklar (sema diagnostic testleri, CLI alt komut testleri,
 parantez/yorum/unary edge'ler) `Docs/test_coverage.md` "Bulunan Bosluklar"
