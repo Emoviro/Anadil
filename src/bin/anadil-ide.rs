@@ -4,6 +4,27 @@ use std::{
     process::Command,
 };
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+/// IDE'den spawn edilen alt process'lerin Windows uzerinde kendi console
+/// penceresini acmasini engeller. IDE GUI subsystem oldugu icin console
+/// subsystem alt process'ler (anadil.exe, uretilen .exe) bu flag olmadan
+/// gecici bir cmd penceresi flash eder.
+fn hide_command_window(command: &mut Command) {
+    #[cfg(windows)]
+    {
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = command;
+    }
+}
+
 use anadil::{check_source, diagnostics::Diagnostic};
 use eframe::egui::{
     self, text::LayoutJob, text_edit::TextEditState, Color32, FontFamily, FontId, RichText,
@@ -2032,6 +2053,7 @@ fn run_native_build(path: &Path) -> Result<NativeBuildOutput, String> {
     if let Some(current_dir) = &build_command.current_dir {
         command.current_dir(current_dir);
     }
+    hide_command_window(&mut command);
 
     let output = command
         .output()
@@ -2143,6 +2165,7 @@ fn run_executable(path: &Path) -> Result<std::process::Output, std::io::Error> {
     if let Some(parent) = path.parent() {
         command.current_dir(parent);
     }
+    hide_command_window(&mut command);
     command.output()
 }
 

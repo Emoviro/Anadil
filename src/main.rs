@@ -6,6 +6,26 @@ use std::{
     time::Duration,
 };
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+/// `Command`'a Windows uzerinde CREATE_NO_WINDOW flag'i ekler; boylece
+/// GUI process'lerden (orn. anadil-ide.exe -> anadil.exe -> cmd.exe)
+/// spawn edildiginde console penceresi yanip sonmez.
+fn hide_command_window(command: &mut process::Command) {
+    #[cfg(windows)]
+    {
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = command;
+    }
+}
+
 mod ide;
 
 use anadil::{
@@ -435,6 +455,7 @@ fn run_native_executable(path: &Path) -> Result<process::Output, String> {
     if let Some(parent) = path.parent() {
         command.current_dir(parent);
     }
+    hide_command_window(&mut command);
     command.output().map_err(|error| {
         format!(
             "Native executable calistirilamadi `{}`: {error}",
@@ -708,17 +729,31 @@ fn relative_runtime_lib() -> PathBuf {
         .join("anadil_runtime.lib")
 }
 
-/// Tool cagrilarinda kullanilacak path string'ini secer:
-/// - Eger relative path cwd'den gercek dosyaya/dizine erisebiliyorsa
-///   onu doner (saf ASCII; ml64/lib/link'e Turkce karakterli absolute
-///   path gitmez).
-/// - Aksi halde absolute path string'ini doner (eski davranis).
+/// Tool cagrilarinda kullanilacak path string'ini secer.
+///
+/// MS toolchain araclari (ml64/lib/link) cmd.exe + .bat aracilığıyla
+/// cagrildigi icin .bat dosyasindaki UTF-8 byte'lari OEM codepage'de
+/// yanlis yorumlaniyor; bu yuzden path argumanlari saf ASCII olmali.
+///
+/// Sira:
+/// 1. Onerilen statik relative aday (orn. `runtime/anadil_runtime.asm`,
+///    `target/native-runtime/anadil_runtime.lib`) gercekten ayni dosyaya
+///    isaret ediyorsa kullan.
+/// 2. Aksi halde cwd'den absolute hedefe dinamik relative yol hesapla;
+///    saf ASCII ise onu kullan. Cwd absolute path'i Turkce karakter
+///    icerse bile sorun olmaz; Windows path resolution UTF-16 ile yapilir,
+///    biz sadece komut satirina giden string'i ASCII tutmaya calisiyoruz.
+/// 3. Son care olarak absolute path string'ini doner.
 fn runtime_tool_arg(absolute: &Path, relative: &Path) -> String {
     if relative_path_is_usable(absolute, relative) {
-        relative.display().to_string()
-    } else {
-        absolute.display().to_string()
+        return relative.display().to_string();
     }
+
+    if let Some(cwd_relative) = cwd_relative_ascii_path(absolute) {
+        return cwd_relative;
+    }
+
+    absolute.display().to_string()
 }
 
 fn relative_path_is_usable(absolute: &Path, relative: &Path) -> bool {
@@ -734,6 +769,63 @@ fn relative_path_is_usable(absolute: &Path, relative: &Path) -> bool {
     fs::canonicalize(relative)
         .map(|relative_canon| relative_canon == absolute_canon)
         .unwrap_or(false)
+}
+
+/// Cwd'den hedef absolute path'e relative bir yol hesaplar; sonuc tam
+/// ASCII ise doner. ASCII degilse veya hesaplanamiyorsa `None`.
+fn cwd_relative_ascii_path(absolute: &Path) -> Option<String> {
+    let cwd = env::current_dir().ok()?;
+    let cwd_canon = fs::canonicalize(&cwd).ok()?;
+    let absolute_canon = fs::canonicalize(absolute).ok()?;
+    let relative = compute_relative_path(&absolute_canon, &cwd_canon)?;
+    let display = relative.to_string_lossy().into_owned();
+    if display.is_empty() || !display.is_ascii() {
+        return None;
+    }
+    Some(display)
+}
+
+/// `target` path'inin `base`'ten goruldugundeki relative formunu uretir.
+/// Iki path ayni root'a sahip olmali (canonicalize edilmis halleri tercih).
+fn compute_relative_path(target: &Path, base: &Path) -> Option<PathBuf> {
+    use std::path::Component;
+
+    let target_components: Vec<Component> = target.components().collect();
+    let base_components: Vec<Component> = base.components().collect();
+
+    let mut common = 0;
+    for (a, b) in target_components.iter().zip(base_components.iter()) {
+        if a == b {
+            common += 1;
+        } else {
+            break;
+        }
+    }
+
+    if common == 0 {
+        // Farkli root'lar; relative yapilamaz.
+        return None;
+    }
+
+    let mut result = PathBuf::new();
+    let parents_needed = base_components.len() - common;
+    for _ in 0..parents_needed {
+        result.push("..");
+    }
+    for component in &target_components[common..] {
+        match component {
+            Component::Normal(part) => result.push(part),
+            Component::CurDir => {}
+            _ => return None,
+        }
+    }
+
+    if result.as_os_str().is_empty() {
+        // Cwd ile hedef ayni; bos string yerine "." vermek tools icin
+        // anlamsiz. Bu durumda relative'in degeri yok, None done.
+        return None;
+    }
+    Some(result)
 }
 
 struct RuntimeCacheLock {
@@ -938,8 +1030,10 @@ fn run_tool(program: &str, args: &[String], vcvars64: Option<&Path>) -> Result<(
 }
 
 fn run_process(program: &str, args: &[String]) -> Result<(), String> {
-    let output = process::Command::new(program)
-        .args(args)
+    let mut command = process::Command::new(program);
+    command.args(args);
+    hide_command_window(&mut command);
+    let output = command
         .output()
         .map_err(|error| format!("`{program}` calistirilamadi: {error}"))?;
 
