@@ -8,7 +8,7 @@
 **Hazırlayanlar:**
 
 - **Emir Canbaz** — 233205046 — [GitHub](https://github.com/Emoviro) · [LinkedIn](https://www.linkedin.com/in/emir-canbaz/)
-- **Akif Buğra Karslı** — 233205007 — [GitHub](https://github.com/ArsenAlighieri) · [LinkedIn](https://www.linkedin.com/in/akif-bugra-karsli/)
+- **Akif Bugra Karsli** — 233205007 — [GitHub](https://github.com/ArsenAlighieri) · [LinkedIn](https://www.linkedin.com/in/akif-bugra-karsli/)
 
 ---
 

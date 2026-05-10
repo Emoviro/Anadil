@@ -5,6 +5,20 @@ Bu dosya Anadil'in kamuya acik surumlerini ve her surumun getirdigi
 degisiklikleri toplar. En yeni surum en uste yazilir.
 
 
+v0.1.2 - Mayis 2026
+-------------------
+
+V0.1 icin installer metinleri patch release'i.
+
+Duzeltilenler:
+
+  Kurulum sihirbazi
+    * Finish ekranindaki GitHub linki ve Windows program bilgisi
+      `https://github.com/Emoviro/Anadil` adresine guncellendi.
+    * Kurulumda gorunen lisans/proje metinlerinde `Akif Bugra Karsli`
+      ASCII yazimina gecildi.
+
+
 v0.1.1 - Mayis 2026
 -------------------
 

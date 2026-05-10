@@ -32,7 +32,7 @@ Sunum kıyafeti, su şişesi, cüzdan...
 
 ## 1. Açılış (1 dakika)
 
-> "Merhaba hocam. Ben Emir Canbaz, ortağım Akif Buğra Karslı. Bilgisayar
+> "Merhaba hocam. Ben Emir Canbaz, ortağım Akif Bugra Karsli. Bilgisayar
 > Mühendisliği üçüncü sınıf öğrencileriyiz. Bugün size Proje 2 dersinin
 > ürünü olan **Anadil**'i sunacağız."
 

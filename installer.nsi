@@ -18,7 +18,7 @@ Unicode True
 ; ---------------------------------------------------------------------------
 
 !ifndef ANADIL_VERSION
-    !define ANADIL_VERSION "0.1.0"
+    !define ANADIL_VERSION "0.1.2"
 !endif
 
 !ifndef ANADIL_DIST_DIR
@@ -31,7 +31,7 @@ Unicode True
 
 !define ANADIL_NAME       "Anadil"
 !define ANADIL_PUBLISHER  "Emir Canbaz ve Akif Bugra Karsli"
-!define ANADIL_URL        "https://github.com/ArsenAlighieri/Anadil"
+!define ANADIL_URL        "https://github.com/Emoviro/Anadil"
 !define ANADIL_REGKEY     "Software\Microsoft\Windows\CurrentVersion\Uninstall\Anadil"
 
 ; ---------------------------------------------------------------------------
@@ -47,7 +47,7 @@ SetCompressor /SOLID lzma
 ShowInstDetails show
 ShowUninstDetails show
 
-VIProductVersion "0.1.0.0"
+VIProductVersion "0.1.2.0"
 VIAddVersionKey  "ProductName"     "${ANADIL_NAME}"
 VIAddVersionKey  "ProductVersion"  "${ANADIL_VERSION}"
 VIAddVersionKey  "FileDescription" "Anadil Setup"
@@ -66,7 +66,7 @@ VIAddVersionKey  "LegalCopyright"  "(c) 2026 ${ANADIL_PUBLISHER}"
 !define MUI_ABORTWARNING
 !define MUI_FINISHPAGE_RUN          "$INSTDIR\anadil-ide.exe"
 !define MUI_FINISHPAGE_RUN_TEXT     "Anadil IDE'yi simdi calistir"
-!define MUI_FINISHPAGE_LINK         "GitHub: ArsenAlighieri/Anadil"
+!define MUI_FINISHPAGE_LINK         "GitHub: Emoviro/Anadil"
 !define MUI_FINISHPAGE_LINK_LOCATION "${ANADIL_URL}"
 !define MUI_FINISHPAGE_SHOWREADME   "$INSTDIR\KURULUM.txt"
 !define MUI_FINISHPAGE_SHOWREADME_TEXT "Kurulum talimatlarini ac (KURULUM.txt)"
