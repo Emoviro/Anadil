@@ -33,7 +33,34 @@ Bu CLI yuzeyi V0.1 icin sabit kabul edilir.
 Henuz yapilmayanlar:
 
 - Dizi, struct, class, modul sistemi
-- Dosya paketleme veya kurulum araci
+- Heap allocation, dinamik metin, referans sayma
+
+## Indir ve Kullan
+
+Anadil'i kullanmak icin Rust toolchain'ine veya kaynak kodu derlemeye
+ihtiyaciniz yok. Hazir Windows x64 paketi:
+
+[Anadil v0.1.0 — GitHub Releases](https://github.com/ArsenAlighieri/Anadil/releases/tag/v0.1.0)
+
+Iki kurulum yolu vardir:
+
+- **Setup sihirbazi** (`Anadil-Setup-vX.Y.Z.exe`): per-user kurulum,
+  opsiyonel `PATH` eklemesi, Baslat menusu kisayollari ve `.ana` dosya
+  eslemesi. Admin gerekmez. Standart Windows kaldirma sihirbazi ile
+  temiz silinir.
+- **ZIP arsivi** (`Anadil-vX.Y.Z-windows-x64.zip`): herhangi bir klasore
+  cikartip dogrudan calistirilabilir; tasinabilir kullanim icin uygun.
+
+Detayli kurulum talimati ZIP/Setup icindeki `KURULUM.txt` dosyasinda;
+surum notlari `CHANGELOG.txt` icinde.
+
+Native derleme (`anadil derle`) icin Visual Studio Build Tools
+(`link.exe`) kurulu olmalidir; Anadil paketi runtime kutuphanesini
+onceden derlenmis olarak ship eder, Build Tools yalnizca son linkleme
+adimi icin gereklidir. Interpreter modu (`anadil yorumla`) ve native
+IDE Build Tools olmadan calisir.
+
+[Build Tools indirme sayfasi](https://visualstudio.microsoft.com/visual-cpp-build-tools/).
 
 ## Calistirma
 
@@ -356,13 +383,17 @@ cargo clippy --all-targets --all-features -- -D warnings
 
 ## Dokumantasyon
 
+- Proje raporu (akademik): [Docs/proje_raporu.md](Docs/proje_raporu.md)
+- Sunum demo akisi: [Docs/demo_akisi.md](Docs/demo_akisi.md)
 - Guncel dil referansi: [Docs/dil_referansi.md](Docs/dil_referansi.md)
 - Proje durum ozeti: [Docs/project_status.md](Docs/project_status.md)
 - Native compiler notlari: [Docs/native_compiler.md](Docs/native_compiler.md)
 - Bellek modeli notlari: [Docs/memory_model.md](Docs/memory_model.md)
 - Runtime platform soyutlama notlari: [Docs/runtime_platform_abstraction.md](Docs/runtime_platform_abstraction.md)
+- Release dagitim modeli: [Docs/release_layout.md](Docs/release_layout.md)
 - Local IDE notlari: [Docs/local_ide.md](Docs/local_ide.md)
 - Native IDE smoke test: [Docs/ide_smoke_test.md](Docs/ide_smoke_test.md)
 - Test kapsam ve bosluk analizi: [Docs/test_coverage.md](Docs/test_coverage.md)
+- Test gap onceliklendirmesi: [Docs/test_gap_analizi.md](Docs/test_gap_analizi.md)
 - Yapilacaklar: [Docs/todo.md](Docs/todo.md)
 - Ornek programlar: [examples/README.md](examples/README.md)

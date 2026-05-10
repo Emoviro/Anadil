@@ -691,6 +691,65 @@ alınmadı. Microsoft toolchain (`ml64`, `lib`, `link`) yalnızca
 "assembler ve linker" rolünde kullanıldı; bu programların yaptığı iş
 kavramsal olarak makine kodu üreteci ile karıştırılmamalıdır.
 
+### S17. "Bu projeyi başkaları indirip kullanabilir mi?"
+
+Evet. Anadil v0.1.0 GitHub Releases sayfasında yayında. İki kurulum
+seçeneği vardır:
+
+- **ZIP arşivi**: indirilir, herhangi bir klasöre çıkartılır,
+  `anadil-ide.exe` veya `anadil.exe` doğrudan çalıştırılabilir.
+  Taşınabilir (portable) kullanımı destekler.
+- **Setup sihirbazı (`Anadil-Setup-vX.Y.Z.exe`)**: per-user kurulum
+  yapar, `PATH` ortam değişkenine ekleme, Başlat menüsü kısayolları
+  ve `.ana` dosya eşlemesi gibi sistem entegrasyonlarını otomatik
+  yapar. Kurulum admin yetkisi istemez. Standart Windows kaldırma
+  sihirbazı ile temiz silinir.
+
+Native `.exe` derlemesi (`anadil derle`) için kullanıcı tarafında
+Visual Studio Build Tools kurulu olmalıdır. Bu Microsoft ürünü
+yeniden dağıtılamadığı için Anadil paketinde yer almaz; ancak
+interpreter modu (`anadil yorumla`) ve native IDE Build Tools olmadan
+çalışır.
+
+### S18. "Code signing yapmadınız mı? Windows SmartScreen uyarısı
+verir."
+
+Code signing sertifikası (~$200/yıl ticari, akademik bir öğrenci
+projesi için yatırılması mantıklı olmayan bir maliyet) kapsamımız
+dışında bırakıldı. Bu, Anadil ilk kez çalıştırıldığında Windows
+SmartScreen'in "Daha fazla bilgi → Yine de çalıştır" uyarısını
+gösterebileceği anlamına gelir; kullanıcıya `KURULUM.txt` içinde
+açıkça anlatılmıştır. İmzasız binary'ler güvenlik riski değil,
+sadece bir UX sürtüşmesidir.
+
+### S19. "Otomatik güncelleme var mı?"
+
+Hayır. v0.1.0 tek seferlik bir release'tir. Anadil'in V0.2'ye geçişi
+manuel indirme yoluyla olacaktır. Auto-updater tasarımı V0.2 veya
+sonraki sürümlerde değerlendirilebilir; ancak küçük bir öğrenci
+projesi için güncelleme altyapısı kurmak getirisi düşük bir yatırım
+olduğu için bilinçli atlandı.
+
+### S20. "Linux ve macOS hedefi nasıl olur?"
+
+Linux ve macOS desteği planlanmıştır ancak V0.1'de yer almaz.
+`Docs/runtime_platform_abstraction.md` belgesi mevcut çalışma
+zamanının Win32 syscall katmanının soyutlanmasını ve Linux
+(`syscall` instruction + `write`/`read`/`exit_group`) ve macOS
+(BSD syscall numaralarıyla) hedeflerine genişlemesini detaylı
+olarak ele alır. Compiler kod üretici tarafı zaten platform-agnostik
+isimlerle çalışmaktadır; gereken iş yalnızca platform-spesifik
+runtime modülleri eklemektir.
+
+### S21. "Test edilmemiş davranış var mı?"
+
+Test kapsam matrisi `Docs/test_coverage.md`'de belgelenmiştir.
+Bilinen V0.1 kapsamı dışı veya kozmetik test boşlukları
+`Docs/test_gap_analizi.md`'de P0/P1/P2 olarak önceliklendirilmiş
+şekilde takip edilir. V0.1 kapatılırken P0 (yüksek öncelikli)
+boşluklar kapatılmıştır; P1 ve P2 boşluklar V0.2 ile birlikte ele
+alınacaktır.
+
 ---
 
 ## 11. Sonuç
@@ -708,6 +767,9 @@ Anadil V0.1 sürümü ile aşağıdakiler başarıldı:
 - İnterpreter ve native derleyici çıktılarını otomatik karşılaştıran
   test paketi kuruldu.
 - Türkçe karakter ve yol dayanıklılığı testlerle korundu.
+- Public release (v0.1.0): MIT lisanslı GitHub Releases yayını,
+  ZIP arşivi ve NSIS Setup sihirbazı; otomatik CI/CD release
+  altyapısı GitHub Actions üzerinde.
 
 Projenin **eğitim hedefi**, dilin "kullanıcı kazanması" değil, bir
 derleyicinin yapı taşlarını birinci elden öğrenmekti. Bu hedef tam
@@ -732,7 +794,12 @@ Daha derin teknik detay için aşağıdaki belgeler proje içindeki
 - `Docs/runtime_platform_abstraction.md` — Cross-platform soyutlama
   planı.
 - `Docs/test_coverage.md` — Test kapsam matrisi.
+- `Docs/test_gap_analizi.md` — Önceliklendirilmiş test boşluk
+  analizi.
 - `Docs/project_status.md` — V0.1 tamam kriterleri ve genel durum.
+- `Docs/release_layout.md` — Release dağıtım yapısı ve paketleme
+  akışı.
+- `Docs/demo_akisi.md` — Sözlü/canlı sunum demo akışı.
 - `Docs/local_ide.md` — IDE tasarım notları.
 
 Kaynak kod yapısı:
