@@ -14,7 +14,7 @@ Duzeltilenler:
 
   Kurulum sihirbazi
     * Finish ekranindaki GitHub linki ve Windows program bilgisi
-      `https://github.com/Emoviro/Anadil` adresine guncellendi.
+      `https://github.com/ArsenAlighieri/Anadil` adresine guncellendi.
     * Kurulumda gorunen lisans/proje metinlerinde `Akif Bugra Karsli`
       ASCII yazimina gecildi.
 
