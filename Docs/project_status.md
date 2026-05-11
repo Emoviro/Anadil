@@ -61,7 +61,9 @@ dogrulama/debug araci olarak tutulur.
   toplandi ve static literal layout'u `[refcount][tip_id][len][bytes]`
   bicimine tasindi.
 - `metin + metin` MVP olarak eklendi; runtime heap'te yeni length-prefixed
-  metin uretir, ancak compiler henuz otomatik `birak` cleanup emit etmez.
+  metin uretir.
+- Nested concat ve user-defined fonksiyon return operandlari concat sonrasi
+  `birak` edilir.
 - Ilk RC cleanup emit'i eklendi: void fonksiyonlarin ust seviye `metin`
   local'leri fonksiyon cikisinda `anadil_runtime_birak` ile birakilir.
 - `metin` assignment replacement icin owned/static RHS durumunda eski slot

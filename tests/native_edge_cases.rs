@@ -48,6 +48,22 @@ Ana() {\n\
 }
 
 #[test]
+fn native_chained_string_concat_matches_interpreter() {
+    assert_native_output(
+        "string_concat_chained",
+        "\
+Uret() -> metin {\n\
+    d\u{00f6}n \" C\" + \" D\";\n\
+}\n\
+\n\
+Ana() {\n\
+    mesaj: metin = \"A\" + \" B\" + Uret();\n\
+    yazdir(mesaj);\n\
+}\n",
+    );
+}
+
+#[test]
 fn native_string_assignment_replacement_matches_interpreter() {
     assert_native_output(
         "string_assignment_replace",

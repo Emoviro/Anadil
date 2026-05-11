@@ -423,14 +423,30 @@ impl<'a> NativeEmitter<'a> {
         out: &mut String,
     ) -> Result<(), String> {
         if is_string_concat(left, op, right) {
+            let cleanup_left = is_owned_temporary_string_expr(left);
+            let cleanup_right = is_owned_temporary_string_expr(right);
+
             self.emit_expr(left, out)?;
             self.emit_push_rax(out);
             self.emit_expr(right, out)?;
-            out.push_str("    mov rdx, rax\n");
+            self.emit_push_rax(out);
+            self.emit_pop_into("rdx", out);
             self.emit_pop_into("rcx", out);
+            if cleanup_right {
+                self.emit_push_register("rdx", out);
+            }
+            if cleanup_left {
+                self.emit_push_register("rcx", out);
+            }
             let call_area_size = self.emit_reserve_call_area(0, out);
             out.push_str("    call anadil_runtime_metin_birlestir\n");
             self.emit_release_call_area(call_area_size, out);
+            if cleanup_left {
+                self.emit_release_saved_operand_preserving_rax(out);
+            }
+            if cleanup_right {
+                self.emit_release_saved_operand_preserving_rax(out);
+            }
             return Ok(());
         }
 
@@ -575,8 +591,23 @@ impl<'a> NativeEmitter<'a> {
     }
 
     fn emit_push_rax(&mut self, out: &mut String) {
-        out.push_str("    push rax\n");
+        self.emit_push_register("rax", out);
+    }
+
+    fn emit_push_register(&mut self, register: &str, out: &mut String) {
+        out.push_str(&format!("    push {register}\n"));
         self.temp_stack_depth += 1;
+    }
+
+    fn emit_release_saved_operand_preserving_rax(&mut self, out: &mut String) {
+        out.push_str("    mov r10, rax\n");
+        self.emit_pop_into("rcx", out);
+        out.push_str("    mov rax, r10\n");
+        self.emit_push_rax(out);
+        let call_area_size = self.emit_reserve_call_area(0, out);
+        out.push_str("    call anadil_runtime_birak\n");
+        self.emit_release_call_area(call_area_size, out);
+        self.emit_pop_into("rax", out);
     }
 
     fn emit_pop_into(&mut self, register: &str, out: &mut String) {
@@ -847,6 +878,18 @@ fn is_owned_or_static_string_expr(expr: &TypedExpr) -> bool {
         }
 }
 
+fn is_owned_temporary_string_expr(expr: &TypedExpr) -> bool {
+    matches!(expr.ty, TypedExprType::Value(Type::Metin))
+        && match &expr.kind {
+            TypedExprKind::Binary { left, op, right } => is_string_concat(left, *op, right),
+            TypedExprKind::Call {
+                target: CallTarget::Function { .. },
+                ..
+            } => true,
+            _ => false,
+        }
+}
+
 fn is_shared_string_expr(expr: &TypedExpr) -> bool {
     matches!(expr.ty, TypedExprType::Value(Type::Metin))
         && matches!(expr.kind, TypedExprKind::Variable(_))
@@ -967,6 +1010,31 @@ Ana() {\n\
         assert!(asm.contains("extrn anadil_runtime_metin_birlestir:proc"));
         assert!(asm.contains("call anadil_runtime_metin_birlestir"));
         assert!(asm.contains("call anadil_runtime_print_metin_nesne"));
+    }
+
+    #[test]
+    fn emits_cleanup_for_owned_concat_temporaries() {
+        let source = "\
+Uret() -> metin {\n\
+    d\u{00f6}n \"C\" + \"D\";\n\
+}\n\
+\n\
+Ana() {\n\
+    mesaj: metin = \"A\" + \"B\" + Uret();\n\
+    yazdir(mesaj);\n\
+}\n";
+
+        let program = compile_source(source).expect("program should compile");
+        let asm = emit_windows_x64_asm(&program).expect("assembly should be emitted");
+
+        assert!(
+            asm.matches("call anadil_runtime_metin_birlestir").count() >= 3,
+            "nested concat and returned concat should call concat helper"
+        );
+        assert!(
+            asm.matches("call anadil_runtime_birak").count() >= 3,
+            "owned concat temporaries, returned temporary, and final local should cleanup"
+        );
     }
 
     #[test]

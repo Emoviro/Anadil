@@ -287,8 +287,14 @@ ust seviye `metin` local'leri icin fonksiyon cikisinda
 tasidigi icin bu cagri no-op olur; `metin + metin` sonucu heap nesnesi ise
 serbest birakilir.
 
-Bu henuz tam RC degildir: ara concat temporary'leri, last-use optimizasyonu
-ve daha karmasik ownership indirgemeleri sonraki RC emit fazlarina kalir.
+Bu henuz tam RC degildir: last-use optimizasyonu ve daha karmasik ownership
+indirgemeleri sonraki RC emit fazlarina kalir.
+
+Concat ifadesi baska bir concat veya user-defined fonksiyon return degerini
+operand olarak kullaniyorsa, native backend `anadil_runtime_metin_birlestir`
+sonucunu korur ve owned temporary operandlari `anadil_runtime_birak` ile
+temizler. Boylece `"A" + "B" + Uret()` gibi zincirlerde ara heap metinler
+program sonuna kadar tasinmaz.
 
 Atama tarafinda ilk guvenli daralma eklendi: `metin` local'i literal veya
 `metin + metin` gibi owned/static bir ifadeyle yeniden atanirken eski slot

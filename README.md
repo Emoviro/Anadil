@@ -365,6 +365,7 @@ Desteklenenler:
 - `anadil ir` V0.2 ara temsilinde runtime operasyonlarini `runtime.yazdir_metin` ve `runtime.metin_esit` gibi acik isimlerle gosterir.
 - Static `metin` literal'lari native assembly'de length-prefixed Anadil metin nesnesi olarak emit edilir.
 - `metin + metin`, runtime heap allocation ile yeni length-prefixed metin uretir.
+- Nested `metin + metin` ve user-defined fonksiyon return operandlari concat sonrasi temizlenir.
 - Void fonksiyonlardaki ust seviye `metin` local'leri icin temel `birak` cleanup'i emit edilir.
 - Literal/concat RHS ile `metin` yeniden atamalarinda eski deger temel cleanup ile birakilir.
 - Local `metin` paylasiminda `paylas` emit edilir.
@@ -384,7 +385,7 @@ Sinirlar:
 - Ilk 4 fonksiyon parametresi register ile, sonraki parametreler stack uzerinden tasinir.
 - Dinamik `metin` allocation simdilik `metin + metin` ile sinirlidir; otomatik `birak` emit'i fonksiyon cikisi, if/loop scope cikisi ve owned/static RHS assignment replacement icin kademeli olarak vardir.
 - Return ownership simdilik local `metin` ve owned concat return degerleriyle sinirlidir.
-- RC emit henuz ara concat temporary'leri ve tum kompleks ownership optimizasyonlarini kapsayan tam bir model degildir.
+- RC emit henuz last-use ve tum kompleks ownership optimizasyonlarini kapsayan tam bir model degildir.
 - Runtime hatalari interpreter kadar ayrintili raporlanmaz.
 - Sifira bolme native executable icinde kontrollu hata ve process exit code `1` ile raporlanir.
 - Native executable program sonunda ve runtime hata cikisinda terminalin kapanmamasi icin Enter bekler.
