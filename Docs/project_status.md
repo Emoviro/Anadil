@@ -64,6 +64,8 @@ dogrulama/debug araci olarak tutulur.
   metin uretir.
 - `uzunluk(metin) -> sayi` builtin'i interpreter, IR ve native backend'de
   desteklenir; native backend length-prefixed runtime helper'ini kullanir.
+- `examples/metin_v02.ana` V0.2 dinamik metin, `uzunluk`, function return
+  ve RC cleanup senaryolarini gosterir.
 - Nested concat ve user-defined fonksiyon return operandlari concat sonrasi
   `birak` edilir.
 - `yazdir` owned temporary argumanlari ve kullanilmayan owned expression

@@ -42,6 +42,14 @@ fn runs_metin_example() {
 }
 
 #[test]
+fn runs_metin_v02_example() {
+    assert_example_output(
+        include_str!("../examples/metin_v02.ana"),
+        "Merhaba Anadil\n14\n0\n2\n15\ndo\u{011f}ru",
+    );
+}
+
+#[test]
 fn runs_kosullu_dongu_example() {
     assert_example_output(include_str!("../examples/kosullu_dongu.ana"), "0\n1\n2");
 }

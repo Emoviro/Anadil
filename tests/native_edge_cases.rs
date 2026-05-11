@@ -52,9 +52,18 @@ fn native_string_length_matches_interpreter() {
     assert_native_output(
         "string_length",
         "\
+Uret() -> metin {\n\
+    d\u{00f6}n \"Yerel\" + \" Derleyici\";\n\
+}\n\
+\n\
 Ana() {\n\
+    mesaj: metin = \"Merhaba\";\n\
     yazdir(uzunluk(\"Merhaba\"));\n\
+    yazdir(uzunluk(\"\"));\n\
+    yazdir(uzunluk(mesaj));\n\
     yazdir(uzunluk(\"A\" + \"B\"));\n\
+    yazdir(uzunluk(Uret()));\n\
+    yazdir(uzunluk(mesaj) == 7);\n\
 }\n",
     );
 }

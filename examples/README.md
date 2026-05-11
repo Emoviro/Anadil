@@ -98,6 +98,23 @@ Yerel Derleyici
 doğru
 ```
 
+V0.2 dinamik metin ve `uzunluk`:
+
+```powershell
+cargo run -- calistir examples\metin_v02.ana
+```
+
+Beklenen cikti:
+
+```text
+Merhaba Anadil
+14
+0
+2
+15
+doğru
+```
+
 Kosullu dongu:
 
 ```powershell

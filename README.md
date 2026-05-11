@@ -318,6 +318,20 @@ Ana() {
 }
 ```
 
+### V0.2 Metin Ornegi
+
+```ana
+Selamla(ad: metin) -> metin {
+    dön "Merhaba " + ad;
+}
+
+Ana() {
+    mesaj: metin = Selamla("Anadil");
+    yazdir(mesaj);
+    yazdir(uzunluk(mesaj));
+}
+```
+
 ## Gelistirme
 
 ### Mimari

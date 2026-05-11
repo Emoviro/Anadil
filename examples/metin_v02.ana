@@ -1,0 +1,17 @@
+Selamla(ad: metin) -> metin {
+    dön "Merhaba " + ad;
+}
+
+Uret() -> metin {
+    dön "Yerel" + " Derleyici";
+}
+
+Ana() {
+    mesaj: metin = Selamla("Anadil");
+    yazdir(mesaj);
+    yazdir(uzunluk(mesaj));
+    yazdir(uzunluk(""));
+    yazdir(uzunluk("A" + "B"));
+    yazdir(uzunluk(Uret()));
+    yazdir(uzunluk(mesaj) == 14);
+}
