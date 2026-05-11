@@ -54,6 +54,7 @@ Kalan P2 bosluklar `Docs/test_gap_analizi.md` altinda izlenir.
 - [x] Native backend `metin` ownership siniflandirmasini tek helper'a toparla.
 - [x] `uzunluk(metin) -> sayi` builtin'ini interpreter, IR ve native backend'e ekle.
 - [x] `uzunluk` edge testlerini ve `examples/metin_v02.ana` ornegini ekle.
+- [x] V0.2 RC audit checklist'ini `Docs/native_compiler.md` icine isle.
 - [x] Native string literal emit'ini length-prefixed migration'a hazir soyutlamaya al.
 - [x] IR cikti katmaninda runtime metin operasyonlarini acik temsil et.
 - [x] Length-prefixed `metin` nesnesi icin runtime ABI helper'larini ekle.

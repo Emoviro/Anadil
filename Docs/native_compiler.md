@@ -302,6 +302,47 @@ Native backend `metin` ifadelerini kodgen sirasinda su dar siniflara ayirir:
 | `Uret()` -> `metin` | Owned temporary | Return ownership caller'a gecer; hedefe devredilmezse caller temizler. |
 | `sayi`, `mantik`, void | Not string | RC emit edilmez. |
 
+### V0.2 RC Audit Checklist
+
+V0.2 branch'inde su RC akislari testli ve desteklidir:
+
+- [x] Function-scope `metin` local cleanup: fonksiyon cikisinda ters sirayla
+  `birak` edilir.
+- [x] Assignment replacement: target `metin` slot'u owned/static/shared RHS
+  ile guncellenirken eski deger korunmus yeni degerden sonra `birak` edilir.
+- [x] Local sharing: `b: metin = a` ve `b = a` icin `paylas` emit edilir.
+- [x] User-defined function local arg: caller local'i `paylas` eder, callee
+  `metin` parametresini cikista `birak` eder.
+- [x] User-defined function owned arg transfer: inline concat veya `metin`
+  return degeri retain edilmeden callee'ye devredilir ve callee cikisinda
+  `birak` edilir.
+- [x] Return ownership: local `metin` return edilirken caller icin `paylas`
+  edilir; owned concat return retain edilmeden caller'a devredilir.
+- [x] If/else branch scope cleanup: branch sonuna normal akisla ulasilirsa
+  branch-local `metin` degerleri `birak` edilir.
+- [x] Loop body scope cleanup: normal iterasyon sonu, `devam` ve `kır`
+  akislarinda loop body `metin` local'leri temizlenir.
+- [x] Early return cleanup: aktif nested scope'lar temizlendikten sonra
+  fonksiyon epilogue cleanup yoluna atlanir.
+- [x] Builtin owned arg cleanup: `yazdir("A" + "B")` ve
+  `uzunluk("A" + "B")` gibi builtin argumanlarinda owned temporary caller
+  tarafinda temizlenir.
+- [x] Unused owned expression cleanup: `Uret();` ve `"A" + "B";` gibi
+  sonucu kullanilmayan owned expression statement'lari hemen `birak` edilir.
+- [x] Nested concat temporary cleanup: `"A" + "B" + Uret()` gibi zincirlerde
+  ara owned operandlar dis concat sonucundan sonra temizlenir.
+
+Bilinen kalan sinirlar:
+
+- [ ] Last-use optimizasyonu yoktur; guvenli RC icin bazi `paylas`/`birak`
+  cagrilari performans acisindan gereksiz kalabilir.
+- [ ] Dizi/yapi/closure gibi yeni heap referans tipleri henuz yoktur; RC
+  siniflandirmasi su anda `metin` uzerinden uygulanir.
+- [ ] Unicode karakter/grapheme uzunlugu henuz yoktur; `uzunluk(metin)`
+  byte length dondurur.
+- [ ] Cycle handling yoktur; mevcut `metin` tipinde cycle uretilemez, ama
+  ileride `dizi`/`yapi` ile tekrar ele alinmalidir.
+
 Concat ifadesi baska bir concat veya user-defined fonksiyon return degerini
 operand olarak kullaniyorsa, native backend `anadil_runtime_metin_birlestir`
 sonucunu korur ve owned temporary operandlari `anadil_runtime_birak` ile
