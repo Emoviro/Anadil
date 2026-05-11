@@ -12,6 +12,7 @@ Native derleme hatti su sekildedir:
   -> Parser
   -> Semantic analiz
   -> Typed AST
+  -> Typed AST optimizer
   -> Windows x64 MASM assembly
   -> ml64 ile .obj
   -> lib ile runtime .lib
@@ -21,6 +22,8 @@ Native derleme hatti su sekildedir:
 Ilgili dosyalar:
 
 - `src/native.rs`: Typed AST'den Windows x64 MASM assembly uretir.
+- `src/optimizer.rs`: Typed AST uzerinde sabit katlama ve basit cebirsel
+  sadelestirme gecisi uygular.
 - `runtime/anadil_runtime.asm`: Anadil runtime helper'larini ayri MASM modulu olarak saglar.
 - `src/lib.rs`: `emit_native_asm_source` API'sini disari acar.
 - `src/main.rs`: `asm`, `asm-yaz` ve `derle` CLI komutlarini calistirir.
@@ -413,7 +416,8 @@ Visual Studio native toolchain bulunamazsa native integration testi kendini skip
 - Garbage collector yoktur.
 - String literal disinda runtime metin uretimi yoktur.
 - Native runtime hatalari tek satir `Anadil runtime hatasi: ...` formatindadir, ancak henuz kaynak satir/sutun bilgisi tasimaz.
-- Optimizasyon yoktur.
+- Optimizasyon su an yalnizca typed AST uzerinde sabit katlama ve basit
+  cebirsel sadelestirme seviyesindedir; IR/CFG tabanli optimizer yoktur.
 - Debug info uretilmez.
 
 ## Sonraki Hedefler

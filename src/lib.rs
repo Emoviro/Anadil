@@ -4,6 +4,7 @@ pub mod error;
 pub mod interpreter;
 pub mod lexer;
 pub mod native;
+pub mod optimizer;
 pub mod parser;
 pub mod sema;
 pub mod token;
@@ -12,6 +13,7 @@ pub mod typed;
 use diagnostics::{format_lex_error, format_parse_error, format_semantic_error, Diagnostic};
 use interpreter::Interpreter;
 use lexer::Lexer;
+use optimizer::optimize_typed_program;
 use parser::Parser;
 use sema::Analyzer;
 
@@ -29,7 +31,9 @@ pub fn parse_source(source: &str) -> Result<ast::Program, String> {
 
 pub fn compile_source(source: &str) -> Result<typed::TypedProgram, String> {
     let program = parse_source(source)?;
-    Analyzer::analyze(&program).map_err(|error| format_semantic_error(source, &error))
+    Analyzer::analyze(&program)
+        .map(optimize_typed_program)
+        .map_err(|error| format_semantic_error(source, &error))
 }
 
 pub fn check_source(source: &str) -> Result<(), Diagnostic> {
@@ -52,7 +56,9 @@ fn compile_source_diagnostic(source: &str) -> Result<typed::TypedProgram, Diagno
         .parse_program()
         .map_err(|error| Diagnostic::from_parse_error(&error))?;
 
-    Analyzer::analyze(&program).map_err(|error| Diagnostic::from_semantic_error(&error))
+    Analyzer::analyze(&program)
+        .map(optimize_typed_program)
+        .map_err(|error| Diagnostic::from_semantic_error(&error))
 }
 
 pub fn run_source(source: &str) -> Result<String, String> {
