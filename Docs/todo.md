@@ -32,9 +32,9 @@ ek testler:
 - [x] 6 parametreli fonksiyon icin interpreter+native parity ornegi.
 - [x] `mantik` esitlik ve esitsizlik (`==`, `!=`) icin sema karari ve testi.
 
-Orta/dusuk oncelik bosluklar (sema diagnostic testleri, CLI alt komut testleri,
-parantez/yorum/unary edge'ler) `Docs/test_coverage.md` "Bulunan Bosluklar"
-basligi altinda listelenmistir.
+V0.2 baslangicinda P1 test borcu kapatildi: sema diagnostic ornekleri,
+eksik dosya CLI diagnostic'i ve ic ice dongu native parity testi eklendi.
+Kalan P2 bosluklar `Docs/test_gap_analizi.md` altinda izlenir.
 
 ## Native Compiler
 

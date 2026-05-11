@@ -87,3 +87,39 @@ fn rejects_hata_ana_yok_example() {
     assert!(error.contains("Semantic hata"));
     assert!(error.contains("Ana()"));
 }
+
+#[test]
+fn rejects_hata_kir_disarida_example() {
+    let error = compile_source(include_str!("../examples/hata_kir_disarida.ana"))
+        .expect_err("break outside loop example should fail");
+
+    assert!(error.contains("Semantic hata"));
+    assert!(error.contains("döngü") || error.contains("dÃ¶ngÃ¼"));
+}
+
+#[test]
+fn rejects_hata_donus_eksik_example() {
+    let error = compile_source(include_str!("../examples/hata_donus_eksik.ana"))
+        .expect_err("missing return example should fail");
+
+    assert!(error.contains("Semantic hata"));
+    assert!(error.contains("kontrol yollar"));
+}
+
+#[test]
+fn rejects_hata_karisik_karsilastirma_example() {
+    let error = compile_source(include_str!("../examples/hata_karisik_karsilastirma.ana"))
+        .expect_err("mixed type comparison example should fail");
+
+    assert!(error.contains("Semantic hata"));
+    assert!(error.contains("karşılaştırılamaz") || error.contains("karÅŸÄ±laÅŸtÄ±rÄ±lamaz"));
+}
+
+#[test]
+fn rejects_hata_yazdir_deger_example() {
+    let error = compile_source(include_str!("../examples/hata_yazdir_deger.ana"))
+        .expect_err("using yazdir as a value should fail");
+
+    assert!(error.contains("Semantic hata"));
+    assert!(error.contains("değer üretmeli") || error.contains("deÄŸer Ã¼retmeli"));
+}

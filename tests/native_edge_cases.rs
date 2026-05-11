@@ -107,6 +107,29 @@ Ana() {\n\
 }
 
 #[test]
+fn native_nested_loop_break_scope_matches_interpreter() {
+    assert_native_output(
+        "nested_loop_break_scope",
+        "\
+Ana() {\n\
+    toplam: say\u{0131} = 0;\n\
+    d\u{00f6}ng\u{00fc} (i: say\u{0131} = 0; i < 3; i = i + 1) {\n\
+        d\u{00f6}ng\u{00fc} (j: say\u{0131} = 0; j < 4; j = j + 1) {\n\
+            e\u{011f}er (j == 1) {\n\
+                devam;\n\
+            }\n\
+            e\u{011f}er (j == 3) {\n\
+                k\u{0131}r;\n\
+            }\n\
+            toplam = toplam + i * 10 + j;\n\
+        }\n\
+    }\n\
+    yazdir(toplam);\n\
+}\n",
+    );
+}
+
+#[test]
 fn native_scope_shadowing_matches_interpreter() {
     assert_native_output(
         "scope_shadowing",

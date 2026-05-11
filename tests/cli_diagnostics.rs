@@ -507,6 +507,38 @@ Ana() {\n\
     assert!(stdout.contains("\"diagnostics\":[]"));
 }
 
+#[test]
+fn cli_rejects_missing_source_file() {
+    let Some(anadil_bin) = anadil_binary() else {
+        eprintln!("cli diagnostic test skipped: anadil binary path is not available");
+        return;
+    };
+
+    let missing_path = PathBuf::from("target")
+        .join("cli_diagnostics")
+        .join("yok_boyle_bir_dosya.ana");
+    let _ = fs::remove_file(&missing_path);
+
+    let output = Command::new(anadil_bin)
+        .arg("kontrol")
+        .arg("--json")
+        .arg(&missing_path)
+        .output()
+        .expect("check command should run");
+
+    assert!(!output.status.success(), "missing file check should fail");
+    assert!(
+        output.stderr.is_empty(),
+        "json missing file failure should not write stderr"
+    );
+
+    let stdout = normalize_stdout(&output.stdout);
+    assert!(stdout.contains("\"ok\":false"));
+    assert!(stdout.contains("\"stage\":\"io\""));
+    assert!(stdout.contains("Dosya okunamadi"));
+    assert!(stdout.contains("\"line\":null"));
+}
+
 fn write_fixture(name: &str, source: &str) -> PathBuf {
     let source_path = PathBuf::from("target").join("cli_diagnostics").join(name);
     let parent = source_path

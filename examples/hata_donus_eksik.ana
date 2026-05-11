@@ -1,0 +1,9 @@
+Eksik(x: sayı) -> sayı {
+    eğer (x > 0) {
+        dön x;
+    }
+}
+
+Ana() {
+    yazdir(Eksik(1));
+}

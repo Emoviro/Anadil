@@ -30,17 +30,18 @@ icinde eklendi ve `cargo test --test native_edge_cases` ile gecti.
 
 ## P1 — Iyi Olur
 
-Not: `native_six_parameter_function_matches_interpreter` eklendi ve gecti.
+Durum: Tamamlandi. Asagidaki testler `tests/native_edge_cases.rs`,
+`tests/examples.rs` ve `tests/cli_diagnostics.rs` icinde eklendi ve gecti.
 
 | Test adi | Neyi korur | Dosya |
 |---|---|---|
 | ~~`native_six_parameter_function_matches_interpreter`~~ | 4 register + 2 stack arg sinir durumu (5 ve 7 mevcut, 6 atlanmis) | `tests/native_edge_cases.rs` |
-| `native_nested_loop_break_scope_matches_interpreter` | Ic ice donguda `kir` sadece ic donguyu kirar; `devam` dogru iterasyona doner | `tests/native_edge_cases.rs` |
-| `rejects_break_outside_loop_example` | `kir`/`devam` dongu disinda sema hatasi | `tests/examples.rs` + yeni `examples/hata_kir_disarida.ana` |
-| `rejects_missing_return_example` | Donus tipli fonksiyonun bazi dallarinda `don` eksikligi sema hatasi | `tests/examples.rs` + yeni `examples/hata_donus_eksik.ana` |
-| `rejects_mixed_type_comparison_example` | `sayi == metin` gibi karisik tip karsilastirma sema hatasi | `tests/examples.rs` + yeni `examples/hata_karisik_karsilastirma.ana` |
-| `rejects_yazdir_value_use_example` | `yazdir` sonucunu deger gibi kullanma sema hatasi (`x = yazdir(10)`) | `tests/examples.rs` + yeni `examples/hata_yazdir_deger.ana` |
-| `cli_rejects_missing_source_file` | Var olmayan kaynak dosya cagirisinda diagnostic ve exit kodu | `tests/cli_diagnostics.rs` |
+| ~~`native_nested_loop_break_scope_matches_interpreter`~~ | Ic ice donguda `kir` sadece ic donguyu kirar; `devam` dogru iterasyona doner | `tests/native_edge_cases.rs` |
+| ~~`rejects_break_outside_loop_example`~~ | `kir`/`devam` dongu disinda sema hatasi | `tests/examples.rs` + `examples/hata_kir_disarida.ana` |
+| ~~`rejects_missing_return_example`~~ | Donus tipli fonksiyonun bazi dallarinda `don` eksikligi sema hatasi | `tests/examples.rs` + `examples/hata_donus_eksik.ana` |
+| ~~`rejects_mixed_type_comparison_example`~~ | `sayi == metin` gibi karisik tip karsilastirma sema hatasi | `tests/examples.rs` + `examples/hata_karisik_karsilastirma.ana` |
+| ~~`rejects_yazdir_value_use_example`~~ | `yazdir` sonucunu deger gibi kullanma sema hatasi (`x = yazdir(10)`) | `tests/examples.rs` + `examples/hata_yazdir_deger.ana` |
+| ~~`cli_rejects_missing_source_file`~~ | Var olmayan kaynak dosya cagirisinda diagnostic ve exit kodu | `tests/cli_diagnostics.rs` |
 
 ## P2 — Sonra
 
@@ -56,16 +57,15 @@ Not: `native_six_parameter_function_matches_interpreter` eklendi ve gecti.
 
 - P0'daki uc madde tamamlandi; `Docs/todo.md` "Test Bosluklari"
   basligi altinda isaretlendi.
-- P1'deki sema reddedisleri (`rejects_*_example`) icin yeni
-  `examples/hata_*.ana` dosyalari gerekir; mevcut `hata_tip.ana` ve
-  `hata_ana_yok.ana` kalibini izlerler.
+- P1 sema reddedisleri icin `examples/hata_*.ana` dosyalari eklendi;
+  mevcut `hata_tip.ana` ve `hata_ana_yok.ana` kalibini izlerler.
 - P2 maddeleri V0.1 kapatma kriterine girmez; ileride `Docs/todo.md`
   "Sonra" basligina alinabilir.
 
 ## Toplam Yuk
 
-- 3 P0 + 1 P1 tamamlandi; kalan 6 P1 + 5 P2 = **11 ek test**.
-- P1'ler ek 1-2 gun.
+- 3 P0 + tum P1 maddeleri tamamlandi; kalan yalnizca 5 P2 testtir.
+- P1 borcu V0.2 baslangicinda kapatildi.
 - P2'ler kademeli.
 
 ## Ilgili Belgeler
