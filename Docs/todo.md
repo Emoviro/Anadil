@@ -2,8 +2,7 @@
 
 ## Hemen Sonraki Adim
 
-- V0.2 stabilizasyon kapisini kapat: last-use ve dizi/yapi kapsam kararini
-  netlestir, temiz test kosumunu merge notuna yaz.
+- V0.2 branch'ini main'e tasimak icin PR/merge hazirligini yap.
 
 ## Sonraki Native Compiler Sprinti
 
@@ -71,9 +70,9 @@ Kalan P2 bosluklar `Docs/test_gap_analizi.md` altinda izlenir.
 - [x] Runtime object cache ekle.
 - [x] Runtime objesini `.lib` modeline tasi.
 - [x] Windows API bagimli runtime katmanini ileride platform soyutlamasina bol. (tasarim notu: `Docs/runtime_platform_abstraction.md`)
-- [ ] V0.2 stabilizasyon kapisindaki kalan karar maddelerini kapat.
-- [ ] Last-use optimizasyonu icin go/no-go karari ver.
-- [ ] Dizi/yapi MVP kapsam kararini V0.2 disi/faz ici olarak netlestir.
+- [x] V0.2 stabilizasyon kapisindaki kalan karar maddelerini kapat.
+- [x] Last-use optimizasyonu icin go/no-go karari ver. (V0.2.1'e ertelendi)
+- [x] Dizi/yapi MVP kapsam kararini V0.2 disi/faz ici olarak netlestir. (V0.3/ayri faz)
 
 ## Dil Tasarimi
 

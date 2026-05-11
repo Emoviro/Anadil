@@ -343,12 +343,21 @@ V0.2'yi main'e tasimadan once hedeflenen durum:
 - [x] `Docs/native_compiler.md` icinde RC audit checklist'i ve bilinen
   sinirlar yazilidir.
 - [x] `examples/metin_v02.ana` kullaniciya gorunur V0.2 metin demosu verir.
-- [ ] Last-use optimizasyonu MVP karari: V0.2'ye girecek mi, yoksa V0.2.1'e
-  mi kalacak?
-- [ ] Dizi/yapi MVP kapsam karari: V0.2'den ayri faz olarak mi tutulacak?
-- [ ] `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` ve
-  `cargo test` temiz kosum sonucu release/merge notuna yazilacak.
+- [x] Last-use optimizasyonu MVP karari: V0.2.1'e ertelendi.
+- [x] Dizi/yapi MVP kapsam karari: V0.3/ayri faz olarak tutulacak.
+- [x] `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` ve
+  `cargo test` temiz kosum sonucu release/merge notuna yazildi.
 
-Mevcut onerilen karar: V0.2'yi dinamik metin + RC temel stabilizasyonu
-olarak kapatmak; dizi/yapi ve last-use optimizasyonunu ayri V0.2.x/V0.3
-fazlarina tasimak.
+Son stabilizasyon kosumu:
+
+```text
+2026-05-12:
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test
+
+Sonuc: temiz.
+```
+
+Karar: V0.2 dinamik metin + RC temel stabilizasyonu olarak kapatilacak.
+Dizi/yapi V0.3/ayri faza, last-use optimizasyonu V0.2.1'e tasindi.
