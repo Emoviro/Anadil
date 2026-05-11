@@ -312,7 +312,7 @@ Anadil V0.1 = lokal IDE + native Windows executable compiler
 Orta vadede hedef:
 
 ```text
-Anadil V0.2 = heap modeli + RC runtime + dinamik metin + dizi/yapi temeli
+Anadil V0.2 = heap modeli + RC runtime + dinamik metin + metin API temeli
 ```
 
 Daha uzun vadede hedef:
@@ -328,3 +328,27 @@ Bu yolda su prensipler korunacak:
 - IDE polish'i compiler kararliligindan sonra yapmak.
 - C'ye donmeden native toolchain modelini buyutmek.
 - V0.1 kapsam disini net soylemek, V0.2+ yolunu ise tasarimla hazirlamak.
+
+## V0.2 Stabilizasyon Kapisi
+
+V0.2'yi main'e tasimadan once hedeflenen durum:
+
+- [x] Dinamik `metin + metin` native/interpreter parity ile calisir.
+- [x] Length-prefixed static ve heap `metin` layout'u runtime helper'lariyla
+  tek model gibi kullanilir.
+- [x] `uzunluk(metin) -> sayi` interpreter, IR ve native backend'de calisir.
+- [x] RC cleanup icin function scope, branch scope, loop scope, return,
+  function arg, builtin arg, unused expression ve nested concat akislari
+  testlidir.
+- [x] `Docs/native_compiler.md` icinde RC audit checklist'i ve bilinen
+  sinirlar yazilidir.
+- [x] `examples/metin_v02.ana` kullaniciya gorunur V0.2 metin demosu verir.
+- [ ] Last-use optimizasyonu MVP karari: V0.2'ye girecek mi, yoksa V0.2.1'e
+  mi kalacak?
+- [ ] Dizi/yapi MVP kapsam karari: V0.2'den ayri faz olarak mi tutulacak?
+- [ ] `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` ve
+  `cargo test` temiz kosum sonucu release/merge notuna yazilacak.
+
+Mevcut onerilen karar: V0.2'yi dinamik metin + RC temel stabilizasyonu
+olarak kapatmak; dizi/yapi ve last-use optimizasyonunu ayri V0.2.x/V0.3
+fazlarina tasimak.

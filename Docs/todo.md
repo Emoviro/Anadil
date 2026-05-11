@@ -2,7 +2,8 @@
 
 ## Hemen Sonraki Adim
 
-- V0.1 RC paketini ve release yayini sonucunu izle.
+- V0.2 stabilizasyon kapisini kapat: last-use ve dizi/yapi kapsam kararini
+  netlestir, temiz test kosumunu merge notuna yaz.
 
 ## Sonraki Native Compiler Sprinti
 
@@ -70,11 +71,14 @@ Kalan P2 bosluklar `Docs/test_gap_analizi.md` altinda izlenir.
 - [x] Runtime object cache ekle.
 - [x] Runtime objesini `.lib` modeline tasi.
 - [x] Windows API bagimli runtime katmanini ileride platform soyutlamasina bol. (tasarim notu: `Docs/runtime_platform_abstraction.md`)
+- [ ] V0.2 stabilizasyon kapisindaki kalan karar maddelerini kapat.
+- [ ] Last-use optimizasyonu icin go/no-go karari ver.
+- [ ] Dizi/yapi MVP kapsam kararini V0.2 disi/faz ici olarak netlestir.
 
 ## Dil Tasarimi
 
 - [ ] Turkce karakterli ana builtin yazimi ve `yazdir` ASCII alias kararini dokumanlarda tutarli tut.
-- [ ] Dizi/struct/modul icin MVP kapsam kararini yaz.
+- [ ] Dizi/yapi/modul icin MVP kapsam kararini yaz.
 - [x] Memory management modelini kisa tasarim notuna dok.
 
 ## Sonra
