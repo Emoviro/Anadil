@@ -319,7 +319,9 @@ Void fonksiyonlarda `metin` parametreleri de fonksiyon cikisinda
 argumani user-defined fonksiyona verilirken `anadil_runtime_paylas` emit
 edilir; boylece caller local'i ve callee parametresi ayni heap nesnesini
 guvenli sekilde paylasir. Inline owned concat argumani retain edilmez,
-callee cikisinda birakilarak sahiplik transferi gibi davranir.
+callee cikisinda birakilarak sahiplik transferi gibi davranir. Ayni kural
+user-defined fonksiyon return degeri dogrudan baska user-defined fonksiyona
+arguman olarak verildiginde de gecerlidir.
 
 Return value icin epilogue return pointer'ini cleanup oncesi stack slot'unda
 saklar, ref cleanup tamamlandiktan sonra `rax`'a geri yukler. Return edilen

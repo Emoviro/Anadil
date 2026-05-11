@@ -1157,6 +1157,36 @@ Ana() {\n\
     }
 
     #[test]
+    fn transfers_owned_string_arguments_without_retain() {
+        let source = "\
+Selamla(ad: metin) {\n\
+    yazdir(ad);\n\
+}\n\
+\n\
+Uret() -> metin {\n\
+    d\u{00f6}n \"U\" + \"ret\";\n\
+}\n\
+\n\
+Ana() {\n\
+    Selamla(\"Merhaba\" + \"!\");\n\
+    Selamla(Uret());\n\
+}\n";
+
+        let program = compile_source(source).expect("program should compile");
+        let asm = emit_windows_x64_asm(&program).expect("assembly should be emitted");
+
+        assert_eq!(
+            asm.matches("call anadil_runtime_paylas").count(),
+            0,
+            "owned inline args should transfer to callee without retain"
+        );
+        assert!(
+            asm.matches("call anadil_runtime_birak").count() >= 1,
+            "callee string param should cleanup transferred owned args"
+        );
+    }
+
+    #[test]
     fn preserves_string_return_values_across_cleanup() {
         let source = "\
 Uret() -> metin {\n\

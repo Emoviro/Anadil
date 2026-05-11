@@ -50,6 +50,7 @@ Kalan P2 bosluklar `Docs/test_gap_analizi.md` altinda izlenir.
 - [x] Loop body scope cleanup ve `kır`/`devam` RC cleanup emit et.
 - [x] Nested concat ve function-return concat operand temporary cleanup emit et.
 - [x] `yazdir` owned temporary argumani ve kullanilmayan owned expression cleanup emit et.
+- [x] User-defined fonksiyonlara inline owned `metin` arguman transferini regresyonla sabitle.
 - [x] Native string literal emit'ini length-prefixed migration'a hazir soyutlamaya al.
 - [x] IR cikti katmaninda runtime metin operasyonlarini acik temsil et.
 - [x] Length-prefixed `metin` nesnesi icin runtime ABI helper'larini ekle.

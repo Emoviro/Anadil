@@ -125,6 +125,26 @@ Ana() {\n\
 }
 
 #[test]
+fn native_inline_owned_string_arguments_match_interpreter() {
+    assert_native_output(
+        "inline_owned_string_args",
+        "\
+Selamla(ad: metin) {\n\
+    yazdir(ad);\n\
+}\n\
+\n\
+Uret() -> metin {\n\
+    d\u{00f6}n \"U\" + \"ret\";\n\
+}\n\
+\n\
+Ana() {\n\
+    Selamla(\"Merhaba\" + \"!\");\n\
+    Selamla(Uret());\n\
+}\n",
+    );
+}
+
+#[test]
 fn native_string_return_ownership_matches_interpreter() {
     assert_native_output(
         "string_return_ownership",
