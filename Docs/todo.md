@@ -44,6 +44,7 @@ Kalan P2 bosluklar `Docs/test_gap_analizi.md` altinda izlenir.
 - [x] Void fonksiyon ust seviye `metin` local'leri icin temel RC cleanup emit et.
 - [x] Owned/static RHS ile `metin` assignment replacement icin eski degeri birak.
 - [x] Local `metin` paylasiminda `paylas` emit et.
+- [x] User-defined fonksiyonlara local `metin` argumani gecirilirken `paylas` emit et.
 - [x] Native string literal emit'ini length-prefixed migration'a hazir soyutlamaya al.
 - [x] IR cikti katmaninda runtime metin operasyonlarini acik temsil et.
 - [x] Length-prefixed `metin` nesnesi icin runtime ABI helper'larini ekle.

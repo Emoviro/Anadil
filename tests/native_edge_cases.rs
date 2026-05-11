@@ -76,6 +76,23 @@ Ana() {\n\
 }
 
 #[test]
+fn native_string_parameter_retain_matches_interpreter() {
+    assert_native_output(
+        "string_param_retain",
+        "\
+Selamla(ad: metin) {\n\
+    yazdir(ad);\n\
+}\n\
+\n\
+Ana() {\n\
+    mesaj: metin = \"Merhaba\" + \"!\";\n\
+    Selamla(mesaj);\n\
+    yazdir(mesaj);\n\
+}\n",
+    );
+}
+
+#[test]
 fn native_void_function_matches_interpreter() {
     assert_native_output(
         "void_function",

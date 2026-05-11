@@ -303,6 +303,13 @@ retain edildikten sonra eski target degeri `birak` edilir ve slot yeni
 pointer ile guncellenir. Bu sira self-assignment ve ayni heap objesini
 paylasma durumlarinda refcount'un erken sifira inmesini engeller.
 
+Void fonksiyonlarda `metin` parametreleri de fonksiyon cikisinda
+`anadil_runtime_birak` ile temizlenir. Caller tarafinda local `metin`
+argumani user-defined fonksiyona verilirken `anadil_runtime_paylas` emit
+edilir; boylece caller local'i ve callee parametresi ayni heap nesnesini
+guvenli sekilde paylasir. Inline owned concat argumani retain edilmez,
+callee cikisinda birakilarak sahiplik transferi gibi davranir.
+
 ## Runtime Hatalari
 
 Native MVP sifira bolme icin interpreter'a benzer kontrollu hata davranisi uretir. Kodgen bu durumda `anadil_runtime_panic` helper'ini cagirir:
@@ -492,8 +499,9 @@ Visual Studio native toolchain bulunamazsa native integration testi kendini skip
 - Dinamik metinler icin otomatik `birak` emit'i simdilik yalnizca void
   fonksiyon ust seviye `metin` local'leri ve owned/static RHS ile guvenli
   `metin` assignment replacement icin vardir.
-- Local `metin` paylasimi icin `paylas` emit edilir; parametre ve return
-  sahipligi henuz tam RC kapsaminda degildir.
+- Local `metin` paylasimi ve user-defined fonksiyona local `metin` arguman
+  gecisi icin `paylas` emit edilir; return sahipligi henuz tam RC kapsaminda
+  degildir.
 - Native runtime hatalari tek satir `Anadil runtime hatasi: ...` formatindadir, ancak henuz kaynak satir/sutun bilgisi tasimaz.
 - Optimizasyon su an yalnizca typed AST uzerinde sabit katlama ve basit
   cebirsel sadelestirme seviyesindedir; IR/CFG tabanli optimizer yoktur.

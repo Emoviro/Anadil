@@ -480,6 +480,7 @@ impl<'a> NativeEmitter<'a> {
 
                 for arg in args {
                     self.emit_expr(arg, out)?;
+                    self.emit_retain_if_shared_string(arg, out);
                     self.emit_push_rax(out);
                 }
 
@@ -611,15 +612,22 @@ fn call_arg_offset(local_count: usize, index: usize) -> usize {
 }
 
 fn function_scope_ref_locals(function: &TypedFunction) -> Vec<LocalId> {
-    function
-        .body
-        .statements
+    let mut locals: Vec<LocalId> = function
+        .params
         .iter()
-        .filter_map(|statement| match &statement.kind {
-            TypedStmtKind::VarDecl(decl) if decl.ty == Type::Metin => Some(decl.local_id),
-            _ => None,
-        })
-        .collect()
+        .filter_map(|param| (param.ty == Type::Metin).then_some(param.local_id))
+        .collect();
+    locals.extend(
+        function
+            .body
+            .statements
+            .iter()
+            .filter_map(|statement| match &statement.kind {
+                TypedStmtKind::VarDecl(decl) if decl.ty == Type::Metin => Some(decl.local_id),
+                _ => None,
+            }),
+    );
+    locals
 }
 
 fn local_count(function: &TypedFunction) -> usize {
@@ -948,6 +956,28 @@ Ana() {\n\
         assert!(
             asm.matches("call anadil_runtime_paylas").count() >= 2,
             "var decl and assignment from local string should retain"
+        );
+    }
+
+    #[test]
+    fn retains_string_local_arguments_and_cleans_params() {
+        let source = "\
+Selamla(ad: metin) {\n\
+    yazdir(ad);\n\
+}\n\
+\n\
+Ana() {\n\
+    mesaj: metin = \"Merhaba\" + \"!\";\n\
+    Selamla(mesaj);\n\
+}\n";
+
+        let program = compile_source(source).expect("program should compile");
+        let asm = emit_windows_x64_asm(&program).expect("assembly should be emitted");
+
+        assert!(asm.contains("call anadil_runtime_paylas"));
+        assert!(
+            asm.matches("call anadil_runtime_birak").count() >= 2,
+            "callee param and caller local should both cleanup"
         );
     }
 
