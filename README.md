@@ -371,6 +371,7 @@ Desteklenenler:
 - User-defined fonksiyonlara local `metin` argumani gecirilirken `paylas` emit edilir.
 - Local `metin` return degerleri cleanup sonrasi caller'a canli doner.
 - If/else branch'lerinin normal cikisinda branch-scope `metin` local cleanup'i vardir.
+- Loop body `metin` local'leri normal tur sonu, `kır` ve `devam` akislarinda temizlenir.
 - Native cikti dogrulugu su an interpreter oracle'i kullanan ornek programlar ve edge-case testleriyle korunur.
 
 Sinirlar:
@@ -381,9 +382,9 @@ Sinirlar:
 - Runtime helper'lari `GetStdHandle`, `WriteFile`, `ReadFile` ve `ExitProcess` kullanir; `printf`, `getchar`, `strcmp` veya C `exit` cagrisi yoktur.
 - Link satirinda Anadil runtime library ve `kernel32.lib` disinda CRT kutuphanesi yoktur.
 - Ilk 4 fonksiyon parametresi register ile, sonraki parametreler stack uzerinden tasinir.
-- Dinamik `metin` allocation simdilik `metin + metin` ile sinirlidir; otomatik `birak` emit'i yalnizca void fonksiyon ust seviye `metin` local'leri ve owned/static RHS assignment replacement icin vardir.
+- Dinamik `metin` allocation simdilik `metin + metin` ile sinirlidir; otomatik `birak` emit'i fonksiyon cikisi, if/loop scope cikisi ve owned/static RHS assignment replacement icin kademeli olarak vardir.
 - Return ownership simdilik local `metin` ve owned concat return degerleriyle sinirlidir.
-- Erken `return`/`kir`/`devam` ve loop body scope cleanup genellestirmesi henuz tamamlanmamistir.
+- RC emit henuz ara concat temporary'leri ve tum kompleks ownership optimizasyonlarini kapsayan tam bir model degildir.
 - Runtime hatalari interpreter kadar ayrintili raporlanmaz.
 - Sifira bolme native executable icinde kontrollu hata ve process exit code `1` ile raporlanir.
 - Native executable program sonunda ve runtime hata cikisinda terminalin kapanmamasi icin Enter bekler.

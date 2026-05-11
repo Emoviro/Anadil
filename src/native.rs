@@ -21,12 +21,14 @@ struct NativeEmitter<'a> {
     current_max_call_args: usize,
     temp_stack_depth: usize,
     loop_stack: Vec<LoopLabels>,
+    scope_cleanup_stack: Vec<Vec<LocalId>>,
 }
 
 #[derive(Debug, Clone)]
 struct LoopLabels {
     break_label: String,
     continue_label: String,
+    cleanup_scope_depth: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -91,6 +93,7 @@ impl<'a> NativeEmitter<'a> {
             current_max_call_args: 0,
             temp_stack_depth: 0,
             loop_stack: Vec::new(),
+            scope_cleanup_stack: Vec::new(),
         }
     }
 
@@ -208,6 +211,7 @@ impl<'a> NativeEmitter<'a> {
                     "    mov QWORD PTR [rbp-{}], rax\n",
                     local_offset(decl.local_id)
                 ));
+                self.defer_ref_cleanup(decl.local_id, decl.ty);
             }
             TypedStmtKind::Assign(assign) => {
                 self.emit_assignment(assign, out)?;
@@ -219,7 +223,13 @@ impl<'a> NativeEmitter<'a> {
                 if let Some(value) = value {
                     self.emit_expr(value, out)?;
                     self.emit_retain_if_shared_string(value, out);
+                    if !self.scope_cleanup_stack.is_empty() {
+                        self.emit_push_rax(out);
+                        self.emit_active_scope_ref_cleanup(out);
+                        self.emit_pop_into("rax", out);
+                    }
                 } else {
+                    self.emit_active_scope_ref_cleanup(out);
                     out.push_str("    xor rax, rax\n");
                 }
                 out.push_str(&format!("    jmp {}\n", self.current_return_label));
@@ -230,13 +240,11 @@ impl<'a> NativeEmitter<'a> {
                 self.emit_expr(&if_stmt.condition, out)?;
                 out.push_str("    cmp rax, 0\n");
                 out.push_str(&format!("    je {else_label}\n"));
-                self.emit_block(&if_stmt.then_branch, out)?;
-                self.emit_block_scope_ref_cleanup(&if_stmt.then_branch, out);
+                self.emit_scoped_block(&if_stmt.then_branch, out)?;
                 out.push_str(&format!("    jmp {end_label}\n"));
                 out.push_str(&format!("{else_label}:\n"));
                 if let Some(else_branch) = &if_stmt.else_branch {
-                    self.emit_block(else_branch, out)?;
-                    self.emit_block_scope_ref_cleanup(else_branch, out);
+                    self.emit_scoped_block(else_branch, out)?;
                 }
                 out.push_str(&format!("{end_label}:\n"));
             }
@@ -251,6 +259,7 @@ impl<'a> NativeEmitter<'a> {
                 self.loop_stack.push(LoopLabels {
                     break_label: break_label.clone(),
                     continue_label: continue_label.clone(),
+                    cleanup_scope_depth: self.scope_cleanup_stack.len(),
                 });
 
                 out.push_str(&format!("{start_label}:\n"));
@@ -260,7 +269,7 @@ impl<'a> NativeEmitter<'a> {
                     out.push_str(&format!("    je {break_label}\n"));
                 }
 
-                self.emit_block(&loop_stmt.body, out)?;
+                self.emit_scoped_block(&loop_stmt.body, out)?;
                 out.push_str(&format!("{continue_label}:\n"));
                 if let Some(step) = &loop_stmt.step {
                     self.emit_loop_part(step, out)?;
@@ -273,18 +282,41 @@ impl<'a> NativeEmitter<'a> {
                 let labels = self
                     .loop_stack
                     .last()
+                    .cloned()
                     .ok_or("native codegen icinde loop etiketi bulunamadi")?;
+                self.emit_active_scope_ref_cleanup_from(labels.cleanup_scope_depth, out);
                 out.push_str(&format!("    jmp {}\n", labels.break_label));
             }
             TypedStmtKind::Continue => {
                 let labels = self
                     .loop_stack
                     .last()
+                    .cloned()
                     .ok_or("native codegen icinde loop etiketi bulunamadi")?;
+                self.emit_active_scope_ref_cleanup_from(labels.cleanup_scope_depth, out);
                 out.push_str(&format!("    jmp {}\n", labels.continue_label));
             }
         }
         Ok(())
+    }
+
+    fn emit_scoped_block(&mut self, block: &TypedBlock, out: &mut String) -> Result<(), String> {
+        self.scope_cleanup_stack.push(Vec::new());
+        self.emit_block(block, out)?;
+        let locals = self
+            .scope_cleanup_stack
+            .pop()
+            .expect("native scoped block cleanup stack underflow");
+        self.emit_ref_cleanup(locals, out);
+        Ok(())
+    }
+
+    fn defer_ref_cleanup(&mut self, local_id: LocalId, ty: Type) {
+        if ty == Type::Metin {
+            if let Some(scope) = self.scope_cleanup_stack.last_mut() {
+                scope.push(local_id);
+            }
+        }
     }
 
     fn emit_loop_part(&mut self, part: &TypedLoopPart, out: &mut String) -> Result<(), String> {
@@ -590,8 +622,14 @@ impl<'a> NativeEmitter<'a> {
         self.emit_ref_cleanup(function_scope_ref_locals(function), out);
     }
 
-    fn emit_block_scope_ref_cleanup(&self, block: &TypedBlock, out: &mut String) {
-        self.emit_ref_cleanup(block_scope_ref_locals(block), out);
+    fn emit_active_scope_ref_cleanup(&self, out: &mut String) {
+        self.emit_active_scope_ref_cleanup_from(0, out);
+    }
+
+    fn emit_active_scope_ref_cleanup_from(&self, scope_depth: usize, out: &mut String) {
+        for locals in self.scope_cleanup_stack[scope_depth..].iter().rev() {
+            self.emit_ref_cleanup(locals.clone(), out);
+        }
     }
 
     fn emit_ref_cleanup(&self, locals: Vec<LocalId>, out: &mut String) {
@@ -654,17 +692,6 @@ fn function_scope_ref_locals(function: &TypedFunction) -> Vec<LocalId> {
             }),
     );
     locals
-}
-
-fn block_scope_ref_locals(block: &TypedBlock) -> Vec<LocalId> {
-    block
-        .statements
-        .iter()
-        .filter_map(|statement| match &statement.kind {
-            TypedStmtKind::VarDecl(decl) if decl.ty == Type::Metin => Some(decl.local_id),
-            _ => None,
-        })
-        .collect()
 }
 
 fn local_count(function: &TypedFunction) -> usize {
@@ -1059,6 +1086,31 @@ Ana() {\n\
         assert!(
             asm.matches("call anadil_runtime_birak").count() >= 2,
             "both if branches should cleanup string locals"
+        );
+    }
+
+    #[test]
+    fn emits_cleanup_for_loop_body_string_locals_on_control_flow() {
+        let source = "\
+Ana() {\n\
+    d\u{00f6}ng\u{00fc} (i: say\u{0131} = 0; i < 4; i = i + 1) {\n\
+        mesaj: metin = \"Merhaba\" + \"!\";\n\
+        e\u{011f}er (i == 1) {\n\
+            devam;\n\
+        }\n\
+        e\u{011f}er (i == 3) {\n\
+            k\u{0131}r;\n\
+        }\n\
+        yazdir(mesaj);\n\
+    }\n\
+}\n";
+
+        let program = compile_source(source).expect("program should compile");
+        let asm = emit_windows_x64_asm(&program).expect("assembly should be emitted");
+
+        assert!(
+            asm.matches("call anadil_runtime_birak").count() >= 3,
+            "loop normal path, continue, and break should cleanup loop body strings"
         );
     }
 

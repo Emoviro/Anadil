@@ -276,9 +276,10 @@ cagirir. Helper `anadil_runtime_tahsis` ile yeni length-prefixed heap metin
 nesnesi olusturur, sol ve sag operand byte'larini arka arkaya kopyalar ve
 yeni data pointer'i dondurur.
 
-Bu ilk dilimde RC cleanup emit'i yoktur; uretilen dinamik metinler program
-omru boyunca serbest birakilmaz. V0.2 RC emit fazi atama, kapsam cikisi ve
-return kurallarini ekleyene kadar bu bilinen bir sinirdir.
+Bu ilk dilimden sonra RC cleanup emit'i kademeli olarak genisletildi:
+fonksiyon cikisi, atama replacement, local paylasimi, parametre sahipligi,
+return sahipligi, if/else branch scope cikisi ve loop body scope cikisi
+artik native backend tarafindan ele alinir.
 
 Ilk cleanup dilimi olarak native backend, donus degeri olmayan fonksiyonlarin
 ust seviye `metin` local'leri icin fonksiyon cikisinda
@@ -286,9 +287,8 @@ ust seviye `metin` local'leri icin fonksiyon cikisinda
 tasidigi icin bu cagri no-op olur; `metin + metin` sonucu heap nesnesi ise
 serbest birakilir.
 
-Bu henuz tam RC degildir: ara concat temporary'leri, atama ustune yazma,
-parametre sahipligi, return value sahipligi ve ic blok/branch local cleanup
-kurallari sonraki RC emit fazlarina kalir.
+Bu henuz tam RC degildir: ara concat temporary'leri, last-use optimizasyonu
+ve daha karmasik ownership indirgemeleri sonraki RC emit fazlarina kalir.
 
 Atama tarafinda ilk guvenli daralma eklendi: `metin` local'i literal veya
 `metin + metin` gibi owned/static bir ifadeyle yeniden atanirken eski slot
@@ -318,9 +318,11 @@ degeri zaten yeni refcount=1 nesne oldugu icin retain edilmeden caller'a
 gecer.
 
 If/else branch'lerinde normal akisla branch sonuna ulasilirse, o branch'in
-ust seviye `metin` local'leri ters sirayla `birak` edilir. Erken `return`,
-`kir`, `devam` ve loop body kapsam cikisi henuz bu cleanup yoluna dahil
-degildir; sonraki RC scope fazinda genellestirilecektir.
+ust seviye `metin` local'leri ters sirayla `birak` edilir. Erken `return`
+aktif nested scope'lari temizledikten sonra fonksiyon epilogue'una atlar.
+Loop body scope'u da normal iterasyon sonunda temizlenir; `kır` ve `devam`
+akislarinda yalnizca cikilan loop'un aktif scope'lari temizlenir, dis loop
+scope'lari canli kalir.
 
 ## Runtime Hatalari
 
@@ -508,13 +510,13 @@ Visual Studio native toolchain bulunamazsa native integration testi kendini skip
 - Heap allocation yoktur.
 - Garbage collector yoktur.
 - `metin + metin` disinda runtime metin uretimi yoktur.
-- Dinamik metinler icin otomatik `birak` emit'i simdilik yalnizca void
-  fonksiyon ust seviye `metin` local'leri ve owned/static RHS ile guvenli
-  `metin` assignment replacement icin vardir.
+- Dinamik metinler icin otomatik `birak` emit'i fonksiyon cikisi, if/loop
+  scope cikisi ve owned/static RHS ile guvenli `metin` assignment replacement
+  icin vardir.
 - Local `metin` paylasimi, user-defined fonksiyona local `metin` arguman
   gecisi ve local `metin` return degeri icin `paylas` emit edilir.
-- If/else branch'lerinin normal cikisinda branch-scope `metin` local'leri
-  `birak` edilir; erken cikis ve loop cleanup henuz genellestirilmemistir.
+- If/else branch ve loop body scope'larindaki `metin` local'leri normal
+  cikista ve ilgili erken akis cikislarinda `birak` edilir.
 - Native runtime hatalari tek satir `Anadil runtime hatasi: ...` formatindadir, ancak henuz kaynak satir/sutun bilgisi tasimaz.
 - Optimizasyon su an yalnizca typed AST uzerinde sabit katlama ve basit
   cebirsel sadelestirme seviyesindedir; IR/CFG tabanli optimizer yoktur.

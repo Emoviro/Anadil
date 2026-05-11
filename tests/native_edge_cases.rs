@@ -128,6 +128,26 @@ Ana() {\n\
 }
 
 #[test]
+fn native_loop_string_cleanup_with_break_continue_matches_interpreter() {
+    assert_native_output(
+        "loop_string_cleanup_break_continue",
+        "\
+Ana() {\n\
+    d\u{00f6}ng\u{00fc} (i: say\u{0131} = 0; i < 4; i = i + 1) {\n\
+        mesaj: metin = \"Merhaba\" + \"!\";\n\
+        e\u{011f}er (i == 1) {\n\
+            devam;\n\
+        }\n\
+        e\u{011f}er (i == 3) {\n\
+            k\u{0131}r;\n\
+        }\n\
+        yazdir(mesaj);\n\
+    }\n\
+}\n",
+    );
+}
+
+#[test]
 fn native_void_function_matches_interpreter() {
     assert_native_output(
         "void_function",

@@ -74,6 +74,8 @@ dogrulama/debug araci olarak tutulur.
   edilirken caller referansi icin `paylas` emit edilir.
 - If/else branch'lerinin normal cikisinda branch-scope `metin` local'leri
   `birak` edilir.
+- Loop body `metin` local'leri normal iterasyon sonu, `devam` ve `kır`
+  akislarinda `birak` edilir.
 - Program entrypoint'i `Ana()` olarak kabul ediliyor.
 - Fonksiyon cagirma, stack argument gecisi ve nested call senaryolari test
   altinda.
