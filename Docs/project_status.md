@@ -64,6 +64,8 @@ dogrulama/debug araci olarak tutulur.
   metin uretir.
 - Nested concat ve user-defined fonksiyon return operandlari concat sonrasi
   `birak` edilir.
+- `yazdir` owned temporary argumanlari ve kullanilmayan owned expression
+  sonuclari caller tarafinda `birak` edilir.
 - Ilk RC cleanup emit'i eklendi: void fonksiyonlarin ust seviye `metin`
   local'leri fonksiyon cikisinda `anadil_runtime_birak` ile birakilir.
 - `metin` assignment replacement icin owned/static RHS durumunda eski slot

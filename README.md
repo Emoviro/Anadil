@@ -366,6 +366,7 @@ Desteklenenler:
 - Static `metin` literal'lari native assembly'de length-prefixed Anadil metin nesnesi olarak emit edilir.
 - `metin + metin`, runtime heap allocation ile yeni length-prefixed metin uretir.
 - Nested `metin + metin` ve user-defined fonksiyon return operandlari concat sonrasi temizlenir.
+- `yazdir` icindeki owned `metin` temporary'leri ve kullanilmayan owned expression sonuclari temizlenir.
 - Void fonksiyonlardaki ust seviye `metin` local'leri icin temel `birak` cleanup'i emit edilir.
 - Literal/concat RHS ile `metin` yeniden atamalarinda eski deger temel cleanup ile birakilir.
 - Local `metin` paylasiminda `paylas` emit edilir.

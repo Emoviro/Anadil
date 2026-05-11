@@ -64,6 +64,22 @@ Ana() {\n\
 }
 
 #[test]
+fn native_owned_string_expression_cleanup_matches_interpreter() {
+    assert_native_output(
+        "owned_string_expression_cleanup",
+        "\
+Uret() -> metin {\n\
+    d\u{00f6}n \"C\" + \"D\";\n\
+}\n\
+\n\
+Ana() {\n\
+    yazdir(\"A\" + \"B\");\n\
+    Uret();\n\
+}\n",
+    );
+}
+
+#[test]
 fn native_string_assignment_replacement_matches_interpreter() {
     assert_native_output(
         "string_assignment_replace",

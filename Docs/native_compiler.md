@@ -296,6 +296,11 @@ sonucunu korur ve owned temporary operandlari `anadil_runtime_birak` ile
 temizler. Boylece `"A" + "B" + Uret()` gibi zincirlerde ara heap metinler
 program sonuna kadar tasinmaz.
 
+`yazdir("A" + "B")` gibi builtin cagri argumanlarinda callee param cleanup
+yolu olmadigi icin caller, yazdirma bittikten sonra owned temporary'yi
+`birak` eder. Benzer sekilde `Uret();` veya `"A" + "B";` gibi sonucu
+kullanilmayan owned expression statement'lari da hemen temizlenir.
+
 Atama tarafinda ilk guvenli daralma eklendi: `metin` local'i literal veya
 `metin + metin` gibi owned/static bir ifadeyle yeniden atanirken eski slot
 degeri yeni deger korunarak `anadil_runtime_birak` ile birakilir.

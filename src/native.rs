@@ -218,6 +218,7 @@ impl<'a> NativeEmitter<'a> {
             }
             TypedStmtKind::Expr(expr) => {
                 self.emit_expr(expr, out)?;
+                self.emit_release_if_owned_temporary_string(expr, out);
             }
             TypedStmtKind::Return(value) => {
                 if let Some(value) = value {
@@ -382,6 +383,12 @@ impl<'a> NativeEmitter<'a> {
         out.push_str("    call anadil_runtime_paylas\n");
         self.emit_release_call_area(call_area_size, out);
         self.emit_pop_into("rax", out);
+    }
+
+    fn emit_release_if_owned_temporary_string(&mut self, expr: &TypedExpr, out: &mut String) {
+        if is_owned_temporary_string_expr(expr) {
+            self.emit_release_rax(out);
+        }
     }
 
     fn emit_expr(&mut self, expr: &TypedExpr, out: &mut String) -> Result<(), String> {
@@ -610,6 +617,13 @@ impl<'a> NativeEmitter<'a> {
         self.emit_pop_into("rax", out);
     }
 
+    fn emit_release_rax(&mut self, out: &mut String) {
+        out.push_str("    mov rcx, rax\n");
+        let call_area_size = self.emit_reserve_call_area(0, out);
+        out.push_str("    call anadil_runtime_birak\n");
+        self.emit_release_call_area(call_area_size, out);
+    }
+
     fn emit_pop_into(&mut self, register: &str, out: &mut String) {
         out.push_str(&format!("    pop {register}\n"));
         self.temp_stack_depth = self
@@ -637,6 +651,10 @@ impl<'a> NativeEmitter<'a> {
 
     fn emit_yazdir(&mut self, arg: &TypedExpr, out: &mut String) -> Result<(), String> {
         self.emit_expr(arg, out)?;
+        let cleanup_arg = is_owned_temporary_string_expr(arg);
+        if cleanup_arg {
+            self.emit_push_rax(out);
+        }
         out.push_str("    mov rcx, rax\n");
         let runtime_call = match value_type(arg)? {
             Type::Sayi => "anadil_runtime_print_sayi",
@@ -646,6 +664,10 @@ impl<'a> NativeEmitter<'a> {
         let call_area_size = self.emit_reserve_call_area(0, out);
         out.push_str(&format!("    call {runtime_call}\n"));
         self.emit_release_call_area(call_area_size, out);
+        if cleanup_arg {
+            self.emit_pop_into("rax", out);
+            self.emit_release_rax(out);
+        }
         Ok(())
     }
 
@@ -1034,6 +1056,27 @@ Ana() {\n\
         assert!(
             asm.matches("call anadil_runtime_birak").count() >= 3,
             "owned concat temporaries, returned temporary, and final local should cleanup"
+        );
+    }
+
+    #[test]
+    fn emits_cleanup_for_owned_string_expression_results() {
+        let source = "\
+Uret() -> metin {\n\
+    d\u{00f6}n \"C\" + \"D\";\n\
+}\n\
+\n\
+Ana() {\n\
+    yazdir(\"A\" + \"B\");\n\
+    Uret();\n\
+}\n";
+
+        let program = compile_source(source).expect("program should compile");
+        let asm = emit_windows_x64_asm(&program).expect("assembly should be emitted");
+
+        assert!(
+            asm.matches("call anadil_runtime_birak").count() >= 2,
+            "yazdir owned arg and unused call return should cleanup"
         );
     }
 
