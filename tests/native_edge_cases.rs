@@ -61,6 +61,21 @@ Ana() {\n\
 }
 
 #[test]
+fn native_string_local_sharing_matches_interpreter() {
+    assert_native_output(
+        "string_local_share",
+        "\
+Ana() {\n\
+    a: metin = \"Merhaba\" + \"!\";\n\
+    b: metin = a;\n\
+    b = a;\n\
+    yazdir(a);\n\
+    yazdir(b);\n\
+}\n",
+    );
+}
+
+#[test]
 fn native_void_function_matches_interpreter() {
     assert_native_output(
         "void_function",

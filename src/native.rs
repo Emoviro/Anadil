@@ -2,8 +2,9 @@ use std::collections::HashMap;
 
 use crate::ast::{BinaryOp, Type, UnaryOp};
 use crate::typed::{
-    BuiltinFunction, CallTarget, FunctionId, LocalId, TypedBlock, TypedExpr, TypedExprKind,
-    TypedExprType, TypedFunction, TypedLoopPart, TypedProgram, TypedStmt, TypedStmtKind,
+    BuiltinFunction, CallTarget, FunctionId, LocalId, TypedAssignStmt, TypedBlock, TypedExpr,
+    TypedExprKind, TypedExprType, TypedFunction, TypedLoopPart, TypedProgram, TypedStmt,
+    TypedStmtKind,
 };
 
 pub fn emit_windows_x64_asm(program: &TypedProgram) -> Result<String, String> {
@@ -102,6 +103,7 @@ impl<'a> NativeEmitter<'a> {
         out.push_str("extrn anadil_runtime_print_mantik:proc\n");
         out.push_str("extrn anadil_runtime_metin_esit:proc\n");
         out.push_str("extrn anadil_runtime_metin_birlestir:proc\n");
+        out.push_str("extrn anadil_runtime_paylas:proc\n");
         out.push_str("extrn anadil_runtime_birak:proc\n");
         out.push_str("extrn anadil_runtime_wait_before_exit:proc\n");
         out.push_str("extrn anadil_runtime_panic:proc\n\n");
@@ -190,6 +192,7 @@ impl<'a> NativeEmitter<'a> {
         match &statement.kind {
             TypedStmtKind::VarDecl(decl) => {
                 self.emit_expr(&decl.value, out)?;
+                self.emit_retain_if_shared_string(&decl.value, out);
                 out.push_str(&format!(
                     "    mov QWORD PTR [rbp-{}], rax\n",
                     local_offset(decl.local_id)
@@ -274,6 +277,7 @@ impl<'a> NativeEmitter<'a> {
         match part {
             TypedLoopPart::VarDecl(decl) => {
                 self.emit_expr(&decl.value, out)?;
+                self.emit_retain_if_shared_string(&decl.value, out);
                 out.push_str(&format!(
                     "    mov QWORD PTR [rbp-{}], rax\n",
                     local_offset(decl.local_id)
@@ -291,11 +295,17 @@ impl<'a> NativeEmitter<'a> {
 
     fn emit_assignment(
         &mut self,
-        assign: &crate::typed::TypedAssignStmt,
+        assign: &TypedAssignStmt,
         out: &mut String,
     ) -> Result<(), String> {
         self.emit_expr(&assign.value, out)?;
-        if assign.target.ty == Type::Metin && is_owned_or_static_string_expr(&assign.value) {
+        if assign.target.ty == Type::Metin && is_shared_string_expr(&assign.value) {
+            self.emit_retain_rax(out);
+        }
+        if assign.target.ty == Type::Metin
+            && (is_owned_or_static_string_expr(&assign.value)
+                || is_shared_string_expr(&assign.value))
+        {
             self.emit_push_rax(out);
             out.push_str(&format!(
                 "    mov rcx, QWORD PTR [rbp-{}]\n",
@@ -311,6 +321,21 @@ impl<'a> NativeEmitter<'a> {
             local_offset(assign.target.id)
         ));
         Ok(())
+    }
+
+    fn emit_retain_if_shared_string(&mut self, expr: &TypedExpr, out: &mut String) {
+        if is_shared_string_expr(expr) {
+            self.emit_retain_rax(out);
+        }
+    }
+
+    fn emit_retain_rax(&mut self, out: &mut String) {
+        self.emit_push_rax(out);
+        out.push_str("    mov rcx, rax\n");
+        let call_area_size = self.emit_reserve_call_area(0, out);
+        out.push_str("    call anadil_runtime_paylas\n");
+        self.emit_release_call_area(call_area_size, out);
+        self.emit_pop_into("rax", out);
     }
 
     fn emit_expr(&mut self, expr: &TypedExpr, out: &mut String) -> Result<(), String> {
@@ -750,6 +775,11 @@ fn is_owned_or_static_string_expr(expr: &TypedExpr) -> bool {
         }
 }
 
+fn is_shared_string_expr(expr: &TypedExpr) -> bool {
+    matches!(expr.ty, TypedExprType::Value(Type::Metin))
+        && matches!(expr.kind, TypedExprKind::Variable(_))
+}
+
 fn encode_db_string(value: &str) -> String {
     let mut parts = Vec::new();
     let mut current = String::new();
@@ -898,6 +928,26 @@ Ana() {\n\
         assert!(
             asm.matches("call anadil_runtime_birak").count() >= 2,
             "assignment replacement and function exit should both cleanup"
+        );
+    }
+
+    #[test]
+    fn emits_retain_when_sharing_string_locals() {
+        let source = "\
+Ana() {\n\
+    a: metin = \"Merhaba\" + \"!\";\n\
+    b: metin = a;\n\
+    b = a;\n\
+    yazdir(b);\n\
+}\n";
+
+        let program = compile_source(source).expect("program should compile");
+        let asm = emit_windows_x64_asm(&program).expect("assembly should be emitted");
+
+        assert!(asm.contains("extrn anadil_runtime_paylas:proc"));
+        assert!(
+            asm.matches("call anadil_runtime_paylas").count() >= 2,
+            "var decl and assignment from local string should retain"
         );
     }
 

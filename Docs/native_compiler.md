@@ -296,6 +296,13 @@ degeri yeni deger korunarak `anadil_runtime_birak` ile birakilir.
 `x = y` gibi baska local'den paylas gerektiren assignment'lar henuz tam RC
 kurali bekler; bu durumda compiler ekstra `paylas`/`birak` emit etmez.
 
+Sonraki dar RC adimi olarak local `metin` paylasimi da eklendi:
+`b: metin = a` ve `b = a` durumlarinda RHS local pointer'i
+`anadil_runtime_paylas` ile retain edilir. Assignment formunda yeni referans
+retain edildikten sonra eski target degeri `birak` edilir ve slot yeni
+pointer ile guncellenir. Bu sira self-assignment ve ayni heap objesini
+paylasma durumlarinda refcount'un erken sifira inmesini engeller.
+
 ## Runtime Hatalari
 
 Native MVP sifira bolme icin interpreter'a benzer kontrollu hata davranisi uretir. Kodgen bu durumda `anadil_runtime_panic` helper'ini cagirir:
@@ -485,6 +492,8 @@ Visual Studio native toolchain bulunamazsa native integration testi kendini skip
 - Dinamik metinler icin otomatik `birak` emit'i simdilik yalnizca void
   fonksiyon ust seviye `metin` local'leri ve owned/static RHS ile guvenli
   `metin` assignment replacement icin vardir.
+- Local `metin` paylasimi icin `paylas` emit edilir; parametre ve return
+  sahipligi henuz tam RC kapsaminda degildir.
 - Native runtime hatalari tek satir `Anadil runtime hatasi: ...` formatindadir, ancak henuz kaynak satir/sutun bilgisi tasimaz.
 - Optimizasyon su an yalnizca typed AST uzerinde sabit katlama ve basit
   cebirsel sadelestirme seviyesindedir; IR/CFG tabanli optimizer yoktur.
