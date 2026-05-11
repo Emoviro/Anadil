@@ -93,6 +93,23 @@ Ana() {\n\
 }
 
 #[test]
+fn native_string_return_ownership_matches_interpreter() {
+    assert_native_output(
+        "string_return_ownership",
+        "\
+Uret() -> metin {\n\
+    sonuc: metin = \"Merhaba\" + \"!\";\n\
+    d\u{00f6}n sonuc;\n\
+}\n\
+\n\
+Ana() {\n\
+    mesaj: metin = Uret();\n\
+    yazdir(mesaj);\n\
+}\n",
+    );
+}
+
+#[test]
 fn native_void_function_matches_interpreter() {
     assert_native_output(
         "void_function",

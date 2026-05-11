@@ -310,6 +310,13 @@ edilir; boylece caller local'i ve callee parametresi ayni heap nesnesini
 guvenli sekilde paylasir. Inline owned concat argumani retain edilmez,
 callee cikisinda birakilarak sahiplik transferi gibi davranir.
 
+Return value icin epilogue return pointer'ini cleanup oncesi stack slot'unda
+saklar, ref cleanup tamamlandiktan sonra `rax`'a geri yukler. Return edilen
+deger local `metin` ise `paylas` emit edilir; boylece function-scope cleanup
+local'i birakirken caller'a donen referans canli kalir. Owned concat return
+degeri zaten yeni refcount=1 nesne oldugu icin retain edilmeden caller'a
+gecer.
+
 ## Runtime Hatalari
 
 Native MVP sifira bolme icin interpreter'a benzer kontrollu hata davranisi uretir. Kodgen bu durumda `anadil_runtime_panic` helper'ini cagirir:
@@ -499,9 +506,8 @@ Visual Studio native toolchain bulunamazsa native integration testi kendini skip
 - Dinamik metinler icin otomatik `birak` emit'i simdilik yalnizca void
   fonksiyon ust seviye `metin` local'leri ve owned/static RHS ile guvenli
   `metin` assignment replacement icin vardir.
-- Local `metin` paylasimi ve user-defined fonksiyona local `metin` arguman
-  gecisi icin `paylas` emit edilir; return sahipligi henuz tam RC kapsaminda
-  degildir.
+- Local `metin` paylasimi, user-defined fonksiyona local `metin` arguman
+  gecisi ve local `metin` return degeri icin `paylas` emit edilir.
 - Native runtime hatalari tek satir `Anadil runtime hatasi: ...` formatindadir, ancak henuz kaynak satir/sutun bilgisi tasimaz.
 - Optimizasyon su an yalnizca typed AST uzerinde sabit katlama ve basit
   cebirsel sadelestirme seviyesindedir; IR/CFG tabanli optimizer yoktur.

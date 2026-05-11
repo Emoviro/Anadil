@@ -70,6 +70,8 @@ dogrulama/debug araci olarak tutulur.
   `anadil_runtime_paylas` emit edilir.
 - User-defined fonksiyonlara local `metin` argumani gecilirken caller
   `paylas` eder; void callee `metin` parametrelerini cikista `birak` eder.
+- `metin` return degerleri cleanup boyunca korunur; local `metin` return
+  edilirken caller referansi icin `paylas` emit edilir.
 - Program entrypoint'i `Ana()` olarak kabul ediliyor.
 - Fonksiyon cagirma, stack argument gecisi ve nested call senaryolari test
   altinda.

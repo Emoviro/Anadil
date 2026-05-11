@@ -369,6 +369,7 @@ Desteklenenler:
 - Literal/concat RHS ile `metin` yeniden atamalarinda eski deger temel cleanup ile birakilir.
 - Local `metin` paylasiminda `paylas` emit edilir.
 - User-defined fonksiyonlara local `metin` argumani gecirilirken `paylas` emit edilir.
+- Local `metin` return degerleri cleanup sonrasi caller'a canli doner.
 - Native cikti dogrulugu su an interpreter oracle'i kullanan ornek programlar ve edge-case testleriyle korunur.
 
 Sinirlar:
@@ -380,7 +381,7 @@ Sinirlar:
 - Link satirinda Anadil runtime library ve `kernel32.lib` disinda CRT kutuphanesi yoktur.
 - Ilk 4 fonksiyon parametresi register ile, sonraki parametreler stack uzerinden tasinir.
 - Dinamik `metin` allocation simdilik `metin + metin` ile sinirlidir; otomatik `birak` emit'i yalnizca void fonksiyon ust seviye `metin` local'leri ve owned/static RHS assignment replacement icin vardir.
-- Return ownership kurallari henuz tam RC emit kapsaminda degildir.
+- Return ownership simdilik local `metin` ve owned concat return degerleriyle sinirlidir.
 - Runtime hatalari interpreter kadar ayrintili raporlanmaz.
 - Sifira bolme native executable icinde kontrollu hata ve process exit code `1` ile raporlanir.
 - Native executable program sonunda ve runtime hata cikisinda terminalin kapanmamasi icin Enter bekler.

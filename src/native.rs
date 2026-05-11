@@ -139,7 +139,8 @@ impl<'a> NativeEmitter<'a> {
     fn emit_function(&mut self, function: &TypedFunction, out: &mut String) -> Result<(), String> {
         let local_count = local_count(function);
         let max_call_args = max_call_args(function);
-        let frame_size = align_to((local_count + max_call_args) * 8, 16);
+        let return_save_slots = usize::from(function.return_type.is_some());
+        let frame_size = align_to((local_count + max_call_args + return_save_slots) * 8, 16);
         let return_label = self.fresh_label("return");
         self.current_return_label = return_label.clone();
         self.current_local_count = local_count;
@@ -170,8 +171,18 @@ impl<'a> NativeEmitter<'a> {
         self.emit_block(&function.body, out)?;
         out.push_str("    xor rax, rax\n");
         out.push_str(&format!("{return_label}:\n"));
-        if function.return_type.is_none() {
-            self.emit_function_scope_ref_cleanup(function, out);
+        if function.return_type.is_some() {
+            out.push_str(&format!(
+                "    mov QWORD PTR [rbp-{}], rax\n",
+                return_save_offset(local_count, max_call_args)
+            ));
+        }
+        self.emit_function_scope_ref_cleanup(function, out);
+        if function.return_type.is_some() {
+            out.push_str(&format!(
+                "    mov rax, QWORD PTR [rbp-{}]\n",
+                return_save_offset(local_count, max_call_args)
+            ));
         }
         out.push_str(&format!("    add rsp, {frame_size}\n"));
         out.push_str("    pop rbp\n");
@@ -207,6 +218,7 @@ impl<'a> NativeEmitter<'a> {
             TypedStmtKind::Return(value) => {
                 if let Some(value) = value {
                     self.emit_expr(value, out)?;
+                    self.emit_retain_if_shared_string(value, out);
                 } else {
                     out.push_str("    xor rax, rax\n");
                 }
@@ -611,6 +623,10 @@ fn call_arg_offset(local_count: usize, index: usize) -> usize {
     (local_count + index + 1) * 8
 }
 
+fn return_save_offset(local_count: usize, max_call_args: usize) -> usize {
+    (local_count + max_call_args + 1) * 8
+}
+
 fn function_scope_ref_locals(function: &TypedFunction) -> Vec<LocalId> {
     let mut locals: Vec<LocalId> = function
         .params
@@ -979,6 +995,28 @@ Ana() {\n\
             asm.matches("call anadil_runtime_birak").count() >= 2,
             "callee param and caller local should both cleanup"
         );
+    }
+
+    #[test]
+    fn preserves_string_return_values_across_cleanup() {
+        let source = "\
+Uret() -> metin {\n\
+    sonuc: metin = \"Merhaba\" + \"!\";\n\
+    d\u{00f6}n sonuc;\n\
+}\n\
+\n\
+Ana() {\n\
+    mesaj: metin = Uret();\n\
+    yazdir(mesaj);\n\
+}\n";
+
+        let program = compile_source(source).expect("program should compile");
+        let asm = emit_windows_x64_asm(&program).expect("assembly should be emitted");
+
+        assert!(asm.contains("call anadil_runtime_paylas"));
+        assert!(asm.contains("call anadil_runtime_birak"));
+        assert!(asm.contains("mov QWORD PTR [rbp-"));
+        assert!(asm.contains("mov rax, QWORD PTR [rbp-"));
     }
 
     #[test]
