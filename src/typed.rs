@@ -154,12 +154,14 @@ pub enum CallTarget {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BuiltinFunction {
     Yazdir,
+    Uzunluk,
 }
 
 impl BuiltinFunction {
     pub fn from_name(name: &str) -> Option<Self> {
         match name {
             "yazdır" | "yazdir" => Some(Self::Yazdir),
+            "uzunluk" => Some(Self::Uzunluk),
             _ => None,
         }
     }
@@ -167,6 +169,7 @@ impl BuiltinFunction {
     pub fn return_type(self) -> Option<Type> {
         match self {
             BuiltinFunction::Yazdir => None,
+            BuiltinFunction::Uzunluk => Some(Type::Sayi),
         }
     }
 }

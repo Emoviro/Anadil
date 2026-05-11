@@ -48,6 +48,18 @@ Ana() {\n\
 }
 
 #[test]
+fn native_string_length_matches_interpreter() {
+    assert_native_output(
+        "string_length",
+        "\
+Ana() {\n\
+    yazdir(uzunluk(\"Merhaba\"));\n\
+    yazdir(uzunluk(\"A\" + \"B\"));\n\
+}\n",
+    );
+}
+
+#[test]
 fn native_chained_string_concat_matches_interpreter() {
     assert_native_output(
         "string_concat_chained",

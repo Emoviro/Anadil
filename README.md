@@ -24,6 +24,7 @@ Yapilanlar:
 - Fonksiyon tanimlama ve fonksiyon cagirma
 - `Ana()` giris noktasi
 - `yazdır` yerlesik fonksiyonu (`yazdir` ASCII alias'i da desteklenir)
+- V0.2 branch'inde `uzunluk(metin) -> sayı` yerlesik fonksiyonu
 - V0.2 branch'inde `metin + metin` dinamik birlestirme MVP'si
 - `//` satir yorumlari
 - CLI komutlari: `calistir`, `yorumla`, `kontrol`, `ast`, `typed`, `ir`, `asm`, `asm-yaz`, `derle`, `ide`, `ornekler`, `surum`, `yardim`
@@ -359,12 +360,14 @@ Desteklenenler:
 - `kir`, `devam`, `don`
 - Fonksiyon tanimlama ve fonksiyon cagirma
 - `yazdır` (`yazdir` alias'i desteklenir)
+- `uzunluk(metin) -> sayı`
 - `yazdir`, metin karsilastirma ve runtime hata cikislari ayri Anadil runtime kutuphanesi uzerinden linklenir.
 - Runtime kutuphanesi `target/native-runtime/anadil_runtime.lib` olarak cache'lenir ve `runtime/anadil_runtime.asm` timestamp'iyle invalidate edilir.
 - Typed AST optimizer sabit katlama ve basit cebirsel sadelestirme uygular.
 - `anadil ir` V0.2 ara temsilinde runtime operasyonlarini `runtime.yazdir_metin` ve `runtime.metin_esit` gibi acik isimlerle gosterir.
 - Static `metin` literal'lari native assembly'de length-prefixed Anadil metin nesnesi olarak emit edilir.
 - `metin + metin`, runtime heap allocation ile yeni length-prefixed metin uretir.
+- `uzunluk(metin)` native backend'de `anadil_runtime_metin_uzunluk` helper'ina dusurulur.
 - Nested `metin + metin` ve user-defined fonksiyon return operandlari concat sonrasi temizlenir.
 - `yazdir` icindeki owned `metin` temporary'leri ve kullanilmayan owned expression sonuclari temizlenir.
 - Void fonksiyonlardaki ust seviye `metin` local'leri icin temel `birak` cleanup'i emit edilir.

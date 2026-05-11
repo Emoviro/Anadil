@@ -297,6 +297,19 @@ impl<'a> Interpreter<'a> {
                 self.output.push(value.render());
                 Ok(None)
             }
+            CallTarget::Builtin(BuiltinFunction::Uzunluk) => {
+                let value = values
+                    .into_iter()
+                    .next()
+                    .ok_or_else(|| RuntimeError::at(span, "`uzunluk` bir arguman bekler"))?;
+                match value {
+                    Value::String(value) => Ok(Some(Value::Number(value.len() as i64))),
+                    _ => Err(RuntimeError::at(
+                        span,
+                        "`uzunluk` argumani calisma zamaninda metin olmali",
+                    )),
+                }
+            }
         }
     }
 
@@ -551,5 +564,17 @@ Ana() {
             run(source).expect("program should run"),
             "Merhaba\ndo\u{011f}ru\ndo\u{011f}ru"
         );
+    }
+
+    #[test]
+    fn runs_string_length_builtin() {
+        let source = r#"
+Ana() {
+    yazdir(uzunluk("Merhaba"));
+    yazdir(uzunluk("A" + "B"));
+}
+"#;
+
+        assert_eq!(run(source).expect("program should run"), "7\n2");
     }
 }

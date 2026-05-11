@@ -86,6 +86,7 @@ pub enum IrCallTarget {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IrRuntimeCall {
     Yazdir(Type),
+    MetinUzunluk,
     MetinEsit,
     MetinEsitDegil,
 }
@@ -260,12 +261,22 @@ fn lower_expr(expr: &TypedExpr) -> IrExpr {
 }
 
 fn lower_call_expr(target: &CallTarget, args: &[TypedExpr]) -> IrExpr {
-    if let CallTarget::Builtin(BuiltinFunction::Yazdir) = target {
-        if let Some(arg) = args.first() {
-            return IrExpr::Call {
-                target: IrCallTarget::Runtime(IrRuntimeCall::Yazdir(value_type(arg))),
-                args: args.iter().map(lower_expr).collect(),
-            };
+    if let CallTarget::Builtin(builtin) = target {
+        match builtin {
+            BuiltinFunction::Yazdir => {
+                if let Some(arg) = args.first() {
+                    return IrExpr::Call {
+                        target: IrCallTarget::Runtime(IrRuntimeCall::Yazdir(value_type(arg))),
+                        args: args.iter().map(lower_expr).collect(),
+                    };
+                }
+            }
+            BuiltinFunction::Uzunluk => {
+                return IrExpr::Call {
+                    target: IrCallTarget::Runtime(IrRuntimeCall::MetinUzunluk),
+                    args: args.iter().map(lower_expr).collect(),
+                };
+            }
         }
     }
 
@@ -505,6 +516,7 @@ impl fmt::Display for IrCallTarget {
         match self {
             IrCallTarget::Function { id, name } => write!(f, "{name}@{}", id.0),
             IrCallTarget::Builtin(BuiltinFunction::Yazdir) => f.write_str("builtin.yazdir"),
+            IrCallTarget::Builtin(BuiltinFunction::Uzunluk) => f.write_str("builtin.uzunluk"),
             IrCallTarget::Runtime(call) => write!(f, "runtime.{call}"),
         }
     }
@@ -516,6 +528,7 @@ impl fmt::Display for IrRuntimeCall {
             IrRuntimeCall::Yazdir(Type::Sayi) => f.write_str("yazdir_sayi"),
             IrRuntimeCall::Yazdir(Type::Mantik) => f.write_str("yazdir_mantik"),
             IrRuntimeCall::Yazdir(Type::Metin) => f.write_str("yazdir_metin"),
+            IrRuntimeCall::MetinUzunluk => f.write_str("metin_uzunluk"),
             IrRuntimeCall::MetinEsit => f.write_str("metin_esit"),
             IrRuntimeCall::MetinEsitDegil => f.write_str("metin_esit_degil"),
         }
@@ -611,6 +624,7 @@ Ana() {
 Ana() {
     a: metin = \"Merhaba\";
     yazdir(a);
+    yazdir(uzunluk(a));
     yazdir(a == \"Merhaba\");
     yazdir(a != \"Dunya\");
 }
@@ -618,6 +632,7 @@ Ana() {
         );
 
         assert!(ir.contains("expr runtime.yazdir_metin(a#0)"));
+        assert!(ir.contains("runtime.yazdir_sayi(runtime.metin_uzunluk(a#0))"));
         assert!(ir.contains("runtime.yazdir_mantik(runtime.metin_esit(a#0, \"Merhaba\"))"));
         assert!(ir.contains("runtime.yazdir_mantik(runtime.metin_esit_degil(a#0, \"Dunya\"))"));
     }

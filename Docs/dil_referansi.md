@@ -168,16 +168,23 @@ Dönüş tipi belirtilirse tum kontrol yolları deger dondurmelidir.
 
 ## Yerlesik Fonksiyonlar
 
-Su anda tek yerlesik fonksiyon vardir:
+Su anda iki yerlesik fonksiyon vardir:
 
 ```ana
 yazdır(deger);
+uzunluk(metin_deger);
 ```
 
 `yazdır` deger dondurmez. Geriye uyumluluk icin `yazdir` ASCII alias'i da kabul edilir. Bu yuzden su gecersizdir:
 
 ```ana
 x: sayı = yazdır(10);
+```
+
+`uzunluk(metin)` `sayı` dondurur. V0.2 MVP'de bu deger runtime metin nesnesinin byte uzunlugudur.
+
+```ana
+x: sayı = uzunluk("Merhaba");
 ```
 
 ## Hata Kontrolleri

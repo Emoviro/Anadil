@@ -62,6 +62,8 @@ dogrulama/debug araci olarak tutulur.
   bicimine tasindi.
 - `metin + metin` MVP olarak eklendi; runtime heap'te yeni length-prefixed
   metin uretir.
+- `uzunluk(metin) -> sayi` builtin'i interpreter, IR ve native backend'de
+  desteklenir; native backend length-prefixed runtime helper'ini kullanir.
 - Nested concat ve user-defined fonksiyon return operandlari concat sonrasi
   `birak` edilir.
 - `yazdir` owned temporary argumanlari ve kullanilmayan owned expression

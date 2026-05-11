@@ -313,6 +313,13 @@ yolu olmadigi icin caller, yazdirma bittikten sonra owned temporary'yi
 `birak` eder. Benzer sekilde `Uret();` veya `"A" + "B";` gibi sonucu
 kullanilmayan owned expression statement'lari da hemen temizlenir.
 
+`uzunluk(metin)` V0.2'de length-prefixed layout'un ilk kullaniciya acik
+builtin'idir. Native backend bunu `anadil_runtime_metin_uzunluk` helper'ina
+dusurur ve `sayi` dondurur. Ilk MVP'de deger runtime nesnesindeki byte length
+alanidir; Unicode grapheme/karakter sayma sonraki metin API katmanina kalir.
+Owned temporary argumanlar sonuc korunduktan sonra caller tarafinda `birak`
+edilir.
+
 Atama tarafinda ilk guvenli daralma eklendi: `metin` local'i literal veya
 `metin + metin` gibi owned/static bir ifadeyle yeniden atanirken eski slot
 degeri yeni deger korunarak `anadil_runtime_birak` ile birakilir.

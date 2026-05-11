@@ -74,7 +74,7 @@ const ERR_LINE_BG: Color32 = Color32::from_rgb(0x33, 0x1B, 0x24);
 // Syntax highlighting (palet uyumlu)
 const SYN_KEYWORD: Color32 = ACCENT; // egil/dön/döngü/...
 const SYN_TYPE: Color32 = Color32::from_rgb(0x7F, 0xCB, 0xC4); // sayı/mantık/metin
-const SYN_BUILTIN: Color32 = Color32::from_rgb(0x82, 0xAA, 0xFF); // Ana/yazdır
+const SYN_BUILTIN: Color32 = Color32::from_rgb(0x82, 0xAA, 0xFF); // Ana/yazdır/uzunluk
 const SYN_FUNCTION: Color32 = Color32::from_rgb(0xFF, 0xD4, 0x66); // Buyuk harfli ident
 const SYN_STRING: Color32 = Color32::from_rgb(0xC3, 0xE8, 0x8D);
 const SYN_NUMBER: Color32 = Color32::from_rgb(0xF7, 0x8C, 0x6C);
@@ -2447,7 +2447,7 @@ fn token_format(token: &str, background: Color32) -> TextFormat {
         return format(SYN_TYPE, background);
     }
 
-    if matches!(token, "Ana" | "yazdır" | "yazdir") {
+    if matches!(token, "Ana" | "yazdır" | "yazdir" | "uzunluk") {
         return format(SYN_BUILTIN, background);
     }
 

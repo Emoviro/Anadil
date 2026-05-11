@@ -106,6 +106,7 @@ impl<'a> NativeEmitter<'a> {
         out.push_str("extrn anadil_runtime_print_mantik:proc\n");
         out.push_str("extrn anadil_runtime_metin_esit:proc\n");
         out.push_str("extrn anadil_runtime_metin_birlestir:proc\n");
+        out.push_str("extrn anadil_runtime_metin_uzunluk:proc\n");
         out.push_str("extrn anadil_runtime_paylas:proc\n");
         out.push_str("extrn anadil_runtime_birak:proc\n");
         out.push_str("extrn anadil_runtime_wait_before_exit:proc\n");
@@ -539,6 +540,12 @@ impl<'a> NativeEmitter<'a> {
                     .ok_or("`yazdır` native codegen icin bir arguman bekler")?;
                 self.emit_yazdir(arg, out)
             }
+            CallTarget::Builtin(BuiltinFunction::Uzunluk) => {
+                let arg = args
+                    .first()
+                    .ok_or("`uzunluk` native codegen icin bir arguman bekler")?;
+                self.emit_uzunluk(arg, out)
+            }
             CallTarget::Function { function_id, name } => {
                 if args.len() > self.current_max_call_args {
                     return Err(format!(
@@ -667,6 +674,26 @@ impl<'a> NativeEmitter<'a> {
         if cleanup_arg {
             self.emit_pop_into("rax", out);
             self.emit_release_rax(out);
+        }
+        Ok(())
+    }
+
+    fn emit_uzunluk(&mut self, arg: &TypedExpr, out: &mut String) -> Result<(), String> {
+        self.emit_expr(arg, out)?;
+        let cleanup_arg = is_owned_temporary_string_expr(arg);
+        if cleanup_arg {
+            self.emit_push_rax(out);
+        }
+        out.push_str("    mov rcx, rax\n");
+        let call_area_size = self.emit_reserve_call_area(0, out);
+        out.push_str("    call anadil_runtime_metin_uzunluk\n");
+        self.emit_release_call_area(call_area_size, out);
+        if cleanup_arg {
+            self.emit_push_rax(out);
+            out.push_str("    mov rax, QWORD PTR [rsp+8]\n");
+            self.emit_release_rax(out);
+            self.emit_pop_into("rax", out);
+            self.emit_pop_into("r10", out);
         }
         Ok(())
     }
@@ -1016,6 +1043,21 @@ Ana() {\n\
         assert!(asm.contains("str_0_tip dq 1"));
         assert!(asm.contains("str_0 dq 7"));
         assert!(asm.contains("str_0_bytes db \"Merhaba\""));
+    }
+
+    #[test]
+    fn emits_runtime_call_for_string_length() {
+        let source = "\
+Ana() {\n\
+    yazdir(uzunluk(\"Merhaba\"));\n\
+    yazdir(uzunluk(\"A\" + \"B\"));\n\
+}\n";
+
+        let program = compile_source(source).expect("program should compile");
+        let asm = emit_windows_x64_asm(&program).expect("assembly should be emitted");
+
+        assert!(asm.contains("call anadil_runtime_metin_uzunluk"));
+        assert!(asm.contains("call anadil_runtime_birak"));
     }
 
     #[test]

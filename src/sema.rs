@@ -675,11 +675,30 @@ impl Analyzer {
             if arg_types.len() != 1 {
                 return Err(SemanticError::at(
                     call_span,
-                    "`yazdır` yerleşik fonksiyonu tam olarak 1 argüman bekler",
+                    format!("`{callee}` yerleşik fonksiyonu tam olarak 1 argüman bekler"),
                 ));
             }
 
-            return Ok(ExprType::Void);
+            let builtin = BuiltinFunction::from_name(callee).expect("builtin checked above");
+            match builtin {
+                BuiltinFunction::Yazdir => {}
+                BuiltinFunction::Uzunluk => {
+                    if arg_types[0] != Type::Metin {
+                        return Err(SemanticError::at(
+                            args[0].span,
+                            format!(
+                                "`uzunluk` argümanı `metin` olmalı, bulunan `{}`",
+                                arg_types[0]
+                            ),
+                        ));
+                    }
+                }
+            }
+
+            return Ok(match builtin.return_type() {
+                Some(ty) => ExprType::Value(ty),
+                None => ExprType::Void,
+            });
         }
 
         Err(SemanticError::at(
@@ -1352,6 +1371,24 @@ impl Analyzer {
                         ));
                     }
                 }
+                BuiltinFunction::Uzunluk => {
+                    if typed_args.len() != 1 {
+                        return Err(SemanticError::at(
+                            call_span,
+                            "`uzunluk` yerleşik fonksiyonu tam olarak 1 argüman bekler",
+                        ));
+                    }
+                    if !matches!(typed_args[0].ty, TypedExprType::Value(Type::Metin)) {
+                        let found = match typed_args[0].ty {
+                            TypedExprType::Value(ty) => ty.to_string(),
+                            TypedExprType::Void => "void".to_string(),
+                        };
+                        return Err(SemanticError::at(
+                            typed_args[0].span,
+                            format!("`uzunluk` argümanı `metin` olmalı, bulunan `{found}`"),
+                        ));
+                    }
+                }
             }
 
             return Ok(TypedExpr {
@@ -1444,6 +1481,30 @@ Ana() {
 "#;
 
         analyze(source).expect("ascii yazdir alias should remain valid");
+    }
+
+    #[test]
+    fn accepts_uzunluk_builtin_for_strings() {
+        let source = "\
+Ana() {\n\
+    boy: say\u{0131} = uzunluk(\"Merhaba\");\n\
+    yazdir(boy);\n\
+}\n";
+
+        analyze(source).expect("uzunluk should accept metin and return sayi");
+    }
+
+    #[test]
+    fn rejects_uzunluk_builtin_for_non_strings() {
+        let source = r#"
+Ana() {
+    yazdir(uzunluk(10));
+}
+"#;
+
+        let error = analyze(source).expect_err("uzunluk should reject non-string args");
+        assert!(error.contains("`uzunluk`"));
+        assert!(error.contains("`metin`"));
     }
 
     #[test]
