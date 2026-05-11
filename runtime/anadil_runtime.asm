@@ -6,6 +6,7 @@ option casemap:none
 STD_INPUT_HANDLE equ -10
 STD_OUTPUT_HANDLE equ -11
 ANADIL_STATIC_REFCOUNT_MIN equ 4000000000000000h
+ANADIL_TIP_METIN equ 1
 
 extrn GetStdHandle:proc
 extrn WriteFile:proc
@@ -190,6 +191,54 @@ anadil_runtime_strcmp_equal:
     xor eax, eax
     ret
 anadil_runtime_strcmp ENDP
+
+; Length-prefixed metin ABI hazirligi.
+; Layout: [refcount][tip_id=ANADIL_TIP_METIN][len: u64][bytes...]
+; Bu helper'lar henuz compiler tarafindan emit edilmez.
+anadil_runtime_metin_uzunluk PROC
+    mov rax, qword ptr [rcx]
+    ret
+anadil_runtime_metin_uzunluk ENDP
+
+anadil_runtime_print_metin_nesne PROC
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32
+
+    mov rdx, qword ptr [rcx]
+    lea rcx, [rcx + 8]
+    call anadil_runtime_write_bytes
+    call anadil_runtime_print_newline
+
+    add rsp, 32
+    pop rbp
+    ret
+anadil_runtime_print_metin_nesne ENDP
+
+anadil_runtime_metin_esit PROC
+    mov r8, qword ptr [rcx]
+    cmp r8, qword ptr [rdx]
+    jne anadil_runtime_metin_esit_false
+
+    lea rcx, [rcx + 8]
+    lea rdx, [rdx + 8]
+    xor r9, r9
+anadil_runtime_metin_esit_loop:
+    cmp r9, r8
+    je anadil_runtime_metin_esit_true
+    mov al, byte ptr [rcx + r9]
+    cmp al, byte ptr [rdx + r9]
+    jne anadil_runtime_metin_esit_false
+    inc r9
+    jmp anadil_runtime_metin_esit_loop
+
+anadil_runtime_metin_esit_true:
+    mov eax, 1
+    ret
+anadil_runtime_metin_esit_false:
+    xor eax, eax
+    ret
+anadil_runtime_metin_esit ENDP
 
 ; V0.2 heap primitive ABI.
 ; Nesne layout'u: [refcount: u64][tip_id: u64][data...]

@@ -52,6 +52,8 @@ dogrulama/debug araci olarak tutulur.
   calismaya devam ediyor.
 - Runtime'a V0.2 heap primitive stub'lari (`tahsis`, `paylas`, `birak`)
   eklendi; compiler henuz bunlari kullanmiyor.
+- Length-prefixed `metin` nesnesi icin runtime ABI helper'lari eklendi;
+  native backend halen V0.1 uyumlu NUL-terminated literal yolunu kullanir.
 - Program entrypoint'i `Ana()` olarak kabul ediliyor.
 - Fonksiyon cagirma, stack argument gecisi ve nested call senaryolari test
   altinda.

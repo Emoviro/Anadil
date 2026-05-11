@@ -725,6 +725,9 @@ Ana() {\n\
             "anadil_runtime_print_mantik PROC",
             "anadil_runtime_strcmp PROC",
             "anadil_runtime_write_cstr PROC",
+            "anadil_runtime_metin_uzunluk PROC",
+            "anadil_runtime_print_metin_nesne PROC",
+            "anadil_runtime_metin_esit PROC",
             "anadil_runtime_tahsis PROC",
             "anadil_runtime_paylas PROC",
             "anadil_runtime_birak PROC",
@@ -749,6 +752,10 @@ Ana() {\n\
         assert!(RUNTIME_ASM.contains("extrn HeapFree:proc"));
         assert!(RUNTIME_ASM.contains("Bellek tahsisi basarisiz"));
         assert!(RUNTIME_ASM.contains("ANADIL_STATIC_REFCOUNT_MIN"));
+        assert!(RUNTIME_ASM.contains("ANADIL_TIP_METIN"));
+        assert!(RUNTIME_ASM.contains("mov rdx, qword ptr [rcx]"));
+        assert!(RUNTIME_ASM.contains("lea rcx, [rcx + 8]"));
+        assert!(RUNTIME_ASM.contains("cmp r8, qword ptr [rdx]"));
         assert!(RUNTIME_ASM.contains("add rax, 16"));
         assert!(RUNTIME_ASM.contains("sub r8, 16"));
     }

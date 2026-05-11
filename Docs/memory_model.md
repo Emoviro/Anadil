@@ -137,6 +137,12 @@ calisir. V0.2+ migration'i tamamlandiginda `metin` kullanicinin gozunden
 tek tip kalir, ama runtime temsili length-prefixed heap/static reference
 modeline gecer.
 
+V0.2 branch'inde bu gecis icin runtime ABI hazirligi basladi:
+`anadil_runtime_metin_uzunluk`, `anadil_runtime_print_metin_nesne` ve
+`anadil_runtime_metin_esit` length-prefixed nesne layout'unu bekler. Native
+backend henuz bunlari emit etmez; V0.1 uyumlu NUL-terminated literal yolu
+korunur.
+
 ## 4. Heap Nesne Layout'u
 
 Tum heap nesneleri ayni 16 byte header ile baslar:
