@@ -290,6 +290,18 @@ serbest birakilir.
 Bu henuz tam RC degildir: last-use optimizasyonu ve daha karmasik ownership
 indirgemeleri sonraki RC emit fazlarina kalir.
 
+### Metin Ownership Matrisi
+
+Native backend `metin` ifadelerini kodgen sirasinda su dar siniflara ayirir:
+
+| Ifade formu | Ownership sinifi | Kodgen kuralı |
+| --- | --- | --- |
+| `"sabit"` | Static literal | Refcount sentinel tasir; `birak` no-op olur. |
+| `local_metin` | Shared reference | Yeni slot/callee/caller referansi gerekiyorsa `paylas` edilir. |
+| `a + b` | Owned temporary | Sonucu heap nesnesidir; hedefe devredilmezse caller temizler. |
+| `Uret()` -> `metin` | Owned temporary | Return ownership caller'a gecer; hedefe devredilmezse caller temizler. |
+| `sayi`, `mantik`, void | Not string | RC emit edilmez. |
+
 Concat ifadesi baska bir concat veya user-defined fonksiyon return degerini
 operand olarak kullaniyorsa, native backend `anadil_runtime_metin_birlestir`
 sonucunu korur ve owned temporary operandlari `anadil_runtime_birak` ile

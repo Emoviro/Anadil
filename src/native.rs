@@ -891,30 +891,46 @@ fn is_string_concat(left: &TypedExpr, op: BinaryOp, right: &TypedExpr) -> bool {
         && matches!(right.ty, TypedExprType::Value(Type::Metin))
 }
 
-fn is_owned_or_static_string_expr(expr: &TypedExpr) -> bool {
-    matches!(expr.ty, TypedExprType::Value(Type::Metin))
-        && match &expr.kind {
-            TypedExprKind::String(_) => true,
-            TypedExprKind::Binary { left, op, right } => is_string_concat(left, *op, right),
-            _ => false,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StringExprOwnership {
+    NotString,
+    StaticLiteral,
+    SharedReference,
+    OwnedTemporary,
+}
+
+fn string_expr_ownership(expr: &TypedExpr) -> StringExprOwnership {
+    if !matches!(expr.ty, TypedExprType::Value(Type::Metin)) {
+        return StringExprOwnership::NotString;
+    }
+
+    match &expr.kind {
+        TypedExprKind::String(_) => StringExprOwnership::StaticLiteral,
+        TypedExprKind::Variable(_) => StringExprOwnership::SharedReference,
+        TypedExprKind::Binary { left, op, right } if is_string_concat(left, *op, right) => {
+            StringExprOwnership::OwnedTemporary
         }
+        TypedExprKind::Call {
+            target: CallTarget::Function { .. },
+            ..
+        } => StringExprOwnership::OwnedTemporary,
+        _ => StringExprOwnership::NotString,
+    }
+}
+
+fn is_owned_or_static_string_expr(expr: &TypedExpr) -> bool {
+    matches!(
+        string_expr_ownership(expr),
+        StringExprOwnership::StaticLiteral | StringExprOwnership::OwnedTemporary
+    )
 }
 
 fn is_owned_temporary_string_expr(expr: &TypedExpr) -> bool {
-    matches!(expr.ty, TypedExprType::Value(Type::Metin))
-        && match &expr.kind {
-            TypedExprKind::Binary { left, op, right } => is_string_concat(left, *op, right),
-            TypedExprKind::Call {
-                target: CallTarget::Function { .. },
-                ..
-            } => true,
-            _ => false,
-        }
+    string_expr_ownership(expr) == StringExprOwnership::OwnedTemporary
 }
 
 fn is_shared_string_expr(expr: &TypedExpr) -> bool {
-    matches!(expr.ty, TypedExprType::Value(Type::Metin))
-        && matches!(expr.kind, TypedExprKind::Variable(_))
+    string_expr_ownership(expr) == StringExprOwnership::SharedReference
 }
 
 fn encode_db_string(value: &str) -> String {
