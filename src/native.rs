@@ -725,6 +725,9 @@ Ana() {\n\
             "anadil_runtime_print_mantik PROC",
             "anadil_runtime_strcmp PROC",
             "anadil_runtime_write_cstr PROC",
+            "anadil_runtime_tahsis PROC",
+            "anadil_runtime_paylas PROC",
+            "anadil_runtime_birak PROC",
             "anadil_runtime_wait_before_exit PROC",
             "anadil_runtime_panic PROC",
         ] {
@@ -741,5 +744,12 @@ Ana() {\n\
         assert!(RUNTIME_ASM.contains("extrn WriteFile:proc"));
         assert!(RUNTIME_ASM.contains("extrn ReadFile:proc"));
         assert!(RUNTIME_ASM.contains("extrn ExitProcess:proc"));
+        assert!(RUNTIME_ASM.contains("extrn GetProcessHeap:proc"));
+        assert!(RUNTIME_ASM.contains("extrn HeapAlloc:proc"));
+        assert!(RUNTIME_ASM.contains("extrn HeapFree:proc"));
+        assert!(RUNTIME_ASM.contains("Bellek tahsisi basarisiz"));
+        assert!(RUNTIME_ASM.contains("ANADIL_STATIC_REFCOUNT_MIN"));
+        assert!(RUNTIME_ASM.contains("add rax, 16"));
+        assert!(RUNTIME_ASM.contains("sub r8, 16"));
     }
 }

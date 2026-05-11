@@ -50,6 +50,8 @@ dogrulama/debug araci olarak tutulur.
 - V0.2 branch'inde typed AST optimizer ve okunabilir `anadil ir`
   ara temsil komutu eklendi; native backend henuz typed AST hattindan
   calismaya devam ediyor.
+- Runtime'a V0.2 heap primitive stub'lari (`tahsis`, `paylas`, `birak`)
+  eklendi; compiler henuz bunlari kullanmiyor.
 - Program entrypoint'i `Ana()` olarak kabul ediliyor.
 - Fonksiyon cagirma, stack argument gecisi ve nested call senaryolari test
   altinda.

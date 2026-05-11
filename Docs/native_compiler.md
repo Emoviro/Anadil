@@ -277,11 +277,17 @@ anadil_runtime_print_sayi(rcx=sayi)
 anadil_runtime_print_metin(rcx=metin_ptr)
 anadil_runtime_print_mantik(rcx=0/1)
 anadil_runtime_strcmp(rcx=left_ptr, rdx=right_ptr) -> eax
+anadil_runtime_tahsis(rcx=data_size, rdx=tip_id) -> rax=data_ptr
+anadil_runtime_paylas(rcx=data_ptr) -> void
+anadil_runtime_birak(rcx=data_ptr) -> void
 anadil_runtime_wait_before_exit()
 anadil_runtime_panic(rcx=message_ptr) -> process exit 1
 ```
 
 Bu helper'lar program assembly'sinden ayri bir cached runtime library olarak linklenir. Runtime I/O, bekleme ve process sonlandirma Windows `kernel32` API'lerine baglidir; C runtime import'u artik native executable link hattinda gerekli degildir.
+V0.2 baslangicinda heap primitive sembolleri de runtime'a eklendi; mevcut
+compiler henuz bu primitive'leri emit etmez, dinamik `metin`/`dizi`/`yapi`
+fazlari icin ABI hazirligi olarak tutulur.
 
 ## Runtime Library Paketleme
 

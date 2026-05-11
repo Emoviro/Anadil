@@ -5,15 +5,20 @@ option casemap:none
 
 STD_INPUT_HANDLE equ -10
 STD_OUTPUT_HANDLE equ -11
+ANADIL_STATIC_REFCOUNT_MIN equ 4000000000000000h
 
 extrn GetStdHandle:proc
 extrn WriteFile:proc
 extrn ReadFile:proc
 extrn ExitProcess:proc
+extrn GetProcessHeap:proc
+extrn HeapAlloc:proc
+extrn HeapFree:proc
 
 .data
 newline db 10
 runtime_error_prefix db "Anadil runtime hatasi: ", 0
+heap_alloc_error db "Bellek tahsisi basarisiz", 0
 text_dogru db 100, 111, 196, 159, 114, 117, 0
 text_yanlis db 121, 97, 110, 108, 196, 177, 197, 159, 0
 io_bytes_written dd 0
@@ -185,6 +190,86 @@ anadil_runtime_strcmp_equal:
     xor eax, eax
     ret
 anadil_runtime_strcmp ENDP
+
+; V0.2 heap primitive ABI.
+; Nesne layout'u: [refcount: u64][tip_id: u64][data...]
+; Kullaniciya donen pointer data baslangicini gosterir.
+anadil_runtime_tahsis PROC
+    push rbp
+    mov rbp, rsp
+    sub rsp, 48
+
+    mov qword ptr [rbp - 8], rcx      ; data_size
+    mov qword ptr [rbp - 16], rdx     ; tip_id
+
+    call GetProcessHeap
+    mov rcx, rax
+    xor edx, edx
+    mov r8, qword ptr [rbp - 8]
+    add r8, 16
+    call HeapAlloc
+
+    test rax, rax
+    jne anadil_runtime_tahsis_ok
+    lea rcx, heap_alloc_error
+    call anadil_runtime_panic
+
+anadil_runtime_tahsis_ok:
+    mov qword ptr [rax], 1
+    mov rdx, qword ptr [rbp - 16]
+    mov qword ptr [rax + 8], rdx
+    add rax, 16
+
+    add rsp, 48
+    pop rbp
+    ret
+anadil_runtime_tahsis ENDP
+
+; NOT: RC Faz 1 tek-thread varsayimiyla non-atomic sayac kullaniyor.
+; Threading dile girdiginde bu PROC lock'lu versiyona gecer.
+anadil_runtime_paylas PROC
+    test rcx, rcx
+    je anadil_runtime_paylas_done
+    mov rax, qword ptr [rcx - 16]
+    mov r10, ANADIL_STATIC_REFCOUNT_MIN
+    cmp rax, r10
+    jge anadil_runtime_paylas_done
+    inc qword ptr [rcx - 16]
+anadil_runtime_paylas_done:
+    ret
+anadil_runtime_paylas ENDP
+
+; NOT: RC Faz 1 tek-thread varsayimiyla non-atomic sayac kullaniyor.
+; Threading dile girdiginde bu PROC lock'lu versiyona gecer.
+anadil_runtime_birak PROC
+    push rbp
+    mov rbp, rsp
+    sub rsp, 48
+
+    test rcx, rcx
+    je anadil_runtime_birak_done
+
+    mov rax, qword ptr [rcx - 16]
+    mov r10, ANADIL_STATIC_REFCOUNT_MIN
+    cmp rax, r10
+    jge anadil_runtime_birak_done
+
+    dec qword ptr [rcx - 16]
+    jne anadil_runtime_birak_done
+
+    mov qword ptr [rbp - 8], rcx
+    call GetProcessHeap
+    mov rcx, rax
+    xor edx, edx
+    mov r8, qword ptr [rbp - 8]
+    sub r8, 16
+    call HeapFree
+
+anadil_runtime_birak_done:
+    add rsp, 48
+    pop rbp
+    ret
+anadil_runtime_birak ENDP
 
 anadil_runtime_wait_before_exit PROC
     push rbp
