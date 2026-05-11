@@ -370,6 +370,7 @@ Desteklenenler:
 - Local `metin` paylasiminda `paylas` emit edilir.
 - User-defined fonksiyonlara local `metin` argumani gecirilirken `paylas` emit edilir.
 - Local `metin` return degerleri cleanup sonrasi caller'a canli doner.
+- If/else branch'lerinin normal cikisinda branch-scope `metin` local cleanup'i vardir.
 - Native cikti dogrulugu su an interpreter oracle'i kullanan ornek programlar ve edge-case testleriyle korunur.
 
 Sinirlar:
@@ -382,6 +383,7 @@ Sinirlar:
 - Ilk 4 fonksiyon parametresi register ile, sonraki parametreler stack uzerinden tasinir.
 - Dinamik `metin` allocation simdilik `metin + metin` ile sinirlidir; otomatik `birak` emit'i yalnizca void fonksiyon ust seviye `metin` local'leri ve owned/static RHS assignment replacement icin vardir.
 - Return ownership simdilik local `metin` ve owned concat return degerleriyle sinirlidir.
+- Erken `return`/`kir`/`devam` ve loop body scope cleanup genellestirmesi henuz tamamlanmamistir.
 - Runtime hatalari interpreter kadar ayrintili raporlanmaz.
 - Sifira bolme native executable icinde kontrollu hata ve process exit code `1` ile raporlanir.
 - Native executable program sonunda ve runtime hata cikisinda terminalin kapanmamasi icin Enter bekler.

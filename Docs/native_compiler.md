@@ -317,6 +317,11 @@ local'i birakirken caller'a donen referans canli kalir. Owned concat return
 degeri zaten yeni refcount=1 nesne oldugu icin retain edilmeden caller'a
 gecer.
 
+If/else branch'lerinde normal akisla branch sonuna ulasilirse, o branch'in
+ust seviye `metin` local'leri ters sirayla `birak` edilir. Erken `return`,
+`kir`, `devam` ve loop body kapsam cikisi henuz bu cleanup yoluna dahil
+degildir; sonraki RC scope fazinda genellestirilecektir.
+
 ## Runtime Hatalari
 
 Native MVP sifira bolme icin interpreter'a benzer kontrollu hata davranisi uretir. Kodgen bu durumda `anadil_runtime_panic` helper'ini cagirir:
@@ -508,6 +513,8 @@ Visual Studio native toolchain bulunamazsa native integration testi kendini skip
   `metin` assignment replacement icin vardir.
 - Local `metin` paylasimi, user-defined fonksiyona local `metin` arguman
   gecisi ve local `metin` return degeri icin `paylas` emit edilir.
+- If/else branch'lerinin normal cikisinda branch-scope `metin` local'leri
+  `birak` edilir; erken cikis ve loop cleanup henuz genellestirilmemistir.
 - Native runtime hatalari tek satir `Anadil runtime hatasi: ...` formatindadir, ancak henuz kaynak satir/sutun bilgisi tasimaz.
 - Optimizasyon su an yalnizca typed AST uzerinde sabit katlama ve basit
   cebirsel sadelestirme seviyesindedir; IR/CFG tabanli optimizer yoktur.

@@ -231,10 +231,12 @@ impl<'a> NativeEmitter<'a> {
                 out.push_str("    cmp rax, 0\n");
                 out.push_str(&format!("    je {else_label}\n"));
                 self.emit_block(&if_stmt.then_branch, out)?;
+                self.emit_block_scope_ref_cleanup(&if_stmt.then_branch, out);
                 out.push_str(&format!("    jmp {end_label}\n"));
                 out.push_str(&format!("{else_label}:\n"));
                 if let Some(else_branch) = &if_stmt.else_branch {
                     self.emit_block(else_branch, out)?;
+                    self.emit_block_scope_ref_cleanup(else_branch, out);
                 }
                 out.push_str(&format!("{end_label}:\n"));
             }
@@ -585,7 +587,15 @@ impl<'a> NativeEmitter<'a> {
     }
 
     fn emit_function_scope_ref_cleanup(&self, function: &TypedFunction, out: &mut String) {
-        for local in function_scope_ref_locals(function).into_iter().rev() {
+        self.emit_ref_cleanup(function_scope_ref_locals(function), out);
+    }
+
+    fn emit_block_scope_ref_cleanup(&self, block: &TypedBlock, out: &mut String) {
+        self.emit_ref_cleanup(block_scope_ref_locals(block), out);
+    }
+
+    fn emit_ref_cleanup(&self, locals: Vec<LocalId>, out: &mut String) {
+        for local in locals.into_iter().rev() {
             out.push_str(&format!(
                 "    mov rcx, QWORD PTR [rbp-{}]\n",
                 local_offset(local)
@@ -644,6 +654,17 @@ fn function_scope_ref_locals(function: &TypedFunction) -> Vec<LocalId> {
             }),
     );
     locals
+}
+
+fn block_scope_ref_locals(block: &TypedBlock) -> Vec<LocalId> {
+    block
+        .statements
+        .iter()
+        .filter_map(|statement| match &statement.kind {
+            TypedStmtKind::VarDecl(decl) if decl.ty == Type::Metin => Some(decl.local_id),
+            _ => None,
+        })
+        .collect()
 }
 
 fn local_count(function: &TypedFunction) -> usize {
@@ -1017,6 +1038,28 @@ Ana() {\n\
         assert!(asm.contains("call anadil_runtime_birak"));
         assert!(asm.contains("mov QWORD PTR [rbp-"));
         assert!(asm.contains("mov rax, QWORD PTR [rbp-"));
+    }
+
+    #[test]
+    fn emits_cleanup_for_if_branch_string_locals() {
+        let source = "\
+Ana() {\n\
+    e\u{011f}er (do\u{011f}ru) {\n\
+        mesaj: metin = \"Merhaba\" + \"!\";\n\
+        yazdir(mesaj);\n\
+    } de\u{011f}ilse {\n\
+        diger: metin = \"Selam\" + \"!\";\n\
+        yazdir(diger);\n\
+    }\n\
+}\n";
+
+        let program = compile_source(source).expect("program should compile");
+        let asm = emit_windows_x64_asm(&program).expect("assembly should be emitted");
+
+        assert!(
+            asm.matches("call anadil_runtime_birak").count() >= 2,
+            "both if branches should cleanup string locals"
+        );
     }
 
     #[test]

@@ -72,6 +72,8 @@ dogrulama/debug araci olarak tutulur.
   `paylas` eder; void callee `metin` parametrelerini cikista `birak` eder.
 - `metin` return degerleri cleanup boyunca korunur; local `metin` return
   edilirken caller referansi icin `paylas` emit edilir.
+- If/else branch'lerinin normal cikisinda branch-scope `metin` local'leri
+  `birak` edilir.
 - Program entrypoint'i `Ana()` olarak kabul ediliyor.
 - Fonksiyon cagirma, stack argument gecisi ve nested call senaryolari test
   altinda.

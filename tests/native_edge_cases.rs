@@ -110,6 +110,24 @@ Ana() {\n\
 }
 
 #[test]
+fn native_if_branch_string_cleanup_matches_interpreter() {
+    assert_native_output(
+        "if_branch_string_cleanup",
+        "\
+Ana() {\n\
+    kosul: mant\u{0131}k = do\u{011f}ru;\n\
+    e\u{011f}er (kosul) {\n\
+        mesaj: metin = \"Merhaba\" + \"!\";\n\
+        yazdir(mesaj);\n\
+    } de\u{011f}ilse {\n\
+        diger: metin = \"Selam\" + \"!\";\n\
+        yazdir(diger);\n\
+    }\n\
+}\n",
+    );
+}
+
+#[test]
 fn native_void_function_matches_interpreter() {
     assert_native_output(
         "void_function",
