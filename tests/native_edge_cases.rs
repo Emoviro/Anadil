@@ -34,6 +34,20 @@ Ana() {\n\
 }
 
 #[test]
+fn native_string_concat_matches_interpreter() {
+    assert_native_output(
+        "string_concat",
+        "\
+Ana() {\n\
+    mesaj: metin = \"Merhaba\" + \" \" + \"Anadil\";\n\
+    bos: metin = \"\" + \"\";\n\
+    yazdir(mesaj);\n\
+    yazdir(bos == \"\");\n\
+}\n",
+    );
+}
+
+#[test]
 fn native_void_function_matches_interpreter() {
     assert_native_output(
         "void_function",

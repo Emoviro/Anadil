@@ -101,6 +101,7 @@ impl<'a> NativeEmitter<'a> {
         out.push_str("extrn anadil_runtime_print_metin_nesne:proc\n");
         out.push_str("extrn anadil_runtime_print_mantik:proc\n");
         out.push_str("extrn anadil_runtime_metin_esit:proc\n");
+        out.push_str("extrn anadil_runtime_metin_birlestir:proc\n");
         out.push_str("extrn anadil_runtime_wait_before_exit:proc\n");
         out.push_str("extrn anadil_runtime_panic:proc\n\n");
         out.push_str(".data\n");
@@ -330,6 +331,18 @@ impl<'a> NativeEmitter<'a> {
         result_type: TypedExprType,
         out: &mut String,
     ) -> Result<(), String> {
+        if is_string_concat(left, op, right) {
+            self.emit_expr(left, out)?;
+            self.emit_push_rax(out);
+            self.emit_expr(right, out)?;
+            out.push_str("    mov rdx, rax\n");
+            self.emit_pop_into("rcx", out);
+            let call_area_size = self.emit_reserve_call_area(0, out);
+            out.push_str("    call anadil_runtime_metin_birlestir\n");
+            self.emit_release_call_area(call_area_size, out);
+            return Ok(());
+        }
+
         if is_string_equality(left, op, right) {
             self.emit_expr(left, out)?;
             self.emit_push_rax(out);
@@ -678,6 +691,12 @@ fn is_string_equality(left: &TypedExpr, op: BinaryOp, right: &TypedExpr) -> bool
         && matches!(right.ty, TypedExprType::Value(Type::Metin))
 }
 
+fn is_string_concat(left: &TypedExpr, op: BinaryOp, right: &TypedExpr) -> bool {
+    op == BinaryOp::Add
+        && matches!(left.ty, TypedExprType::Value(Type::Metin))
+        && matches!(right.ty, TypedExprType::Value(Type::Metin))
+}
+
 fn encode_db_string(value: &str) -> String {
     let mut parts = Vec::new();
     let mut current = String::new();
@@ -780,6 +799,22 @@ Ana() {\n\
     }
 
     #[test]
+    fn emits_runtime_call_for_string_concat() {
+        let source = "\
+Ana() {\n\
+    mesaj: metin = \"Merhaba\" + \" \" + \"Anadil\";\n\
+    yazdir(mesaj);\n\
+}\n";
+
+        let program = compile_source(source).expect("program should compile");
+        let asm = emit_windows_x64_asm(&program).expect("assembly should be emitted");
+
+        assert!(asm.contains("extrn anadil_runtime_metin_birlestir:proc"));
+        assert!(asm.contains("call anadil_runtime_metin_birlestir"));
+        assert!(asm.contains("call anadil_runtime_print_metin_nesne"));
+    }
+
+    #[test]
     fn runtime_assembly_exports_helper_procedures() {
         for helper in [
             "anadil_runtime_print_sayi PROC",
@@ -790,6 +825,7 @@ Ana() {\n\
             "anadil_runtime_metin_uzunluk PROC",
             "anadil_runtime_print_metin_nesne PROC",
             "anadil_runtime_metin_esit PROC",
+            "anadil_runtime_metin_birlestir PROC",
             "anadil_runtime_tahsis PROC",
             "anadil_runtime_paylas PROC",
             "anadil_runtime_birak PROC",
@@ -818,6 +854,7 @@ Ana() {\n\
         assert!(RUNTIME_ASM.contains("mov rdx, qword ptr [rcx]"));
         assert!(RUNTIME_ASM.contains("lea rcx, [rcx + 8]"));
         assert!(RUNTIME_ASM.contains("cmp r8, qword ptr [rdx]"));
+        assert!(RUNTIME_ASM.contains("call anadil_runtime_tahsis"));
         assert!(RUNTIME_ASM.contains("add rax, 16"));
         assert!(RUNTIME_ASM.contains("sub r8, 16"));
     }

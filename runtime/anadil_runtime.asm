@@ -240,6 +240,66 @@ anadil_runtime_metin_esit_false:
     ret
 anadil_runtime_metin_esit ENDP
 
+anadil_runtime_metin_birlestir PROC
+    push rbp
+    mov rbp, rsp
+    sub rsp, 80
+
+    mov qword ptr [rbp - 8], rcx      ; left
+    mov qword ptr [rbp - 16], rdx     ; right
+
+    mov r8, qword ptr [rcx]
+    mov r9, qword ptr [rdx]
+    mov qword ptr [rbp - 24], r8      ; left_len
+    mov qword ptr [rbp - 32], r9      ; right_len
+
+    mov rcx, r8
+    add rcx, r9
+    mov qword ptr [rbp - 40], rcx     ; total_len
+    add rcx, 8
+    mov edx, ANADIL_TIP_METIN
+    call anadil_runtime_tahsis
+
+    mov qword ptr [rbp - 48], rax     ; result
+    mov r10, qword ptr [rbp - 40]
+    mov qword ptr [rax], r10
+
+    mov r10, qword ptr [rbp - 8]
+    add r10, 8
+    mov r11, qword ptr [rbp - 48]
+    add r11, 8
+    mov r8, qword ptr [rbp - 24]
+anadil_runtime_metin_birlestir_left_loop:
+    test r8, r8
+    je anadil_runtime_metin_birlestir_right_start
+    mov al, byte ptr [r10]
+    mov byte ptr [r11], al
+    inc r10
+    inc r11
+    dec r8
+    jmp anadil_runtime_metin_birlestir_left_loop
+
+anadil_runtime_metin_birlestir_right_start:
+    mov r10, qword ptr [rbp - 16]
+    add r10, 8
+    mov r8, qword ptr [rbp - 32]
+anadil_runtime_metin_birlestir_right_loop:
+    test r8, r8
+    je anadil_runtime_metin_birlestir_done
+    mov al, byte ptr [r10]
+    mov byte ptr [r11], al
+    inc r10
+    inc r11
+    dec r8
+    jmp anadil_runtime_metin_birlestir_right_loop
+
+anadil_runtime_metin_birlestir_done:
+    mov rax, qword ptr [rbp - 48]
+    add rsp, 80
+    pop rbp
+    ret
+anadil_runtime_metin_birlestir ENDP
+
 ; V0.2 heap primitive ABI.
 ; Nesne layout'u: [refcount: u64][tip_id: u64][data...]
 ; Kullaniciya donen pointer data baslangicini gosterir.

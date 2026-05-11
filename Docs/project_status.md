@@ -60,6 +60,8 @@ dogrulama/debug araci olarak tutulur.
 - Native string literal emit'i tek `NativeStringLiteral` soyutlamasinda
   toplandi ve static literal layout'u `[refcount][tip_id][len][bytes]`
   bicimine tasindi.
+- `metin + metin` MVP olarak eklendi; runtime heap'te yeni length-prefixed
+  metin uretir, ancak compiler henuz otomatik `birak` cleanup emit etmez.
 - Program entrypoint'i `Ana()` olarak kabul ediliyor.
 - Fonksiyon cagirma, stack argument gecisi ve nested call senaryolari test
   altinda.

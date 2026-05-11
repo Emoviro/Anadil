@@ -311,6 +311,9 @@ impl<'a> Interpreter<'a> {
             (BinaryOp::Add, Value::Number(left), Value::Number(right)) => {
                 Ok(Value::Number(left + right))
             }
+            (BinaryOp::Add, Value::String(left), Value::String(right)) => {
+                Ok(Value::String(format!("{left}{right}")))
+            }
             (BinaryOp::Subtract, Value::Number(left), Value::Number(right)) => {
                 Ok(Value::Number(left - right))
             }

@@ -24,6 +24,7 @@ Yapilanlar:
 - Fonksiyon tanimlama ve fonksiyon cagirma
 - `Ana()` giris noktasi
 - `yazdır` yerlesik fonksiyonu (`yazdir` ASCII alias'i da desteklenir)
+- V0.2 branch'inde `metin + metin` dinamik birlestirme MVP'si
 - `//` satir yorumlari
 - CLI komutlari: `calistir`, `yorumla`, `kontrol`, `ast`, `typed`, `ir`, `asm`, `asm-yaz`, `derle`, `ide`, `ornekler`, `surum`, `yardim`
 - Etkilesimli REPL komutu: `repl`
@@ -33,7 +34,7 @@ Bu CLI yuzeyi V0.1 icin sabit kabul edilir.
 Henuz yapilmayanlar:
 
 - Dizi, struct, class, modul sistemi
-- Heap allocation, dinamik metin, referans sayma
+- Otomatik referans sayma cleanup'i
 
 ## Indir ve Kullan
 
@@ -363,6 +364,7 @@ Desteklenenler:
 - Typed AST optimizer sabit katlama ve basit cebirsel sadelestirme uygular.
 - `anadil ir` V0.2 ara temsilinde runtime operasyonlarini `runtime.yazdir_metin` ve `runtime.metin_esit` gibi acik isimlerle gosterir.
 - Static `metin` literal'lari native assembly'de length-prefixed Anadil metin nesnesi olarak emit edilir.
+- `metin + metin`, runtime heap allocation ile yeni length-prefixed metin uretir.
 - Native cikti dogrulugu su an interpreter oracle'i kullanan ornek programlar ve edge-case testleriyle korunur.
 
 Sinirlar:
@@ -373,7 +375,7 @@ Sinirlar:
 - Runtime helper'lari `GetStdHandle`, `WriteFile`, `ReadFile` ve `ExitProcess` kullanir; `printf`, `getchar`, `strcmp` veya C `exit` cagrisi yoktur.
 - Link satirinda Anadil runtime library ve `kernel32.lib` disinda CRT kutuphanesi yoktur.
 - Ilk 4 fonksiyon parametresi register ile, sonraki parametreler stack uzerinden tasinir.
-- Dinamik `metin` allocation ve metin birlestirme henuz yoktur; length-prefixed layout simdilik static literal yolunda kullanilir.
+- Dinamik `metin` allocation simdilik `metin + metin` ile sinirlidir; otomatik `birak` emit'i henuz yoktur.
 - Runtime hatalari interpreter kadar ayrintili raporlanmaz.
 - Sifira bolme native executable icinde kontrollu hata ve process exit code `1` ile raporlanir.
 - Native executable program sonunda ve runtime hata cikisinda terminalin kapanmamasi icin Enter bekler.

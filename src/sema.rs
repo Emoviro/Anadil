@@ -583,7 +583,15 @@ impl Analyzer {
                 let right_type = self.expect_value_expr(right, scopes, context)?;
 
                 match op {
-                    BinaryOp::Add | BinaryOp::Subtract | BinaryOp::Multiply | BinaryOp::Divide => {
+                    BinaryOp::Add => {
+                        if left_type == Type::Metin && right_type == Type::Metin {
+                            Ok(ExprType::Value(Type::Metin))
+                        } else {
+                            self.expect_numeric_operands(expr.span, *op, left_type, right_type)?;
+                            Ok(ExprType::Value(Type::Sayi))
+                        }
+                    }
+                    BinaryOp::Subtract | BinaryOp::Multiply | BinaryOp::Divide => {
                         self.expect_numeric_operands(expr.span, *op, left_type, right_type)?;
                         Ok(ExprType::Value(Type::Sayi))
                     }
@@ -1221,7 +1229,15 @@ impl Analyzer {
                 };
 
                 let result_type = match op {
-                    BinaryOp::Add | BinaryOp::Subtract | BinaryOp::Multiply | BinaryOp::Divide => {
+                    BinaryOp::Add => {
+                        if left_type == Type::Metin && right_type == Type::Metin {
+                            TypedExprType::Value(Type::Metin)
+                        } else {
+                            self.expect_numeric_operands(expr.span, *op, left_type, right_type)?;
+                            TypedExprType::Value(Type::Sayi)
+                        }
+                    }
+                    BinaryOp::Subtract | BinaryOp::Multiply | BinaryOp::Divide => {
                         self.expect_numeric_operands(expr.span, *op, left_type, right_type)?;
                         TypedExprType::Value(Type::Sayi)
                     }

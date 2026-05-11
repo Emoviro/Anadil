@@ -268,6 +268,18 @@ anadil_runtime_metin_esit(a, b) != 0 -> esit
 anadil_runtime_metin_esit(a, b) == 0 -> esit degil
 ```
 
+## Metin Birlestirme
+
+V0.2 branch'inde `metin + metin` MVP olarak desteklenir. Native backend
+iki operand'i degerlendirir ve `anadil_runtime_metin_birlestir` helper'ini
+cagirir. Helper `anadil_runtime_tahsis` ile yeni length-prefixed heap metin
+nesnesi olusturur, sol ve sag operand byte'larini arka arkaya kopyalar ve
+yeni data pointer'i dondurur.
+
+Bu ilk dilimde RC cleanup emit'i yoktur; uretilen dinamik metinler program
+omru boyunca serbest birakilmaz. V0.2 RC emit fazi atama, kapsam cikisi ve
+return kurallarini ekleyene kadar bu bilinen bir sinirdir.
+
 ## Runtime Hatalari
 
 Native MVP sifira bolme icin interpreter'a benzer kontrollu hata davranisi uretir. Kodgen bu durumda `anadil_runtime_panic` helper'ini cagirir:
@@ -290,6 +302,7 @@ anadil_runtime_print_mantik(rcx=0/1)
 anadil_runtime_strcmp(rcx=left_ptr, rdx=right_ptr) -> eax
 anadil_runtime_metin_uzunluk(rcx=metin_obj_ptr) -> rax
 anadil_runtime_metin_esit(rcx=left_obj_ptr, rdx=right_obj_ptr) -> eax 0/1
+anadil_runtime_metin_birlestir(rcx=left_obj_ptr, rdx=right_obj_ptr) -> rax
 anadil_runtime_tahsis(rcx=data_size, rdx=tip_id) -> rax=data_ptr
 anadil_runtime_paylas(rcx=data_ptr) -> void
 anadil_runtime_birak(rcx=data_ptr) -> void
@@ -401,12 +414,15 @@ Su an native backend'de heap allocation yoktur.
 Bu nedenle:
 
 - Garbage collector yoktur.
-- Reference counting yoktur.
+- Reference counting helper'lari vardir, ancak compiler henuz otomatik
+  cleanup emit etmez.
 - Manual `free`/`delete` modeli yoktur.
 - String literal'lar static length-prefixed `.data` nesneleri olarak yasar.
 - `sayi`, `mantik` ve local `metin` referanslari stack slot'larda tutulur.
 
-Bu model mevcut V0.1 dil alt kumesi icin yeterlidir. `metin` birlestirme, dizi, struct veya dinamik obje destegi eklendiginde heap modeli gerekecektir.
+Bu model mevcut V0.1 dil alt kumesi icin yeterlidir. V0.2 branch'inde
+`metin + metin` heap allocation kullanmaya basladi; dizi, struct ve
+otomatik RC cleanup icin heap modeli genisletilecektir.
 
 Karar belgesi: [memory_model.md](memory_model.md)
 
@@ -449,7 +465,8 @@ Visual Studio native toolchain bulunamazsa native integration testi kendini skip
 - Sadece Windows x64 hedeflenir.
 - Heap allocation yoktur.
 - Garbage collector yoktur.
-- String literal disinda runtime metin uretimi yoktur.
+- `metin + metin` disinda runtime metin uretimi yoktur.
+- Dinamik metinler icin otomatik `birak` emit'i henuz yoktur.
 - Native runtime hatalari tek satir `Anadil runtime hatasi: ...` formatindadir, ancak henuz kaynak satir/sutun bilgisi tasimaz.
 - Optimizasyon su an yalnizca typed AST uzerinde sabit katlama ve basit
   cebirsel sadelestirme seviyesindedir; IR/CFG tabanli optimizer yoktur.
