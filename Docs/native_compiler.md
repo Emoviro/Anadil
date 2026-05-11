@@ -88,6 +88,10 @@ cargo run -- ir examples\topla.ana
 Bu komut typed AST optimizer sonrasi programi okunabilir Anadil IR
 formatinda yazar. V0.2'de IR henuz native backend'in girdisi degildir;
 backend switch icin hazirlik ve test yuzeyi olarak tutulur.
+Runtime'a dusen islemler IR'de acik isimlerle gorunur; ornegin
+`yazdir(metin)` -> `runtime.yazdir_metin(...)`, `metin == metin` ->
+`runtime.metin_esit(...)`. Bu, dinamik `metin` migration'i sirasinda
+backend'in hangi runtime ABI'sine baglanacagini gorunur kilar.
 
 Native executable'i IDE entegrasyonu icin JSON build sonucu ile derlemek:
 

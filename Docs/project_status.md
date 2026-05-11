@@ -50,6 +50,8 @@ dogrulama/debug araci olarak tutulur.
 - V0.2 branch'inde typed AST optimizer ve okunabilir `anadil ir`
   ara temsil komutu eklendi; native backend henuz typed AST hattindan
   calismaya devam ediyor.
+- IR cikti katmani runtime operasyonlarini acik isimlerle gosteriyor
+  (`runtime.yazdir_metin`, `runtime.metin_esit` vb.).
 - Runtime'a V0.2 heap primitive stub'lari (`tahsis`, `paylas`, `birak`)
   eklendi; compiler henuz bunlari kullanmiyor.
 - Length-prefixed `metin` nesnesi icin runtime ABI helper'lari eklendi;

@@ -3,7 +3,7 @@ use std::fmt;
 use crate::ast::{BinaryOp, Type, UnaryOp};
 use crate::typed::{
     BuiltinFunction, CallTarget, FunctionId, LocalId, TypedBlock, TypedExpr, TypedExprKind,
-    TypedFunction, TypedLoopPart, TypedProgram, TypedStmt, TypedStmtKind,
+    TypedExprType, TypedFunction, TypedLoopPart, TypedProgram, TypedStmt, TypedStmtKind,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -80,6 +80,14 @@ pub enum IrExpr {
 pub enum IrCallTarget {
     Function { id: FunctionId, name: String },
     Builtin(BuiltinFunction),
+    Runtime(IrRuntimeCall),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IrRuntimeCall {
+    Yazdir(Type),
+    MetinEsit,
+    MetinEsitDegil,
 }
 
 pub fn lower_typed_program(program: &TypedProgram) -> IrProgram {
@@ -242,19 +250,48 @@ fn lower_expr(expr: &TypedExpr) -> IrExpr {
         TypedExprKind::Bool(value) => IrExpr::Bool(*value),
         TypedExprKind::String(value) => IrExpr::String(value.clone()),
         TypedExprKind::Variable(local) => IrExpr::Local(local.id, local.name.clone()),
-        TypedExprKind::Call { target, args } => IrExpr::Call {
-            target: lower_call_target(target),
-            args: args.iter().map(lower_expr).collect(),
-        },
+        TypedExprKind::Call { target, args } => lower_call_expr(target, args),
         TypedExprKind::Unary { op, expr } => IrExpr::Unary {
             op: *op,
             expr: Box::new(lower_expr(expr)),
         },
-        TypedExprKind::Binary { left, op, right } => IrExpr::Binary {
-            left: Box::new(lower_expr(left)),
-            op: *op,
-            right: Box::new(lower_expr(right)),
-        },
+        TypedExprKind::Binary { left, op, right } => lower_binary_expr(left, *op, right),
+    }
+}
+
+fn lower_call_expr(target: &CallTarget, args: &[TypedExpr]) -> IrExpr {
+    if let CallTarget::Builtin(BuiltinFunction::Yazdir) = target {
+        if let Some(arg) = args.first() {
+            return IrExpr::Call {
+                target: IrCallTarget::Runtime(IrRuntimeCall::Yazdir(value_type(arg))),
+                args: args.iter().map(lower_expr).collect(),
+            };
+        }
+    }
+
+    IrExpr::Call {
+        target: lower_call_target(target),
+        args: args.iter().map(lower_expr).collect(),
+    }
+}
+
+fn lower_binary_expr(left: &TypedExpr, op: BinaryOp, right: &TypedExpr) -> IrExpr {
+    if is_metin_equality(left, op, right) {
+        let runtime_call = match op {
+            BinaryOp::Equal => IrRuntimeCall::MetinEsit,
+            BinaryOp::NotEqual => IrRuntimeCall::MetinEsitDegil,
+            _ => unreachable!(),
+        };
+        return IrExpr::Call {
+            target: IrCallTarget::Runtime(runtime_call),
+            args: vec![lower_expr(left), lower_expr(right)],
+        };
+    }
+
+    IrExpr::Binary {
+        left: Box::new(lower_expr(left)),
+        op,
+        right: Box::new(lower_expr(right)),
     }
 }
 
@@ -266,6 +303,19 @@ fn lower_call_target(target: &CallTarget) -> IrCallTarget {
         },
         CallTarget::Builtin(builtin) => IrCallTarget::Builtin(*builtin),
     }
+}
+
+fn value_type(expr: &TypedExpr) -> Type {
+    match expr.ty {
+        TypedExprType::Value(ty) => ty,
+        TypedExprType::Void => panic!("void expression cannot be lowered as runtime value"),
+    }
+}
+
+fn is_metin_equality(left: &TypedExpr, op: BinaryOp, right: &TypedExpr) -> bool {
+    matches!(op, BinaryOp::Equal | BinaryOp::NotEqual)
+        && matches!(left.ty, TypedExprType::Value(Type::Metin))
+        && matches!(right.ty, TypedExprType::Value(Type::Metin))
 }
 
 pub fn format_ir(program: &IrProgram) -> String {
@@ -455,6 +505,19 @@ impl fmt::Display for IrCallTarget {
         match self {
             IrCallTarget::Function { id, name } => write!(f, "{name}@{}", id.0),
             IrCallTarget::Builtin(BuiltinFunction::Yazdir) => f.write_str("builtin.yazdir"),
+            IrCallTarget::Runtime(call) => write!(f, "runtime.{call}"),
+        }
+    }
+}
+
+impl fmt::Display for IrRuntimeCall {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            IrRuntimeCall::Yazdir(Type::Sayi) => f.write_str("yazdir_sayi"),
+            IrRuntimeCall::Yazdir(Type::Mantik) => f.write_str("yazdir_mantik"),
+            IrRuntimeCall::Yazdir(Type::Metin) => f.write_str("yazdir_metin"),
+            IrRuntimeCall::MetinEsit => f.write_str("metin_esit"),
+            IrRuntimeCall::MetinEsitDegil => f.write_str("metin_esit_degil"),
         }
     }
 }
@@ -518,7 +581,7 @@ Ana() {
 
         assert!(ir.contains("fn Topla(a#0: sayı, b#1: sayı) -> sayı"));
         assert!(ir.contains("return (a#0 + b#1)"));
-        assert!(ir.contains("expr builtin.yazdir(Topla@0(10, 20))"));
+        assert!(ir.contains("expr runtime.yazdir_sayi(Topla@0(10, 20))"));
     }
 
     #[test]
@@ -539,5 +602,23 @@ Ana() {
         assert!(ir.contains("loop (decl i#0: sayı = 0; (i#0 < 3); set i#0 = (i#0 + 1))"));
         assert!(ir.contains("if (i#0 == 1)"));
         assert!(ir.contains("continue"));
+    }
+
+    #[test]
+    fn lowers_runtime_string_operations_explicitly() {
+        let ir = lower(
+            "\
+Ana() {
+    a: metin = \"Merhaba\";
+    yazdir(a);
+    yazdir(a == \"Merhaba\");
+    yazdir(a != \"Dunya\");
+}
+",
+        );
+
+        assert!(ir.contains("expr runtime.yazdir_metin(a#0)"));
+        assert!(ir.contains("runtime.yazdir_mantik(runtime.metin_esit(a#0, \"Merhaba\"))"));
+        assert!(ir.contains("runtime.yazdir_mantik(runtime.metin_esit_degil(a#0, \"Dunya\"))"));
     }
 }
