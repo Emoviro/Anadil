@@ -362,6 +362,7 @@ Desteklenenler:
 - Runtime kutuphanesi `target/native-runtime/anadil_runtime.lib` olarak cache'lenir ve `runtime/anadil_runtime.asm` timestamp'iyle invalidate edilir.
 - Typed AST optimizer sabit katlama ve basit cebirsel sadelestirme uygular.
 - `anadil ir` V0.2 ara temsilinde runtime operasyonlarini `runtime.yazdir_metin` ve `runtime.metin_esit` gibi acik isimlerle gosterir.
+- Static `metin` literal'lari native assembly'de length-prefixed Anadil metin nesnesi olarak emit edilir.
 - Native cikti dogrulugu su an interpreter oracle'i kullanan ornek programlar ve edge-case testleriyle korunur.
 
 Sinirlar:
@@ -372,6 +373,7 @@ Sinirlar:
 - Runtime helper'lari `GetStdHandle`, `WriteFile`, `ReadFile` ve `ExitProcess` kullanir; `printf`, `getchar`, `strcmp` veya C `exit` cagrisi yoktur.
 - Link satirinda Anadil runtime library ve `kernel32.lib` disinda CRT kutuphanesi yoktur.
 - Ilk 4 fonksiyon parametresi register ile, sonraki parametreler stack uzerinden tasinir.
+- Dinamik `metin` allocation ve metin birlestirme henuz yoktur; length-prefixed layout simdilik static literal yolunda kullanilir.
 - Runtime hatalari interpreter kadar ayrintili raporlanmaz.
 - Sifira bolme native executable icinde kontrollu hata ve process exit code `1` ile raporlanir.
 - Native executable program sonunda ve runtime hata cikisinda terminalin kapanmamasi icin Enter bekler.

@@ -131,17 +131,17 @@ Compiler her ifade icin tipi bildiginden, RC cagrisi gerekip gerekmedigi
 derleme sirasinda belirlenir. Value tipler icin paylas/birak ASLA
 emit edilmez.
 
-V0.1'de `metin` henuz heap reference degildir; compiler'in `.data`
-segmentinde tuttugu NUL-terminated statik literal pointer'i olarak
-calisir. V0.2+ migration'i tamamlandiginda `metin` kullanicinin gozunden
-tek tip kalir, ama runtime temsili length-prefixed heap/static reference
-modeline gecer.
+V0.1'de `metin` heap allocation uretmez; V0.2 branch'inde compiler'in
+`.data` segmentinde tuttugu statik literal'lar length-prefixed Anadil metin
+nesnesi layout'una tasindi. Dinamik `metin` uretimi henuz yoktur, ama
+literal ve ilerideki heap string kullanicinin gozunden tek `metin` tipi
+olarak kalacak sekilde ayni data pointer kontratina yaklastirildi.
 
 V0.2 branch'inde bu gecis icin runtime ABI hazirligi basladi:
 `anadil_runtime_metin_uzunluk`, `anadil_runtime_print_metin_nesne` ve
 `anadil_runtime_metin_esit` length-prefixed nesne layout'unu bekler. Native
-backend henuz bunlari emit etmez; V0.1 uyumlu NUL-terminated literal yolu
-korunur.
+backend static metin literal yazdirma ve karsilastirma icin artik bu helper
+yolunu kullanir.
 
 ## 4. Heap Nesne Layout'u
 
@@ -173,19 +173,21 @@ Tip ornekleri:
 `uzunluk(m)` builtin'i `mov rax, [m]` ile len'i okur (ptr len'i
 gosteriyor; bytes hemen ardindan).
 
-**Mevcut runtime ile catisma:**
+**V0.1 runtime ile catisma:**
 
-`runtime/anadil_runtime.asm` su an `metin`'i NUL-terminated kabul ediyor:
+V0.1 release hattinda `runtime/anadil_runtime.asm` `metin`'i
+NUL-terminated kabul ediyordu:
 
 - `anadil_runtime_print_metin` → `anadil_runtime_write_cstr`'i cagiriyor
   → byte byte `0`'a kadar tarayip uzunluk hesapliyor.
 - `anadil_runtime_strcmp` byte byte `0`'a kadar karsilastiriyor.
 - `text_dogru`, `text_yanlis` sabit byte dizileri NUL-terminated.
 
-Length-prefixed layout'a gecince bu fonksiyonlarin **hepsi degismek
-zorunda**. Bu compiler ve runtime arasinda esleştirilmis bir gecistir,
-ayni anda yapilmali. RC Faz 4 ozel olarak bu migration'a ayrilmis. Detay
-icin Bolum 13.4'e bakiniz.
+V0.2 branch'inde static literal yolu icin length-prefixed layout'a gecildi:
+compiler literal'lari `[refcount][tip_id][len][bytes...]` biciminde emit
+eder, `anadil_runtime_print_metin_nesne` ve `anadil_runtime_metin_esit`
+helper'larini cagirir. Eski C-string helper'lari runtime ic mesajlari ve
+`mantik` yazimi icin korunur.
 
 NUL-terminated'tan length-prefixed'e gecmek su kazanimlari getirir:
 

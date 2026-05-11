@@ -219,10 +219,10 @@ Frame size, local sayisina ve fonksiyon icindeki en genis call'un arguman scratc
 `metin`:
 
 - Su an yalnizca string literal desteklenir.
-- Literal'lar assembly `.data` bolumune null-terminated byte dizisi olarak yazilir.
-- Backend tarafinda literal emit'i `NativeStringLiteral` uzerinden tek noktada
-  toplanir; V0.2 length-prefixed static literal migration'i bu yuzeyi
-  degistirerek yapilacak.
+- Literal'lar assembly `.data` bolumune statik length-prefixed Anadil metin
+  nesnesi olarak yazilir: `[refcount][tip_id][len][bytes...]`.
+- Literal data pointer'i length alanini gosterir; runtime bytes alanina
+  `ptr + 8` ile ulasir.
 - Runtime'da yeni string allocation yoktur.
 
 Ornek:
@@ -234,7 +234,10 @@ mesaj: metin = "Merhaba";
 Assembly tarafinda:
 
 ```asm
-str_0 db "Merhaba", 0
+str_0_refcount dq 4000000000000000h
+str_0_tip dq 1
+str_0 dq 7
+str_0_bytes db "Merhaba"
 lea rax, str_0
 ```
 
@@ -245,8 +248,8 @@ lea rax, str_0
 Kullanilan formatlar:
 
 ```text
-sayi  -> "%lld\n"
-metin -> "%s\n"
+sayi  -> decimal + newline
+metin -> length-prefixed bytes + newline
 ```
 
 `mantik` degerleri once static metinlere cevrilir:
@@ -258,11 +261,11 @@ false -> "yanlis" UTF-8: yanlış
 
 ## Metin Karsilastirma
 
-`metin == metin` ve `metin != metin` islemleri `anadil_runtime_strcmp` helper'i ile uretilir. Bu helper runtime icinde byte byte karsilastirma yapar; C runtime `strcmp` cagrisi kullanmaz.
+`metin == metin` ve `metin != metin` islemleri `anadil_runtime_metin_esit` helper'i ile uretilir. Bu helper once length alanlarini, sonra byte'lari karsilastirir; C runtime `strcmp` cagrisi kullanmaz.
 
 ```text
-anadil_runtime_strcmp(a, b) == 0 -> esit
-anadil_runtime_strcmp(a, b) != 0 -> esit degil
+anadil_runtime_metin_esit(a, b) != 0 -> esit
+anadil_runtime_metin_esit(a, b) == 0 -> esit degil
 ```
 
 ## Runtime Hatalari
@@ -281,11 +284,11 @@ Compiler kullanici kodundan dogrudan platform API'si veya C runtime cagrisi uret
 
 ```text
 anadil_runtime_print_sayi(rcx=sayi)
-anadil_runtime_print_metin(rcx=metin_ptr)
+anadil_runtime_print_metin(rcx=cstr_ptr)
+anadil_runtime_print_metin_nesne(rcx=metin_obj_ptr)
 anadil_runtime_print_mantik(rcx=0/1)
 anadil_runtime_strcmp(rcx=left_ptr, rdx=right_ptr) -> eax
 anadil_runtime_metin_uzunluk(rcx=metin_obj_ptr) -> rax
-anadil_runtime_print_metin_nesne(rcx=metin_obj_ptr) -> void
 anadil_runtime_metin_esit(rcx=left_obj_ptr, rdx=right_obj_ptr) -> eax 0/1
 anadil_runtime_tahsis(rcx=data_size, rdx=tip_id) -> rax=data_ptr
 anadil_runtime_paylas(rcx=data_ptr) -> void
@@ -298,9 +301,10 @@ Bu helper'lar program assembly'sinden ayri bir cached runtime library olarak lin
 V0.2 baslangicinda heap primitive sembolleri de runtime'a eklendi; mevcut
 compiler henuz bu primitive'leri emit etmez, dinamik `metin`/`dizi`/`yapi`
 fazlari icin ABI hazirligi olarak tutulur.
-Length-prefixed `metin` nesnesi icin hazirlanan helper'lar da ayni sekilde
-simdilik kullanilmayan ABI yuzeyidir; mevcut native backend V0.1 uyumlulugu
-icin NUL-terminated literal ve `anadil_runtime_print_metin` yolunu kullanir.
+Length-prefixed `metin` nesnesi icin hazirlanan helper'lar native backend
+tarafindan static literal yazdirma ve karsilastirma icin kullanilir. Eski
+C-string helper'lari runtime'in kendi hata ve `mantik` metinleri icin ic
+uyumluluk yuzeyi olarak kalir.
 
 ## Runtime Library Paketleme
 
@@ -399,7 +403,7 @@ Bu nedenle:
 - Garbage collector yoktur.
 - Reference counting yoktur.
 - Manual `free`/`delete` modeli yoktur.
-- String literal'lar static `.data` bolumunde yasar.
+- String literal'lar static length-prefixed `.data` nesneleri olarak yasar.
 - `sayi`, `mantik` ve local `metin` referanslari stack slot'larda tutulur.
 
 Bu model mevcut V0.1 dil alt kumesi icin yeterlidir. `metin` birlestirme, dizi, struct veya dinamik obje destegi eklendiginde heap modeli gerekecektir.
