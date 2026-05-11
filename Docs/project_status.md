@@ -64,6 +64,8 @@ dogrulama/debug araci olarak tutulur.
   metin uretir, ancak compiler henuz otomatik `birak` cleanup emit etmez.
 - Ilk RC cleanup emit'i eklendi: void fonksiyonlarin ust seviye `metin`
   local'leri fonksiyon cikisinda `anadil_runtime_birak` ile birakilir.
+- `metin` assignment replacement icin owned/static RHS durumunda eski slot
+  degeri guvenli sekilde `birak` ile temizlenir.
 - Program entrypoint'i `Ana()` olarak kabul ediliyor.
 - Fonksiyon cagirma, stack argument gecisi ve nested call senaryolari test
   altinda.

@@ -48,6 +48,19 @@ Ana() {\n\
 }
 
 #[test]
+fn native_string_assignment_replacement_matches_interpreter() {
+    assert_native_output(
+        "string_assignment_replace",
+        "\
+Ana() {\n\
+    mesaj: metin = \"Eski\";\n\
+    mesaj = \"Yeni\" + \" Deger\";\n\
+    yazdir(mesaj);\n\
+}\n",
+    );
+}
+
+#[test]
 fn native_void_function_matches_interpreter() {
     assert_native_output(
         "void_function",

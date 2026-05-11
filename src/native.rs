@@ -196,11 +196,7 @@ impl<'a> NativeEmitter<'a> {
                 ));
             }
             TypedStmtKind::Assign(assign) => {
-                self.emit_expr(&assign.value, out)?;
-                out.push_str(&format!(
-                    "    mov QWORD PTR [rbp-{}], rax\n",
-                    local_offset(assign.target.id)
-                ));
+                self.emit_assignment(assign, out)?;
             }
             TypedStmtKind::Expr(expr) => {
                 self.emit_expr(expr, out)?;
@@ -284,16 +280,36 @@ impl<'a> NativeEmitter<'a> {
                 ));
             }
             TypedLoopPart::Assign(assign) => {
-                self.emit_expr(&assign.value, out)?;
-                out.push_str(&format!(
-                    "    mov QWORD PTR [rbp-{}], rax\n",
-                    local_offset(assign.target.id)
-                ));
+                self.emit_assignment(assign, out)?;
             }
             TypedLoopPart::Expr(expr) => {
                 self.emit_expr(expr, out)?;
             }
         }
+        Ok(())
+    }
+
+    fn emit_assignment(
+        &mut self,
+        assign: &crate::typed::TypedAssignStmt,
+        out: &mut String,
+    ) -> Result<(), String> {
+        self.emit_expr(&assign.value, out)?;
+        if assign.target.ty == Type::Metin && is_owned_or_static_string_expr(&assign.value) {
+            self.emit_push_rax(out);
+            out.push_str(&format!(
+                "    mov rcx, QWORD PTR [rbp-{}]\n",
+                local_offset(assign.target.id)
+            ));
+            let call_area_size = self.emit_reserve_call_area(0, out);
+            out.push_str("    call anadil_runtime_birak\n");
+            self.emit_release_call_area(call_area_size, out);
+            self.emit_pop_into("rax", out);
+        }
+        out.push_str(&format!(
+            "    mov QWORD PTR [rbp-{}], rax\n",
+            local_offset(assign.target.id)
+        ));
         Ok(())
     }
 
@@ -725,6 +741,15 @@ fn is_string_concat(left: &TypedExpr, op: BinaryOp, right: &TypedExpr) -> bool {
         && matches!(right.ty, TypedExprType::Value(Type::Metin))
 }
 
+fn is_owned_or_static_string_expr(expr: &TypedExpr) -> bool {
+    matches!(expr.ty, TypedExprType::Value(Type::Metin))
+        && match &expr.kind {
+            TypedExprKind::String(_) => true,
+            TypedExprKind::Binary { left, op, right } => is_string_concat(left, *op, right),
+            _ => false,
+        }
+}
+
 fn encode_db_string(value: &str) -> String {
     let mut parts = Vec::new();
     let mut current = String::new();
@@ -855,6 +880,25 @@ Ana() {\n\
 
         assert!(asm.contains("extrn anadil_runtime_birak:proc"));
         assert!(asm.contains("call anadil_runtime_birak"));
+    }
+
+    #[test]
+    fn emits_cleanup_when_replacing_string_with_owned_value() {
+        let source = "\
+Ana() {\n\
+    mesaj: metin = \"Eski\";\n\
+    mesaj = \"Yeni\" + \" Deger\";\n\
+    yazdir(mesaj);\n\
+}\n";
+
+        let program = compile_source(source).expect("program should compile");
+        let asm = emit_windows_x64_asm(&program).expect("assembly should be emitted");
+
+        assert!(asm.contains("call anadil_runtime_metin_birlestir"));
+        assert!(
+            asm.matches("call anadil_runtime_birak").count() >= 2,
+            "assignment replacement and function exit should both cleanup"
+        );
     }
 
     #[test]

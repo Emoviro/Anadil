@@ -290,6 +290,12 @@ Bu henuz tam RC degildir: ara concat temporary'leri, atama ustune yazma,
 parametre sahipligi, return value sahipligi ve ic blok/branch local cleanup
 kurallari sonraki RC emit fazlarina kalir.
 
+Atama tarafinda ilk guvenli daralma eklendi: `metin` local'i literal veya
+`metin + metin` gibi owned/static bir ifadeyle yeniden atanirken eski slot
+degeri yeni deger korunarak `anadil_runtime_birak` ile birakilir.
+`x = y` gibi baska local'den paylas gerektiren assignment'lar henuz tam RC
+kurali bekler; bu durumda compiler ekstra `paylas`/`birak` emit etmez.
+
 ## Runtime Hatalari
 
 Native MVP sifira bolme icin interpreter'a benzer kontrollu hata davranisi uretir. Kodgen bu durumda `anadil_runtime_panic` helper'ini cagirir:
@@ -477,7 +483,8 @@ Visual Studio native toolchain bulunamazsa native integration testi kendini skip
 - Garbage collector yoktur.
 - `metin + metin` disinda runtime metin uretimi yoktur.
 - Dinamik metinler icin otomatik `birak` emit'i simdilik yalnizca void
-  fonksiyon ust seviye `metin` local'leriyle sinirlidir.
+  fonksiyon ust seviye `metin` local'leri ve owned/static RHS ile guvenli
+  `metin` assignment replacement icin vardir.
 - Native runtime hatalari tek satir `Anadil runtime hatasi: ...` formatindadir, ancak henuz kaynak satir/sutun bilgisi tasimaz.
 - Optimizasyon su an yalnizca typed AST uzerinde sabit katlama ve basit
   cebirsel sadelestirme seviyesindedir; IR/CFG tabanli optimizer yoktur.
