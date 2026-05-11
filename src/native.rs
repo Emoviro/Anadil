@@ -102,6 +102,7 @@ impl<'a> NativeEmitter<'a> {
         out.push_str("extrn anadil_runtime_print_mantik:proc\n");
         out.push_str("extrn anadil_runtime_metin_esit:proc\n");
         out.push_str("extrn anadil_runtime_metin_birlestir:proc\n");
+        out.push_str("extrn anadil_runtime_birak:proc\n");
         out.push_str("extrn anadil_runtime_wait_before_exit:proc\n");
         out.push_str("extrn anadil_runtime_panic:proc\n\n");
         out.push_str(".data\n");
@@ -167,6 +168,9 @@ impl<'a> NativeEmitter<'a> {
         self.emit_block(&function.body, out)?;
         out.push_str("    xor rax, rax\n");
         out.push_str(&format!("{return_label}:\n"));
+        if function.return_type.is_none() {
+            self.emit_function_scope_ref_cleanup(function, out);
+        }
         out.push_str(&format!("    add rsp, {frame_size}\n"));
         out.push_str("    pop rbp\n");
         out.push_str("    ret\n");
@@ -526,6 +530,18 @@ impl<'a> NativeEmitter<'a> {
         Ok(())
     }
 
+    fn emit_function_scope_ref_cleanup(&self, function: &TypedFunction, out: &mut String) {
+        for local in function_scope_ref_locals(function).into_iter().rev() {
+            out.push_str(&format!(
+                "    mov rcx, QWORD PTR [rbp-{}]\n",
+                local_offset(local)
+            ));
+            let call_area_size = self.emit_reserve_call_area(0, out);
+            out.push_str("    call anadil_runtime_birak\n");
+            self.emit_release_call_area(call_area_size, out);
+        }
+    }
+
     fn intern_string(&mut self, value: &str) -> String {
         let label = format!("str_{}", self.string_literals.len());
         let literal = NativeStringLiteral::new(label, value);
@@ -551,6 +567,18 @@ fn local_offset(id: LocalId) -> usize {
 
 fn call_arg_offset(local_count: usize, index: usize) -> usize {
     (local_count + index + 1) * 8
+}
+
+fn function_scope_ref_locals(function: &TypedFunction) -> Vec<LocalId> {
+    function
+        .body
+        .statements
+        .iter()
+        .filter_map(|statement| match &statement.kind {
+            TypedStmtKind::VarDecl(decl) if decl.ty == Type::Metin => Some(decl.local_id),
+            _ => None,
+        })
+        .collect()
 }
 
 fn local_count(function: &TypedFunction) -> usize {
@@ -812,6 +840,21 @@ Ana() {\n\
         assert!(asm.contains("extrn anadil_runtime_metin_birlestir:proc"));
         assert!(asm.contains("call anadil_runtime_metin_birlestir"));
         assert!(asm.contains("call anadil_runtime_print_metin_nesne"));
+    }
+
+    #[test]
+    fn emits_basic_cleanup_for_function_scope_string_locals() {
+        let source = "\
+Ana() {\n\
+    mesaj: metin = \"Merhaba\" + \" Anadil\";\n\
+    yazdir(mesaj);\n\
+}\n";
+
+        let program = compile_source(source).expect("program should compile");
+        let asm = emit_windows_x64_asm(&program).expect("assembly should be emitted");
+
+        assert!(asm.contains("extrn anadil_runtime_birak:proc"));
+        assert!(asm.contains("call anadil_runtime_birak"));
     }
 
     #[test]

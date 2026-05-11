@@ -62,6 +62,8 @@ dogrulama/debug araci olarak tutulur.
   bicimine tasindi.
 - `metin + metin` MVP olarak eklendi; runtime heap'te yeni length-prefixed
   metin uretir, ancak compiler henuz otomatik `birak` cleanup emit etmez.
+- Ilk RC cleanup emit'i eklendi: void fonksiyonlarin ust seviye `metin`
+  local'leri fonksiyon cikisinda `anadil_runtime_birak` ile birakilir.
 - Program entrypoint'i `Ana()` olarak kabul ediliyor.
 - Fonksiyon cagirma, stack argument gecisi ve nested call senaryolari test
   altinda.

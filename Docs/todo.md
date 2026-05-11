@@ -41,6 +41,7 @@ Kalan P2 bosluklar `Docs/test_gap_analizi.md` altinda izlenir.
 - [ ] Native compiler regresyon orneklerini interpreter disi beklenen cikti modeliyle genislet.
 - [x] Static `metin` literal layout'unu length-prefixed nesne bicimine tasi.
 - [x] `metin + metin` icin dinamik heap metin birlestirme MVP'si ekle.
+- [x] Void fonksiyon ust seviye `metin` local'leri icin temel RC cleanup emit et.
 - [x] Native string literal emit'ini length-prefixed migration'a hazir soyutlamaya al.
 - [x] IR cikti katmaninda runtime metin operasyonlarini acik temsil et.
 - [x] Length-prefixed `metin` nesnesi icin runtime ABI helper'larini ekle.

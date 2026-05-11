@@ -280,6 +280,16 @@ Bu ilk dilimde RC cleanup emit'i yoktur; uretilen dinamik metinler program
 omru boyunca serbest birakilmaz. V0.2 RC emit fazi atama, kapsam cikisi ve
 return kurallarini ekleyene kadar bu bilinen bir sinirdir.
 
+Ilk cleanup dilimi olarak native backend, donus degeri olmayan fonksiyonlarin
+ust seviye `metin` local'leri icin fonksiyon cikisinda
+`anadil_runtime_birak` emit eder. Static literal'lar refcount sentinel'i
+tasidigi icin bu cagri no-op olur; `metin + metin` sonucu heap nesnesi ise
+serbest birakilir.
+
+Bu henuz tam RC degildir: ara concat temporary'leri, atama ustune yazma,
+parametre sahipligi, return value sahipligi ve ic blok/branch local cleanup
+kurallari sonraki RC emit fazlarina kalir.
+
 ## Runtime Hatalari
 
 Native MVP sifira bolme icin interpreter'a benzer kontrollu hata davranisi uretir. Kodgen bu durumda `anadil_runtime_panic` helper'ini cagirir:
@@ -414,8 +424,8 @@ Su an native backend'de heap allocation yoktur.
 Bu nedenle:
 
 - Garbage collector yoktur.
-- Reference counting helper'lari vardir, ancak compiler henuz otomatik
-  cleanup emit etmez.
+- Reference counting helper'lari vardir; compiler yalnizca ilk MVP olarak
+  void fonksiyon ust seviye `metin` local cleanup'i emit eder.
 - Manual `free`/`delete` modeli yoktur.
 - String literal'lar static length-prefixed `.data` nesneleri olarak yasar.
 - `sayi`, `mantik` ve local `metin` referanslari stack slot'larda tutulur.
@@ -466,7 +476,8 @@ Visual Studio native toolchain bulunamazsa native integration testi kendini skip
 - Heap allocation yoktur.
 - Garbage collector yoktur.
 - `metin + metin` disinda runtime metin uretimi yoktur.
-- Dinamik metinler icin otomatik `birak` emit'i henuz yoktur.
+- Dinamik metinler icin otomatik `birak` emit'i simdilik yalnizca void
+  fonksiyon ust seviye `metin` local'leriyle sinirlidir.
 - Native runtime hatalari tek satir `Anadil runtime hatasi: ...` formatindadir, ancak henuz kaynak satir/sutun bilgisi tasimaz.
 - Optimizasyon su an yalnizca typed AST uzerinde sabit katlama ve basit
   cebirsel sadelestirme seviyesindedir; IR/CFG tabanli optimizer yoktur.

@@ -365,6 +365,7 @@ Desteklenenler:
 - `anadil ir` V0.2 ara temsilinde runtime operasyonlarini `runtime.yazdir_metin` ve `runtime.metin_esit` gibi acik isimlerle gosterir.
 - Static `metin` literal'lari native assembly'de length-prefixed Anadil metin nesnesi olarak emit edilir.
 - `metin + metin`, runtime heap allocation ile yeni length-prefixed metin uretir.
+- Void fonksiyonlardaki ust seviye `metin` local'leri icin temel `birak` cleanup'i emit edilir.
 - Native cikti dogrulugu su an interpreter oracle'i kullanan ornek programlar ve edge-case testleriyle korunur.
 
 Sinirlar:
@@ -375,7 +376,7 @@ Sinirlar:
 - Runtime helper'lari `GetStdHandle`, `WriteFile`, `ReadFile` ve `ExitProcess` kullanir; `printf`, `getchar`, `strcmp` veya C `exit` cagrisi yoktur.
 - Link satirinda Anadil runtime library ve `kernel32.lib` disinda CRT kutuphanesi yoktur.
 - Ilk 4 fonksiyon parametresi register ile, sonraki parametreler stack uzerinden tasinir.
-- Dinamik `metin` allocation simdilik `metin + metin` ile sinirlidir; otomatik `birak` emit'i henuz yoktur.
+- Dinamik `metin` allocation simdilik `metin + metin` ile sinirlidir; otomatik `birak` emit'i yalnizca void fonksiyon ust seviye `metin` local'leri icin vardir.
 - Runtime hatalari interpreter kadar ayrintili raporlanmaz.
 - Sifira bolme native executable icinde kontrollu hata ve process exit code `1` ile raporlanir.
 - Native executable program sonunda ve runtime hata cikisinda terminalin kapanmamasi icin Enter bekler.
