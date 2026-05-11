@@ -56,6 +56,8 @@ dogrulama/debug araci olarak tutulur.
   eklendi; compiler henuz bunlari kullanmiyor.
 - Length-prefixed `metin` nesnesi icin runtime ABI helper'lari eklendi;
   native backend halen V0.1 uyumlu NUL-terminated literal yolunu kullanir.
+- Native string literal emit'i tek `NativeStringLiteral` soyutlamasinda
+  toplandi; V0.2 static literal layout migration'i icin hazirlik yapildi.
 - Program entrypoint'i `Ana()` olarak kabul ediliyor.
 - Fonksiyon cagirma, stack argument gecisi ve nested call senaryolari test
   altinda.

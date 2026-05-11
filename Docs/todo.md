@@ -39,6 +39,7 @@ Kalan P2 bosluklar `Docs/test_gap_analizi.md` altinda izlenir.
 ## Native Compiler
 
 - [ ] Native compiler regresyon orneklerini interpreter disi beklenen cikti modeliyle genislet.
+- [x] Native string literal emit'ini length-prefixed migration'a hazir soyutlamaya al.
 - [x] IR cikti katmaninda runtime metin operasyonlarini acik temsil et.
 - [x] Length-prefixed `metin` nesnesi icin runtime ABI helper'larini ekle.
 - [x] V0.2 heap primitive runtime sembollerini stub olarak ekle.

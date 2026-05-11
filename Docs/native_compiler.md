@@ -220,6 +220,9 @@ Frame size, local sayisina ve fonksiyon icindeki en genis call'un arguman scratc
 
 - Su an yalnizca string literal desteklenir.
 - Literal'lar assembly `.data` bolumune null-terminated byte dizisi olarak yazilir.
+- Backend tarafinda literal emit'i `NativeStringLiteral` uzerinden tek noktada
+  toplanir; V0.2 length-prefixed static literal migration'i bu yuzeyi
+  degistirerek yapilacak.
 - Runtime'da yeni string allocation yoktur.
 
 Ornek:

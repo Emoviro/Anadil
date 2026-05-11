@@ -13,7 +13,7 @@ pub fn emit_windows_x64_asm(program: &TypedProgram) -> Result<String, String> {
 struct NativeEmitter<'a> {
     program: &'a TypedProgram,
     functions: HashMap<FunctionId, &'a TypedFunction>,
-    string_literals: Vec<(String, String)>,
+    string_literals: Vec<NativeStringLiteral>,
     label_index: usize,
     current_return_label: String,
     current_local_count: usize,
@@ -26,6 +26,32 @@ struct NativeEmitter<'a> {
 struct LoopLabels {
     break_label: String,
     continue_label: String,
+}
+
+#[derive(Debug, Clone)]
+struct NativeStringLiteral {
+    label: String,
+    value: String,
+}
+
+impl NativeStringLiteral {
+    fn new(label: String, value: &str) -> Self {
+        Self {
+            label,
+            value: value.to_string(),
+        }
+    }
+
+    fn data_pointer_label(&self) -> &str {
+        &self.label
+    }
+
+    fn emit_data(&self, out: &mut String) {
+        out.push_str(&self.label);
+        out.push_str(" db ");
+        out.push_str(&encode_db_string(&self.value));
+        out.push_str(", 0\n");
+    }
 }
 
 impl<'a> NativeEmitter<'a> {
@@ -79,11 +105,8 @@ impl<'a> NativeEmitter<'a> {
 
         if !self.string_literals.is_empty() {
             out.push_str(".data\n");
-            for (label, value) in &self.string_literals {
-                out.push_str(label);
-                out.push_str(" db ");
-                out.push_str(&encode_db_string(value));
-                out.push_str(", 0\n");
+            for literal in &self.string_literals {
+                literal.emit_data(&mut out);
             }
         }
 
@@ -474,9 +497,10 @@ impl<'a> NativeEmitter<'a> {
 
     fn intern_string(&mut self, value: &str) -> String {
         let label = format!("str_{}", self.string_literals.len());
-        self.string_literals
-            .push((label.clone(), value.to_string()));
-        label
+        let literal = NativeStringLiteral::new(label, value);
+        let data_label = literal.data_pointer_label().to_string();
+        self.string_literals.push(literal);
+        data_label
     }
 
     fn fresh_label(&mut self, prefix: &str) -> String {
