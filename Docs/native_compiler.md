@@ -24,9 +24,11 @@ Ilgili dosyalar:
 - `src/native.rs`: Typed AST'den Windows x64 MASM assembly uretir.
 - `src/optimizer.rs`: Typed AST uzerinde sabit katlama ve basit cebirsel
   sadelestirme gecisi uygular.
+- `src/ir.rs`: V0.2 ara temsilini typed AST'den dusurur ve okunabilir
+  metin formatiyla yazdirir.
 - `runtime/anadil_runtime.asm`: Anadil runtime helper'larini ayri MASM modulu olarak saglar.
 - `src/lib.rs`: `emit_native_asm_source` API'sini disari acar.
-- `src/main.rs`: `asm`, `asm-yaz` ve `derle` CLI komutlarini calistirir.
+- `src/main.rs`: `ir`, `asm`, `asm-yaz` ve `derle` CLI komutlarini calistirir.
 - `tests/native_examples.rs`: Ornek programlari native executable olarak derler ve interpreter ciktisiyla karsilastirir.
 - `tests/native_edge_cases.rs`: Fonksiyon cagrisi, stack arguman, nested call, karsilastirma ve runtime hata edge case'lerini native/interpreter davranisiyla karsilastirir.
 - `tests/cli_diagnostics.rs`: CLI hata ciktisinin IDE tarafindan okunabilir satir/sutun ve caret bilgisi tasidigini kontrol eder.
@@ -76,6 +78,16 @@ cargo run -- yorumla --json examples\topla.ana
 
 `yorumla --json` runtime hatalarini satir/sutun bilgili `runtime` stage'iyle
 raporlar; bu yol V0.1'de dogrulama/test araci olarak kalir.
+
+V0.2 ara temsilini goruntulemek:
+
+```powershell
+cargo run -- ir examples\topla.ana
+```
+
+Bu komut typed AST optimizer sonrasi programi okunabilir Anadil IR
+formatinda yazar. V0.2'de IR henuz native backend'in girdisi degildir;
+backend switch icin hazirlik ve test yuzeyi olarak tutulur.
 
 Native executable'i IDE entegrasyonu icin JSON build sonucu ile derlemek:
 

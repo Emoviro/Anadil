@@ -25,7 +25,7 @@ Yapilanlar:
 - `Ana()` giris noktasi
 - `yazdır` yerlesik fonksiyonu (`yazdir` ASCII alias'i da desteklenir)
 - `//` satir yorumlari
-- CLI komutlari: `calistir`, `yorumla`, `kontrol`, `ast`, `typed`, `asm`, `asm-yaz`, `derle`, `ide`, `ornekler`, `surum`, `yardim`
+- CLI komutlari: `calistir`, `yorumla`, `kontrol`, `ast`, `typed`, `ir`, `asm`, `asm-yaz`, `derle`, `ide`, `ornekler`, `surum`, `yardim`
 - Etkilesimli REPL komutu: `repl`
 
 Bu CLI yuzeyi V0.1 icin sabit kabul edilir.
@@ -149,6 +149,12 @@ Semantic analizden sonraki typed AST'yi yazdirma:
 
 ```powershell
 cargo run -- typed examples\topla.ana
+```
+
+V0.2 ara temsilini yazdirma:
+
+```powershell
+cargo run -- ir examples\topla.ana
 ```
 
 Windows x64 assembly uretme:

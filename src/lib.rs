@@ -2,6 +2,7 @@ pub mod ast;
 pub mod diagnostics;
 pub mod error;
 pub mod interpreter;
+pub mod ir;
 pub mod lexer;
 pub mod native;
 pub mod optimizer;
@@ -12,6 +13,7 @@ pub mod typed;
 
 use diagnostics::{format_lex_error, format_parse_error, format_semantic_error, Diagnostic};
 use interpreter::Interpreter;
+use ir::{format_ir, lower_typed_program};
 use lexer::Lexer;
 use optimizer::optimize_typed_program;
 use parser::Parser;
@@ -69,6 +71,11 @@ pub fn run_source(source: &str) -> Result<String, String> {
 pub fn emit_native_asm_source(source: &str) -> Result<String, String> {
     let program = compile_source(source)?;
     native::emit_windows_x64_asm(&program)
+}
+
+pub fn emit_ir_source(source: &str) -> Result<String, String> {
+    let program = compile_source(source)?;
+    Ok(format_ir(&lower_typed_program(&program)))
 }
 
 #[cfg(test)]

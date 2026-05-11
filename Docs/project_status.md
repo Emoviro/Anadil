@@ -15,7 +15,7 @@ Compiler tarafinda tercih edilen yon:
 
 ```text
 .ana kaynak
--> lexer / parser / semantic analiz / typed AST
+-> lexer / parser / semantic analiz / typed AST / typed AST optimizer / IR taslagi
 -> Windows x64 MASM assembly
 -> program.obj
 + Anadil runtime library
@@ -47,6 +47,9 @@ dogrulama/debug araci olarak tutulur.
 - `.ana -> assembly -> obj -> exe` hatti calisir durumda.
 - Native backend `src/native.rs` icinde typed AST'den Windows x64 MASM
   assembly uretiyor.
+- V0.2 branch'inde typed AST optimizer ve okunabilir `anadil ir`
+  ara temsil komutu eklendi; native backend henuz typed AST hattindan
+  calismaya devam ediyor.
 - Program entrypoint'i `Ana()` olarak kabul ediliyor.
 - Fonksiyon cagirma, stack argument gecisi ve nested call senaryolari test
   altinda.
@@ -216,8 +219,8 @@ islerle ortusur.
 ### CLI ve diagnostics
 
 - [x] CLI komut yuzeyi sabit: `calistir`, `yorumla`, `kontrol`, `ast`,
-  `typed`, `asm`, `asm-yaz`, `derle`, `ide`, `ornekler`, `surum`, `yardim`,
-  `repl`.
+  `typed`, `ir`, `asm`, `asm-yaz`, `derle`, `ide`, `ornekler`, `surum`,
+  `yardim`, `repl`.
 - [x] `kontrol --json`, `calistir --json` ve `derle --json` IDE/araclar icin
   kararli diagnostic semasi uretiyor. `yorumla --json` gecici
   interpreter/test protokolu olarak kalir.
