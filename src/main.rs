@@ -1324,7 +1324,11 @@ fn looks_like_entry_program(input: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs, path::PathBuf};
+    use std::{
+        fs,
+        path::PathBuf,
+        time::{SystemTime, UNIX_EPOCH},
+    };
 
     use super::{
         packaged_runtime_lib_path_from_exe, parse_args, runtime_lib_needs_rebuild,
@@ -1355,10 +1359,21 @@ mod tests {
         assert_eq!(sanitize_build_name("çalışma-1"), "_al__ma-1");
     }
 
+    fn unique_runtime_cache_test_dir(name: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after UNIX_EPOCH")
+            .as_nanos();
+        let dir = PathBuf::from("target")
+            .join("runtime_cache_unit_tests")
+            .join(format!("{name}_{}_{}", std::process::id(), nanos));
+        fs::create_dir_all(&dir).expect("test cache dir should be created");
+        dir
+    }
+
     #[test]
     fn runtime_obj_cache_rebuilds_when_obj_is_missing() {
-        let dir = PathBuf::from("target").join("runtime_cache_unit_tests");
-        fs::create_dir_all(&dir).expect("test cache dir should be created");
+        let dir = unique_runtime_cache_test_dir("obj_missing");
         let runtime_asm = dir.join("anadil_runtime.asm");
         let runtime_obj = dir.join("anadil_runtime.obj");
         fs::write(&runtime_asm, "; test runtime").expect("runtime asm should be written");
@@ -1370,8 +1385,7 @@ mod tests {
 
     #[test]
     fn runtime_lib_cache_rebuilds_when_lib_is_missing() {
-        let dir = PathBuf::from("target").join("runtime_cache_unit_tests");
-        fs::create_dir_all(&dir).expect("test cache dir should be created");
+        let dir = unique_runtime_cache_test_dir("lib_missing");
         let runtime_obj = dir.join("anadil_runtime.obj");
         let runtime_lib = dir.join("anadil_runtime.lib");
         fs::write(&runtime_obj, "test object placeholder").expect("runtime obj should be written");
