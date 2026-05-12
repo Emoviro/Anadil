@@ -2,8 +2,7 @@
 
 ## Hemen Sonraki Adim
 
-- V0.2 branch'i icin PR ac; aciklamada `Docs/v0.2_merge_notes.md`
-  icerigini kullan.
+- V0.3 dizi MVP icin syntax ve kapsam kararlarini ver.
 
 ## Sonraki Native Compiler Sprinti
 
@@ -79,6 +78,7 @@ Kalan P2 bosluklar `Docs/test_gap_analizi.md` altinda izlenir.
 
 - [ ] Turkce karakterli ana builtin yazimi ve `yazdir` ASCII alias kararini dokumanlarda tutarli tut.
 - [ ] Dizi/yapi/modul icin MVP kapsam kararini yaz.
+- [ ] V0.3 dizi syntax kararini `Docs/v0.3_roadmap.md` uzerinden netlestir.
 - [x] Memory management modelini kisa tasarim notuna dok.
 
 ## Sonra
