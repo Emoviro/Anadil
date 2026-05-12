@@ -1,0 +1,7 @@
+Ana() {
+    degerler: dizi = {1, "iki", 3};
+
+    yazdir(uzunluk(degerler));
+    yazdir(degerler[0]);
+    yazdir(degerler[1]);
+}

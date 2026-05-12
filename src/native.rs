@@ -107,6 +107,11 @@ impl<'a> NativeEmitter<'a> {
         out.push_str("extrn anadil_runtime_metin_esit:proc\n");
         out.push_str("extrn anadil_runtime_metin_birlestir:proc\n");
         out.push_str("extrn anadil_runtime_metin_uzunluk:proc\n");
+        out.push_str("extrn anadil_runtime_dizi_olustur:proc\n");
+        out.push_str("extrn anadil_runtime_dizi_set:proc\n");
+        out.push_str("extrn anadil_runtime_dizi_get:proc\n");
+        out.push_str("extrn anadil_runtime_dizi_uzunluk:proc\n");
+        out.push_str("extrn anadil_runtime_print_deger:proc\n");
         out.push_str("extrn anadil_runtime_paylas:proc\n");
         out.push_str("extrn anadil_runtime_birak:proc\n");
         out.push_str("extrn anadil_runtime_wait_before_exit:proc\n");
@@ -207,7 +212,7 @@ impl<'a> NativeEmitter<'a> {
         match &statement.kind {
             TypedStmtKind::VarDecl(decl) => {
                 self.emit_expr(&decl.value, out)?;
-                self.emit_retain_if_shared_string(&decl.value, out);
+                self.emit_retain_if_shared_ref(&decl.value, out);
                 out.push_str(&format!(
                     "    mov QWORD PTR [rbp-{}], rax\n",
                     local_offset(decl.local_id)
@@ -224,7 +229,7 @@ impl<'a> NativeEmitter<'a> {
             TypedStmtKind::Return(value) => {
                 if let Some(value) = value {
                     self.emit_expr(value, out)?;
-                    self.emit_retain_if_shared_string(value, out);
+                    self.emit_retain_if_shared_ref(value, out);
                     if !self.scope_cleanup_stack.is_empty() {
                         self.emit_push_rax(out);
                         self.emit_active_scope_ref_cleanup(out);
@@ -314,7 +319,7 @@ impl<'a> NativeEmitter<'a> {
     }
 
     fn defer_ref_cleanup(&mut self, local_id: LocalId, ty: Type) {
-        if ty == Type::Metin {
+        if is_ref_type(ty) {
             if let Some(scope) = self.scope_cleanup_stack.last_mut() {
                 scope.push(local_id);
             }
@@ -325,7 +330,7 @@ impl<'a> NativeEmitter<'a> {
         match part {
             TypedLoopPart::VarDecl(decl) => {
                 self.emit_expr(&decl.value, out)?;
-                self.emit_retain_if_shared_string(&decl.value, out);
+                self.emit_retain_if_shared_ref(&decl.value, out);
                 out.push_str(&format!(
                     "    mov QWORD PTR [rbp-{}], rax\n",
                     local_offset(decl.local_id)
@@ -347,12 +352,11 @@ impl<'a> NativeEmitter<'a> {
         out: &mut String,
     ) -> Result<(), String> {
         self.emit_expr(&assign.value, out)?;
-        if assign.target.ty == Type::Metin && is_shared_string_expr(&assign.value) {
+        if is_ref_type(assign.target.ty) && is_shared_ref_expr(&assign.value) {
             self.emit_retain_rax(out);
         }
-        if assign.target.ty == Type::Metin
-            && (is_owned_or_static_string_expr(&assign.value)
-                || is_shared_string_expr(&assign.value))
+        if is_ref_type(assign.target.ty)
+            && (is_owned_or_static_ref_expr(&assign.value) || is_shared_ref_expr(&assign.value))
         {
             self.emit_push_rax(out);
             out.push_str(&format!(
@@ -371,8 +375,8 @@ impl<'a> NativeEmitter<'a> {
         Ok(())
     }
 
-    fn emit_retain_if_shared_string(&mut self, expr: &TypedExpr, out: &mut String) {
-        if is_shared_string_expr(expr) {
+    fn emit_retain_if_shared_ref(&mut self, expr: &TypedExpr, out: &mut String) {
+        if is_shared_ref_expr(expr) {
             self.emit_retain_rax(out);
         }
     }
@@ -387,7 +391,7 @@ impl<'a> NativeEmitter<'a> {
     }
 
     fn emit_release_if_owned_temporary_string(&mut self, expr: &TypedExpr, out: &mut String) {
-        if is_owned_temporary_string_expr(expr) {
+        if is_owned_temporary_ref_expr(expr) {
             self.emit_release_rax(out);
         }
     }
@@ -402,11 +406,8 @@ impl<'a> NativeEmitter<'a> {
                 let label = self.intern_string(value);
                 out.push_str(&format!("    lea rax, {label}\n"));
             }
-            TypedExprKind::Array(_) | TypedExprKind::Index { .. } => {
-                return Err(
-                    "dizi ifadeleri native compiler tarafinda henuz desteklenmiyor".to_string(),
-                );
-            }
+            TypedExprKind::Array(elements) => self.emit_array_literal(elements, out)?,
+            TypedExprKind::Index { target, index } => self.emit_index_expr(target, index, out)?,
             TypedExprKind::Variable(local) => {
                 out.push_str(&format!(
                     "    mov rax, QWORD PTR [rbp-{}]\n",
@@ -531,6 +532,60 @@ impl<'a> NativeEmitter<'a> {
         Ok(())
     }
 
+    fn emit_array_literal(
+        &mut self,
+        elements: &[TypedExpr],
+        out: &mut String,
+    ) -> Result<(), String> {
+        out.push_str(&format!("    mov rcx, {}\n", elements.len()));
+        let alloc_area_size = self.emit_reserve_call_area(0, out);
+        out.push_str("    call anadil_runtime_dizi_olustur\n");
+        self.emit_release_call_area(alloc_area_size, out);
+        self.emit_push_rax(out);
+
+        for (index, element) in elements.iter().enumerate() {
+            let tag = array_value_tag(element)?;
+            self.emit_expr(element, out)?;
+            let cleanup_element = is_owned_temporary_ref_expr(element);
+            self.emit_push_rax(out);
+            out.push_str("    mov rcx, QWORD PTR [rsp+8]\n");
+            out.push_str(&format!("    mov rdx, {index}\n"));
+            out.push_str(&format!("    mov r8, {tag}\n"));
+            out.push_str("    mov r9, QWORD PTR [rsp]\n");
+            let set_area_size = self.emit_reserve_call_area(0, out);
+            out.push_str("    call anadil_runtime_dizi_set\n");
+            self.emit_release_call_area(set_area_size, out);
+            if cleanup_element {
+                self.emit_pop_into("rcx", out);
+                let release_area_size = self.emit_reserve_call_area(0, out);
+                out.push_str("    call anadil_runtime_birak\n");
+                self.emit_release_call_area(release_area_size, out);
+            } else {
+                self.emit_pop_into("r10", out);
+            }
+        }
+
+        self.emit_pop_into("rax", out);
+        Ok(())
+    }
+
+    fn emit_index_expr(
+        &mut self,
+        target: &TypedExpr,
+        index: &TypedExpr,
+        out: &mut String,
+    ) -> Result<(), String> {
+        self.emit_expr(target, out)?;
+        self.emit_push_rax(out);
+        self.emit_expr(index, out)?;
+        out.push_str("    mov rdx, rax\n");
+        self.emit_pop_into("rcx", out);
+        let call_area_size = self.emit_reserve_call_area(0, out);
+        out.push_str("    call anadil_runtime_dizi_get\n");
+        self.emit_release_call_area(call_area_size, out);
+        Ok(())
+    }
+
     fn emit_call(
         &mut self,
         target: &CallTarget,
@@ -561,7 +616,7 @@ impl<'a> NativeEmitter<'a> {
 
                 for arg in args {
                     self.emit_expr(arg, out)?;
-                    self.emit_retain_if_shared_string(arg, out);
+                    self.emit_retain_if_shared_ref(arg, out);
                     self.emit_push_rax(out);
                 }
 
@@ -663,7 +718,7 @@ impl<'a> NativeEmitter<'a> {
 
     fn emit_yazdir(&mut self, arg: &TypedExpr, out: &mut String) -> Result<(), String> {
         self.emit_expr(arg, out)?;
-        let cleanup_arg = is_owned_temporary_string_expr(arg);
+        let cleanup_arg = is_owned_temporary_ref_expr(arg);
         if cleanup_arg {
             self.emit_push_rax(out);
         }
@@ -672,10 +727,10 @@ impl<'a> NativeEmitter<'a> {
             Type::Sayi => "anadil_runtime_print_sayi",
             Type::Mantik => "anadil_runtime_print_mantik",
             Type::Metin => "anadil_runtime_print_metin_nesne",
-            Type::Dizi | Type::Deger => {
+            Type::Deger => "anadil_runtime_print_deger",
+            Type::Dizi => {
                 return Err(
-                    "dizi/deger yazdirma native compiler tarafinda henuz desteklenmiyor"
-                        .to_string(),
+                    "dizi yazdirma native compiler tarafinda henuz desteklenmiyor".to_string(),
                 );
             }
         };
@@ -691,13 +746,22 @@ impl<'a> NativeEmitter<'a> {
 
     fn emit_uzunluk(&mut self, arg: &TypedExpr, out: &mut String) -> Result<(), String> {
         self.emit_expr(arg, out)?;
-        let cleanup_arg = is_owned_temporary_string_expr(arg);
+        let cleanup_arg = is_owned_temporary_ref_expr(arg);
         if cleanup_arg {
             self.emit_push_rax(out);
         }
         out.push_str("    mov rcx, rax\n");
         let call_area_size = self.emit_reserve_call_area(0, out);
-        out.push_str("    call anadil_runtime_metin_uzunluk\n");
+        let runtime_call = match value_type(arg)? {
+            Type::Metin => "anadil_runtime_metin_uzunluk",
+            Type::Dizi => "anadil_runtime_dizi_uzunluk",
+            other => {
+                return Err(format!(
+                    "`uzunluk` native codegen `metin` veya `dizi` bekler, bulunan `{other}`"
+                ));
+            }
+        };
+        out.push_str(&format!("    call {runtime_call}\n"));
         self.emit_release_call_area(call_area_size, out);
         if cleanup_arg {
             self.emit_push_rax(out);
@@ -770,7 +834,7 @@ fn function_scope_ref_locals(function: &TypedFunction) -> Vec<LocalId> {
     let mut locals: Vec<LocalId> = function
         .params
         .iter()
-        .filter_map(|param| (param.ty == Type::Metin).then_some(param.local_id))
+        .filter_map(|param| is_ref_type(param.ty).then_some(param.local_id))
         .collect();
     locals.extend(
         function
@@ -778,7 +842,7 @@ fn function_scope_ref_locals(function: &TypedFunction) -> Vec<LocalId> {
             .statements
             .iter()
             .filter_map(|statement| match &statement.kind {
-                TypedStmtKind::VarDecl(decl) if decl.ty == Type::Metin => Some(decl.local_id),
+                TypedStmtKind::VarDecl(decl) if is_ref_type(decl.ty) => Some(decl.local_id),
                 _ => None,
             }),
     );
@@ -926,6 +990,23 @@ fn value_type(expr: &TypedExpr) -> Result<Type, String> {
     }
 }
 
+fn is_ref_type(ty: Type) -> bool {
+    matches!(ty, Type::Metin | Type::Dizi)
+}
+
+fn array_value_tag(expr: &TypedExpr) -> Result<u64, String> {
+    match value_type(expr)? {
+        Type::Sayi => Ok(1),
+        Type::Mantik => Ok(2),
+        Type::Metin => Ok(3),
+        Type::Dizi => Ok(4),
+        Type::Deger => Err(
+            "dizi literal icinde dinamik `deger` elemani native tarafta henuz desteklenmiyor"
+                .to_string(),
+        ),
+    }
+}
+
 fn is_string_equality(left: &TypedExpr, op: BinaryOp, right: &TypedExpr) -> bool {
     matches!(op, BinaryOp::Equal | BinaryOp::NotEqual)
         && matches!(left.ty, TypedExprType::Value(Type::Metin))
@@ -944,6 +1025,54 @@ enum StringExprOwnership {
     StaticLiteral,
     SharedReference,
     OwnedTemporary,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RefExprOwnership {
+    NotRef,
+    StaticLiteral,
+    SharedReference,
+    OwnedTemporary,
+}
+
+fn ref_expr_ownership(expr: &TypedExpr) -> RefExprOwnership {
+    let Ok(ty) = value_type(expr) else {
+        return RefExprOwnership::NotRef;
+    };
+
+    match ty {
+        Type::Metin => match string_expr_ownership(expr) {
+            StringExprOwnership::NotString => RefExprOwnership::NotRef,
+            StringExprOwnership::StaticLiteral => RefExprOwnership::StaticLiteral,
+            StringExprOwnership::SharedReference => RefExprOwnership::SharedReference,
+            StringExprOwnership::OwnedTemporary => RefExprOwnership::OwnedTemporary,
+        },
+        Type::Dizi => match &expr.kind {
+            TypedExprKind::Array(_) => RefExprOwnership::OwnedTemporary,
+            TypedExprKind::Variable(_) => RefExprOwnership::SharedReference,
+            TypedExprKind::Call {
+                target: CallTarget::Function { .. },
+                ..
+            } => RefExprOwnership::OwnedTemporary,
+            _ => RefExprOwnership::NotRef,
+        },
+        Type::Sayi | Type::Mantik | Type::Deger => RefExprOwnership::NotRef,
+    }
+}
+
+fn is_owned_or_static_ref_expr(expr: &TypedExpr) -> bool {
+    matches!(
+        ref_expr_ownership(expr),
+        RefExprOwnership::StaticLiteral | RefExprOwnership::OwnedTemporary
+    )
+}
+
+fn is_owned_temporary_ref_expr(expr: &TypedExpr) -> bool {
+    ref_expr_ownership(expr) == RefExprOwnership::OwnedTemporary
+}
+
+fn is_shared_ref_expr(expr: &TypedExpr) -> bool {
+    ref_expr_ownership(expr) == RefExprOwnership::SharedReference
 }
 
 fn string_expr_ownership(expr: &TypedExpr) -> StringExprOwnership {
@@ -965,19 +1094,8 @@ fn string_expr_ownership(expr: &TypedExpr) -> StringExprOwnership {
     }
 }
 
-fn is_owned_or_static_string_expr(expr: &TypedExpr) -> bool {
-    matches!(
-        string_expr_ownership(expr),
-        StringExprOwnership::StaticLiteral | StringExprOwnership::OwnedTemporary
-    )
-}
-
 fn is_owned_temporary_string_expr(expr: &TypedExpr) -> bool {
     string_expr_ownership(expr) == StringExprOwnership::OwnedTemporary
-}
-
-fn is_shared_string_expr(expr: &TypedExpr) -> bool {
-    string_expr_ownership(expr) == StringExprOwnership::SharedReference
 }
 
 fn encode_db_string(value: &str) -> String {
@@ -1078,6 +1196,31 @@ Ana() {\n\
 
         assert!(asm.contains("call anadil_runtime_metin_uzunluk"));
         assert!(asm.contains("call anadil_runtime_birak"));
+    }
+
+    #[test]
+    fn emits_runtime_calls_for_array_literals_index_and_length() {
+        let source = "\
+Ana() {\n\
+    degerler: dizi = {1, \"iki\", 3};\n\
+    yazdir(uzunluk(degerler));\n\
+    yazdir(degerler[0]);\n\
+    yazdir(degerler[1]);\n\
+}\n";
+
+        let program = compile_source(source).expect("program should compile");
+        let asm = emit_windows_x64_asm(&program).expect("assembly should be emitted");
+
+        assert!(asm.contains("extrn anadil_runtime_dizi_olustur:proc"));
+        assert!(asm.contains("extrn anadil_runtime_dizi_set:proc"));
+        assert!(asm.contains("extrn anadil_runtime_dizi_get:proc"));
+        assert!(asm.contains("extrn anadil_runtime_dizi_uzunluk:proc"));
+        assert!(asm.contains("extrn anadil_runtime_print_deger:proc"));
+        assert!(asm.contains("call anadil_runtime_dizi_olustur"));
+        assert!(asm.contains("call anadil_runtime_dizi_set"));
+        assert!(asm.contains("call anadil_runtime_dizi_get"));
+        assert!(asm.contains("call anadil_runtime_dizi_uzunluk"));
+        assert!(asm.contains("call anadil_runtime_print_deger"));
     }
 
     #[test]
@@ -1345,6 +1488,11 @@ Ana() {\n\
             "anadil_runtime_print_metin_nesne PROC",
             "anadil_runtime_metin_esit PROC",
             "anadil_runtime_metin_birlestir PROC",
+            "anadil_runtime_dizi_olustur PROC",
+            "anadil_runtime_dizi_set PROC",
+            "anadil_runtime_dizi_get PROC",
+            "anadil_runtime_dizi_uzunluk PROC",
+            "anadil_runtime_print_deger PROC",
             "anadil_runtime_tahsis PROC",
             "anadil_runtime_paylas PROC",
             "anadil_runtime_birak PROC",
@@ -1370,6 +1518,8 @@ Ana() {\n\
         assert!(RUNTIME_ASM.contains("Bellek tahsisi basarisiz"));
         assert!(RUNTIME_ASM.contains("ANADIL_STATIC_REFCOUNT_MIN"));
         assert!(RUNTIME_ASM.contains("ANADIL_TIP_METIN"));
+        assert!(RUNTIME_ASM.contains("ANADIL_TIP_DIZI"));
+        assert!(RUNTIME_ASM.contains("ANADIL_DEGER_METIN"));
         assert!(RUNTIME_ASM.contains("mov rdx, qword ptr [rcx]"));
         assert!(RUNTIME_ASM.contains("lea rcx, [rcx + 8]"));
         assert!(RUNTIME_ASM.contains("cmp r8, qword ptr [rdx]"));

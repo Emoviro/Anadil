@@ -11,6 +11,7 @@ const EXAMPLES: &[&str] = &[
     "fonksiyon",
     "mantik",
     "metin",
+    "dizi_v03",
     "kosullu_dongu",
     "dongu",
     "sonsuz_dongu",

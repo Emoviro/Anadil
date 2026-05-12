@@ -552,6 +552,54 @@ Ana() {\n\
     assert!(combined_output.contains("Anadil runtime hatasi: Sifira bolme hatasi"));
 }
 
+#[test]
+fn native_array_index_out_of_range_reports_runtime_error() {
+    let Some(anadil_bin) = anadil_binary() else {
+        eprintln!("native edge case skipped: anadil binary path is not available");
+        return;
+    };
+
+    let source = "\
+Ana() {\n\
+    degerler: dizi = {1, 2, 3};\n\
+    yazdir(degerler[3]);\n\
+}\n";
+
+    let interpreter_error = run_source(source).expect_err("interpreter should reject bad index");
+    assert!(interpreter_error.contains("aralik"));
+
+    let compile_output =
+        compile_source_with_native(&anadil_bin, "array_index_out_of_range", source);
+    if !compile_output.status.success() && native_toolchain_missing(&compile_output) {
+        eprintln!("native edge case skipped: Visual Studio native toolchain is not available");
+        return;
+    }
+
+    assert!(
+        compile_output.status.success(),
+        "native compile failed for array_index_out_of_range\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile_output.stdout),
+        String::from_utf8_lossy(&compile_output.stderr)
+    );
+
+    let exe_path = edge_case_path("array_index_out_of_range").with_extension("exe");
+    let run_output = Command::new(&exe_path)
+        .output()
+        .expect("native executable should run");
+
+    assert!(
+        !run_output.status.success(),
+        "native executable should fail for array_index_out_of_range"
+    );
+
+    let combined_output = format!(
+        "{}{}",
+        String::from_utf8_lossy(&run_output.stdout),
+        String::from_utf8_lossy(&run_output.stderr)
+    );
+    assert!(combined_output.contains("Anadil runtime hatasi: Dizi index'i aralik disinda"));
+}
+
 fn assert_native_output(name: &str, source: &str) {
     let Some(anadil_bin) = anadil_binary() else {
         eprintln!("native edge case skipped: anadil binary path is not available");
