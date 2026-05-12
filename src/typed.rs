@@ -126,7 +126,12 @@ pub enum TypedExprKind {
     Number(i64),
     Bool(bool),
     String(String),
+    Array(Vec<TypedExpr>),
     Variable(TypedLocalRef),
+    Index {
+        target: Box<TypedExpr>,
+        index: Box<TypedExpr>,
+    },
     Call {
         target: CallTarget,
         args: Vec<TypedExpr>,

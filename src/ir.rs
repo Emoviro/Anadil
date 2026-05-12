@@ -60,7 +60,12 @@ pub enum IrExpr {
     Number(i64),
     Bool(bool),
     String(String),
+    Array(Vec<IrExpr>),
     Local(LocalId, String),
+    Index {
+        target: Box<IrExpr>,
+        index: Box<IrExpr>,
+    },
     Call {
         target: IrCallTarget,
         args: Vec<IrExpr>,
@@ -250,7 +255,12 @@ fn lower_expr(expr: &TypedExpr) -> IrExpr {
         TypedExprKind::Number(value) => IrExpr::Number(*value),
         TypedExprKind::Bool(value) => IrExpr::Bool(*value),
         TypedExprKind::String(value) => IrExpr::String(value.clone()),
+        TypedExprKind::Array(elements) => IrExpr::Array(elements.iter().map(lower_expr).collect()),
         TypedExprKind::Variable(local) => IrExpr::Local(local.id, local.name.clone()),
+        TypedExprKind::Index { target, index } => IrExpr::Index {
+            target: Box::new(lower_expr(target)),
+            index: Box::new(lower_expr(index)),
+        },
         TypedExprKind::Call { target, args } => lower_call_expr(target, args),
         TypedExprKind::Unary { op, expr } => IrExpr::Unary {
             op: *op,
@@ -494,7 +504,18 @@ impl fmt::Display for IrExpr {
             IrExpr::Bool(true) => f.write_str("dogru"),
             IrExpr::Bool(false) => f.write_str("yanlis"),
             IrExpr::String(value) => write!(f, "\"{}\"", value.escape_default()),
+            IrExpr::Array(elements) => {
+                f.write_str("{")?;
+                for (index, element) in elements.iter().enumerate() {
+                    if index > 0 {
+                        f.write_str(", ")?;
+                    }
+                    write!(f, "{element}")?;
+                }
+                f.write_str("}")
+            }
             IrExpr::Local(id, name) => write!(f, "{name}#{}", id.0),
+            IrExpr::Index { target, index } => write!(f, "{target}[{index}]"),
             IrExpr::Call { target, args } => {
                 write!(f, "{target}(")?;
                 for (index, arg) in args.iter().enumerate() {
@@ -528,6 +549,8 @@ impl fmt::Display for IrRuntimeCall {
             IrRuntimeCall::Yazdir(Type::Sayi) => f.write_str("yazdir_sayi"),
             IrRuntimeCall::Yazdir(Type::Mantik) => f.write_str("yazdir_mantik"),
             IrRuntimeCall::Yazdir(Type::Metin) => f.write_str("yazdir_metin"),
+            IrRuntimeCall::Yazdir(Type::Dizi) => f.write_str("yazdir_dizi"),
+            IrRuntimeCall::Yazdir(Type::Deger) => f.write_str("yazdir_deger"),
             IrRuntimeCall::MetinUzunluk => f.write_str("metin_uzunluk"),
             IrRuntimeCall::MetinEsit => f.write_str("metin_esit"),
             IrRuntimeCall::MetinEsitDegil => f.write_str("metin_esit_degil"),

@@ -551,6 +551,12 @@ impl Analyzer {
             ExprKind::Number(_) => Ok(ExprType::Value(Type::Sayi)),
             ExprKind::Bool(_) => Ok(ExprType::Value(Type::Mantik)),
             ExprKind::String(_) => Ok(ExprType::Value(Type::Metin)),
+            ExprKind::Array(elements) => {
+                for element in elements {
+                    self.expect_value_expr(element, scopes, context)?;
+                }
+                Ok(ExprType::Value(Type::Dizi))
+            }
             ExprKind::Variable(name) => {
                 let Some(symbol) = scopes.lookup(name) else {
                     return Err(SemanticError::at(
@@ -563,6 +569,27 @@ impl Analyzer {
             }
             ExprKind::Call { callee, args } => {
                 self.analyze_call_expr(expr.span, callee, args, scopes, context)
+            }
+            ExprKind::Index { target, index } => {
+                let target_type = self.expect_value_expr(target, scopes, context)?;
+                if target_type != Type::Dizi {
+                    return Err(SemanticError::at(
+                        target.span,
+                        format!(
+                            "Index okuma yalnizca `dizi` uzerinde kullanilabilir, bulunan `{target_type}`"
+                        ),
+                    ));
+                }
+
+                let index_type = self.expect_value_expr(index, scopes, context)?;
+                if index_type != Type::Sayi {
+                    return Err(SemanticError::at(
+                        index.span,
+                        format!("Dizi index'i `sayi` olmali, bulunan `{index_type}`"),
+                    ));
+                }
+
+                Ok(ExprType::Value(Type::Deger))
             }
             ExprKind::Unary { op: _, expr: inner } => {
                 let inner_type = self.expect_value_expr(inner, scopes, context)?;
@@ -683,11 +710,11 @@ impl Analyzer {
             match builtin {
                 BuiltinFunction::Yazdir => {}
                 BuiltinFunction::Uzunluk => {
-                    if arg_types[0] != Type::Metin {
+                    if !matches!(arg_types[0], Type::Metin | Type::Dizi) {
                         return Err(SemanticError::at(
                             args[0].span,
                             format!(
-                                "`uzunluk` argümanı `metin` olmalı, bulunan `{}`",
+                                "`uzunluk` argümanı `metin` veya `dizi` olmalı, bulunan `{}`",
                                 arg_types[0]
                             ),
                         ));
@@ -1191,6 +1218,18 @@ impl Analyzer {
                 ty: TypedExprType::Value(Type::Metin),
                 kind: TypedExprKind::String(value.clone()),
             }),
+            ExprKind::Array(elements) => {
+                let mut typed_elements = Vec::with_capacity(elements.len());
+                for element in elements {
+                    typed_elements.push(self.expect_typed_value_expr(element, scopes, context)?);
+                }
+
+                Ok(TypedExpr {
+                    span: expr.span,
+                    ty: TypedExprType::Value(Type::Dizi),
+                    kind: TypedExprKind::Array(typed_elements),
+                })
+            }
             ExprKind::Variable(name) => {
                 let symbol = scopes.lookup(name).ok_or_else(|| {
                     SemanticError::at(
@@ -1207,6 +1246,42 @@ impl Analyzer {
             }
             ExprKind::Call { callee, args } => {
                 self.build_typed_call_expr(expr.span, callee, args, scopes, context)
+            }
+            ExprKind::Index { target, index } => {
+                let target = self.expect_typed_value_expr(target, scopes, context)?;
+                let target_type = match target.ty {
+                    TypedExprType::Value(ty) => ty,
+                    TypedExprType::Void => unreachable!(),
+                };
+                if target_type != Type::Dizi {
+                    return Err(SemanticError::at(
+                        target.span,
+                        format!(
+                            "Index okuma yalnizca `dizi` uzerinde kullanilabilir, bulunan `{target_type}`"
+                        ),
+                    ));
+                }
+
+                let index = self.expect_typed_value_expr(index, scopes, context)?;
+                let index_type = match index.ty {
+                    TypedExprType::Value(ty) => ty,
+                    TypedExprType::Void => unreachable!(),
+                };
+                if index_type != Type::Sayi {
+                    return Err(SemanticError::at(
+                        index.span,
+                        format!("Dizi index'i `sayi` olmali, bulunan `{index_type}`"),
+                    ));
+                }
+
+                Ok(TypedExpr {
+                    span: expr.span,
+                    ty: TypedExprType::Value(Type::Deger),
+                    kind: TypedExprKind::Index {
+                        target: Box::new(target),
+                        index: Box::new(index),
+                    },
+                })
             }
             ExprKind::Unary { op, expr: inner } => {
                 let inner = self.expect_typed_value_expr(inner, scopes, context)?;
@@ -1378,14 +1453,19 @@ impl Analyzer {
                             "`uzunluk` yerleşik fonksiyonu tam olarak 1 argüman bekler",
                         ));
                     }
-                    if !matches!(typed_args[0].ty, TypedExprType::Value(Type::Metin)) {
+                    if !matches!(
+                        typed_args[0].ty,
+                        TypedExprType::Value(Type::Metin | Type::Dizi)
+                    ) {
                         let found = match typed_args[0].ty {
                             TypedExprType::Value(ty) => ty.to_string(),
                             TypedExprType::Void => "void".to_string(),
                         };
                         return Err(SemanticError::at(
                             typed_args[0].span,
-                            format!("`uzunluk` argümanı `metin` olmalı, bulunan `{found}`"),
+                            format!(
+                                "`uzunluk` argümanı `metin` veya `dizi` olmalı, bulunan `{found}`"
+                            ),
                         ));
                     }
                 }

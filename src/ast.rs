@@ -47,6 +47,8 @@ pub enum Type {
     Sayi,
     Mantik,
     Metin,
+    Dizi,
+    Deger,
 }
 
 impl Type {
@@ -55,6 +57,8 @@ impl Type {
             Type::Sayi => "sayı",
             Type::Mantik => "mantık",
             Type::Metin => "metin",
+            Type::Dizi => "dizi",
+            Type::Deger => "değer",
         }
     }
 }
@@ -152,7 +156,12 @@ pub enum ExprKind {
     Number(i64),
     Bool(bool),
     String(String),
+    Array(Vec<Expr>),
     Variable(String),
+    Index {
+        target: Box<Expr>,
+        index: Box<Expr>,
+    },
     Call {
         callee: String,
         args: Vec<Expr>,

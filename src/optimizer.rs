@@ -106,6 +106,13 @@ fn optimize_expr(expr: TypedExpr) -> TypedExpr {
             target,
             args: args.into_iter().map(optimize_expr).collect(),
         },
+        TypedExprKind::Array(elements) => {
+            TypedExprKind::Array(elements.into_iter().map(optimize_expr).collect())
+        }
+        TypedExprKind::Index { target, index } => TypedExprKind::Index {
+            target: Box::new(optimize_expr(*target)),
+            index: Box::new(optimize_expr(*index)),
+        },
         other => other,
     };
 
@@ -202,6 +209,10 @@ fn is_side_effect_free(expr: &TypedExpr) -> bool {
         | TypedExprKind::Bool(_)
         | TypedExprKind::String(_)
         | TypedExprKind::Variable(_) => true,
+        TypedExprKind::Array(elements) => elements.iter().all(is_side_effect_free),
+        TypedExprKind::Index { target, index } => {
+            is_side_effect_free(target) && is_side_effect_free(index)
+        }
         TypedExprKind::Unary { expr, .. } => is_side_effect_free(expr),
         TypedExprKind::Binary { left, right, .. } => {
             is_side_effect_free(left) && is_side_effect_free(right)

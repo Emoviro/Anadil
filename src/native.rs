@@ -402,6 +402,11 @@ impl<'a> NativeEmitter<'a> {
                 let label = self.intern_string(value);
                 out.push_str(&format!("    lea rax, {label}\n"));
             }
+            TypedExprKind::Array(_) | TypedExprKind::Index { .. } => {
+                return Err(
+                    "dizi ifadeleri native compiler tarafinda henuz desteklenmiyor".to_string(),
+                );
+            }
             TypedExprKind::Variable(local) => {
                 out.push_str(&format!(
                     "    mov rax, QWORD PTR [rbp-{}]\n",
@@ -667,6 +672,12 @@ impl<'a> NativeEmitter<'a> {
             Type::Sayi => "anadil_runtime_print_sayi",
             Type::Mantik => "anadil_runtime_print_mantik",
             Type::Metin => "anadil_runtime_print_metin_nesne",
+            Type::Dizi | Type::Deger => {
+                return Err(
+                    "dizi/deger yazdirma native compiler tarafinda henuz desteklenmiyor"
+                        .to_string(),
+                );
+            }
         };
         let call_area_size = self.emit_reserve_call_area(0, out);
         out.push_str(&format!("    call {runtime_call}\n"));
@@ -870,6 +881,15 @@ fn collect_expr_call_args(expr: &TypedExpr, max_args: &mut usize) {
             }
         }
         TypedExprKind::Unary { expr, .. } => collect_expr_call_args(expr, max_args),
+        TypedExprKind::Array(elements) => {
+            for element in elements {
+                collect_expr_call_args(element, max_args);
+            }
+        }
+        TypedExprKind::Index { target, index } => {
+            collect_expr_call_args(target, max_args);
+            collect_expr_call_args(index, max_args);
+        }
         TypedExprKind::Binary { left, right, .. } => {
             collect_expr_call_args(left, max_args);
             collect_expr_call_args(right, max_args);

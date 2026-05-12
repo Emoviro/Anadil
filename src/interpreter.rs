@@ -42,6 +42,7 @@ enum Value {
     Number(i64),
     Bool(bool),
     String(String),
+    Array(Vec<Value>),
 }
 
 impl Value {
@@ -51,6 +52,14 @@ impl Value {
             Value::Bool(true) => "do\u{011f}ru".to_string(),
             Value::Bool(false) => "yanl\u{0131}\u{015f}".to_string(),
             Value::String(value) => value.clone(),
+            Value::Array(values) => {
+                let rendered = values
+                    .iter()
+                    .map(Value::render)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("{{{rendered}}}")
+            }
         }
     }
 }
@@ -254,15 +263,43 @@ impl<'a> Interpreter<'a> {
             TypedExprKind::Number(value) => Ok(Some(Value::Number(*value))),
             TypedExprKind::Bool(value) => Ok(Some(Value::Bool(*value))),
             TypedExprKind::String(value) => Ok(Some(Value::String(value.clone()))),
+            TypedExprKind::Array(elements) => {
+                let mut values = Vec::with_capacity(elements.len());
+                for element in elements {
+                    values.push(self.eval_value(element)?);
+                }
+                Ok(Some(Value::Array(values)))
+            }
             TypedExprKind::Variable(local) => self.lookup(&local.name).map(Some).ok_or_else(|| {
                 RuntimeError::at(expr.span, format!("Degisken bulunamadi: `{}`", local.name))
             }),
+            TypedExprKind::Index { target, index } => {
+                let target = self.eval_value(target)?;
+                let index = self.eval_value(index)?;
+                let Value::Array(values) = target else {
+                    return Err(RuntimeError::at(
+                        expr.span,
+                        "Index okuma icin dizi bekleniyordu",
+                    ));
+                };
+                let Value::Number(index) = index else {
+                    return Err(RuntimeError::at(expr.span, "Dizi index'i sayi olmali"));
+                };
+                if index < 0 {
+                    return Err(RuntimeError::at(expr.span, "Dizi index'i negatif olamaz"));
+                }
+                values
+                    .get(index as usize)
+                    .cloned()
+                    .map(Some)
+                    .ok_or_else(|| RuntimeError::at(expr.span, "Dizi index'i aralik disinda"))
+            }
             TypedExprKind::Call { target, args } => self.eval_call(expr.span, target, args),
             TypedExprKind::Unary { op: _, expr: inner } => {
                 let value = self.eval_value(inner)?;
                 match value {
                     Value::Number(value) => Ok(Some(Value::Number(-value))),
-                    Value::Bool(_) | Value::String(_) => Err(RuntimeError::at(
+                    Value::Bool(_) | Value::String(_) | Value::Array(_) => Err(RuntimeError::at(
                         expr.span,
                         "Unary eksi icin sayi bekleniyordu",
                     )),
@@ -304,9 +341,10 @@ impl<'a> Interpreter<'a> {
                     .ok_or_else(|| RuntimeError::at(span, "`uzunluk` bir arguman bekler"))?;
                 match value {
                     Value::String(value) => Ok(Some(Value::Number(value.len() as i64))),
+                    Value::Array(values) => Ok(Some(Value::Number(values.len() as i64))),
                     _ => Err(RuntimeError::at(
                         span,
-                        "`uzunluk` argumani calisma zamaninda metin olmali",
+                        "`uzunluk` argumani calisma zamaninda metin veya dizi olmali",
                     )),
                 }
             }
@@ -365,7 +403,7 @@ impl<'a> Interpreter<'a> {
     fn eval_bool(&mut self, expr: &TypedExpr) -> Result<bool, RuntimeError> {
         match self.eval_value(expr)? {
             Value::Bool(value) => Ok(value),
-            Value::Number(_) | Value::String(_) => {
+            Value::Number(_) | Value::String(_) | Value::Array(_) => {
                 Err(RuntimeError::at(expr.span, "Mantik degeri bekleniyordu"))
             }
         }
@@ -576,5 +614,19 @@ Ana() {
 "#;
 
         assert_eq!(run(source).expect("program should run"), "7\n2");
+    }
+
+    #[test]
+    fn runs_array_literals_index_reads_and_length() {
+        let source = r#"
+Ana() {
+    degerler: dizi = {1, "iki", 3};
+    yazdir(uzunluk(degerler));
+    yazdir(degerler[0]);
+    yazdir(degerler[1]);
+}
+"#;
+
+        assert_eq!(run(source).expect("program should run"), "3\n1\niki");
     }
 }

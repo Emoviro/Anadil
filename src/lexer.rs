@@ -45,6 +45,14 @@ impl Lexer {
                     tokens.push(self.make_token(TokenKind::RBrace));
                     self.advance();
                 }
+                '[' => {
+                    tokens.push(self.make_token(TokenKind::LBracket));
+                    self.advance();
+                }
+                ']' => {
+                    tokens.push(self.make_token(TokenKind::RBracket));
+                    self.advance();
+                }
                 ',' => {
                     tokens.push(self.make_token(TokenKind::Comma));
                     self.advance();
@@ -247,6 +255,7 @@ impl Lexer {
             "say\u{0131}" | "sayÄ±" | "sayÃ„Â±" => TokenKind::Sayi,
             "mant\u{0131}k" | "mantÄ±k" | "mantÃ„Â±k" => TokenKind::Mantik,
             "metin" => TokenKind::Metin,
+            "dizi" => TokenKind::Dizi,
             "e\u{011f}er" | "eÄŸer" | "eÃ„Å¸er" => TokenKind::Eger,
             "de\u{011f}ilse" | "deÄŸilse" | "deÃ„Å¸ilse" => TokenKind::Degilse,
             "d\u{00f6}ng\u{00fc}" | "dÃ¶ngÃ¼" | "dÃƒÂ¶ngÃƒÂ¼" => TokenKind::Dongu,
