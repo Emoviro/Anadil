@@ -2,7 +2,8 @@
 
 ## Hemen Sonraki Adim
 
-- V0.2 branch'ini main'e tasimak icin PR/merge hazirligini yap.
+- V0.2 branch'i icin PR ac; aciklamada `Docs/v0.2_merge_notes.md`
+  icerigini kullan.
 
 ## Sonraki Native Compiler Sprinti
 
