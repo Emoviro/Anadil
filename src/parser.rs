@@ -357,12 +357,23 @@ impl Parser {
 
     fn parse_assignment(&mut self) -> Result<AssignStmt, ParseError> {
         let (target, span) = self.expect_ident()?;
+        let index = if self
+            .consume_if(|kind| matches!(kind, TokenKind::LBracket))
+            .is_some()
+        {
+            let index = self.parse_expression()?;
+            self.expect_token("`]`", |kind| matches!(kind, TokenKind::RBracket))?;
+            Some(Box::new(index))
+        } else {
+            None
+        };
         self.expect_token("`=`", |kind| matches!(kind, TokenKind::Assign))?;
         let value = self.parse_expression()?;
 
         Ok(AssignStmt {
             span,
             target,
+            index,
             value,
         })
     }
@@ -740,7 +751,7 @@ impl Parser {
 
     fn is_assignment_start(&self) -> bool {
         matches!(&self.current().kind, TokenKind::Ident(_))
-            && matches!(self.peek_kind(), Some(kind) if matches!(kind, TokenKind::Assign))
+            && matches!(self.peek_kind(), Some(kind) if matches!(kind, TokenKind::Assign | TokenKind::LBracket))
     }
 
     fn has_top_level_semicolon_before_rparen(&self) -> bool {

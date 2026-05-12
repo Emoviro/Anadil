@@ -81,6 +81,7 @@ pub struct TypedVarDecl {
 pub struct TypedAssignStmt {
     pub span: SourceSpan,
     pub target: TypedLocalRef,
+    pub index: Option<Box<TypedExpr>>,
     pub value: TypedExpr,
 }
 

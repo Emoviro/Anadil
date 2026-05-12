@@ -38,6 +38,11 @@ pub enum IrInstruction {
         target: IrLocal,
         value: IrExpr,
     },
+    IndexAssign {
+        target: IrLocal,
+        index: IrExpr,
+        value: IrExpr,
+    },
     Expr(IrExpr),
     If {
         condition: IrExpr,
@@ -188,14 +193,7 @@ fn lower_statement(statement: &TypedStmt) -> IrInstruction {
             },
             value: lower_expr(&decl.value),
         },
-        TypedStmtKind::Assign(assign) => IrInstruction::Assign {
-            target: IrLocal {
-                id: assign.target.id,
-                name: assign.target.name.clone(),
-                ty: assign.target.ty,
-            },
-            value: lower_expr(&assign.value),
-        },
+        TypedStmtKind::Assign(assign) => lower_assignment(assign),
         TypedStmtKind::Expr(expr) => IrInstruction::Expr(lower_expr(expr)),
         TypedStmtKind::If(if_stmt) => IrInstruction::If {
             condition: lower_expr(&if_stmt.condition),
@@ -238,15 +236,31 @@ fn lower_loop_part(part: &TypedLoopPart) -> IrInstruction {
             },
             value: lower_expr(&decl.value),
         },
-        TypedLoopPart::Assign(assign) => IrInstruction::Assign {
+        TypedLoopPart::Assign(assign) => lower_assignment(assign),
+        TypedLoopPart::Expr(expr) => IrInstruction::Expr(lower_expr(expr)),
+    }
+}
+
+fn lower_assignment(assign: &crate::typed::TypedAssignStmt) -> IrInstruction {
+    if let Some(index) = &assign.index {
+        IrInstruction::IndexAssign {
+            target: IrLocal {
+                id: assign.target.id,
+                name: assign.target.name.clone(),
+                ty: assign.target.ty,
+            },
+            index: lower_expr(index),
+            value: lower_expr(&assign.value),
+        }
+    } else {
+        IrInstruction::Assign {
             target: IrLocal {
                 id: assign.target.id,
                 name: assign.target.name.clone(),
                 ty: assign.target.ty,
             },
             value: lower_expr(&assign.value),
-        },
-        TypedLoopPart::Expr(expr) => IrInstruction::Expr(lower_expr(expr)),
+        }
     }
 }
 
@@ -404,6 +418,19 @@ fn format_instruction(instruction: &IrInstruction, indent: usize, output: &mut S
             output.push_str(&value.to_string());
             output.push('\n');
         }
+        IrInstruction::IndexAssign {
+            target,
+            index,
+            value,
+        } => {
+            output.push_str("set ");
+            output.push_str(&format_local_ref(target));
+            output.push('[');
+            output.push_str(&index.to_string());
+            output.push_str("] = ");
+            output.push_str(&value.to_string());
+            output.push('\n');
+        }
         IrInstruction::Expr(expr) => {
             output.push_str("expr ");
             output.push_str(&expr.to_string());
@@ -472,6 +499,11 @@ fn format_inline_instructions(instructions: &[IrInstruction]) -> String {
             IrInstruction::Assign { target, value } => {
                 format!("set {} = {value}", format_local_ref(target))
             }
+            IrInstruction::IndexAssign {
+                target,
+                index,
+                value,
+            } => format!("set {}[{index}] = {value}", format_local_ref(target)),
             IrInstruction::Expr(expr) => format!("expr {expr}"),
             IrInstruction::Break => "break".to_string(),
             IrInstruction::Continue => "continue".to_string(),

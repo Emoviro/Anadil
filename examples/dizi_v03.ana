@@ -3,5 +3,7 @@ Ana() {
 
     yazdir(uzunluk(degerler));
     yazdir(degerler[0]);
+    degerler[0] = "bir";
+    yazdir(degerler[0]);
     yazdir(degerler[1]);
 }

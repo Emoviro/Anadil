@@ -351,28 +351,57 @@ impl<'a> NativeEmitter<'a> {
         assign: &TypedAssignStmt,
         out: &mut String,
     ) -> Result<(), String> {
-        self.emit_expr(&assign.value, out)?;
-        if is_ref_type(assign.target.ty) && is_shared_ref_expr(&assign.value) {
-            self.emit_retain_rax(out);
-        }
-        if is_ref_type(assign.target.ty)
-            && (is_owned_or_static_ref_expr(&assign.value) || is_shared_ref_expr(&assign.value))
-        {
+        if let Some(index) = &assign.index {
+            let tag = array_value_tag(&assign.value)?;
+            self.emit_expr(&assign.value, out)?;
+            let cleanup_value = is_owned_temporary_ref_expr(&assign.value);
+            self.emit_push_rax(out);
+            self.emit_expr(index, out)?;
             self.emit_push_rax(out);
             out.push_str(&format!(
                 "    mov rcx, QWORD PTR [rbp-{}]\n",
                 local_offset(assign.target.id)
             ));
+            out.push_str("    mov rdx, QWORD PTR [rsp]\n");
+            out.push_str(&format!("    mov r8, {tag}\n"));
+            out.push_str("    mov r9, QWORD PTR [rsp+8]\n");
             let call_area_size = self.emit_reserve_call_area(0, out);
-            out.push_str("    call anadil_runtime_birak\n");
+            out.push_str("    call anadil_runtime_dizi_set\n");
             self.emit_release_call_area(call_area_size, out);
-            self.emit_pop_into("rax", out);
+            self.emit_pop_into("r10", out);
+            if cleanup_value {
+                self.emit_pop_into("rcx", out);
+                let release_area_size = self.emit_reserve_call_area(0, out);
+                out.push_str("    call anadil_runtime_birak\n");
+                self.emit_release_call_area(release_area_size, out);
+            } else {
+                self.emit_pop_into("r10", out);
+            }
+            Ok(())
+        } else {
+            self.emit_expr(&assign.value, out)?;
+            if is_ref_type(assign.target.ty) && is_shared_ref_expr(&assign.value) {
+                self.emit_retain_rax(out);
+            }
+            if is_ref_type(assign.target.ty)
+                && (is_owned_or_static_ref_expr(&assign.value) || is_shared_ref_expr(&assign.value))
+            {
+                self.emit_push_rax(out);
+                out.push_str(&format!(
+                    "    mov rcx, QWORD PTR [rbp-{}]\n",
+                    local_offset(assign.target.id)
+                ));
+                let call_area_size = self.emit_reserve_call_area(0, out);
+                out.push_str("    call anadil_runtime_birak\n");
+                self.emit_release_call_area(call_area_size, out);
+                self.emit_pop_into("rax", out);
+            }
+            out.push_str(&format!(
+                "    mov QWORD PTR [rbp-{}], rax\n",
+                local_offset(assign.target.id)
+            ));
+            Ok(())
         }
-        out.push_str(&format!(
-            "    mov QWORD PTR [rbp-{}], rax\n",
-            local_offset(assign.target.id)
-        ));
-        Ok(())
     }
 
     fn emit_retain_if_shared_ref(&mut self, expr: &TypedExpr, out: &mut String) {

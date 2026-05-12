@@ -250,6 +250,21 @@ impl<'a> Interpreter<'a> {
 
     fn execute_assignment(&mut self, assign: &TypedAssignStmt) -> Result<(), RuntimeError> {
         let value = self.eval_value(&assign.value)?;
+        if let Some(index) = &assign.index {
+            let index = self.eval_value(index)?;
+            let Value::Number(index) = index else {
+                return Err(RuntimeError::at(assign.span, "Dizi index'i sayi olmali"));
+            };
+            return self
+                .assign_array_index(assign.span, &assign.target.name, index, value)
+                .ok_or_else(|| {
+                    RuntimeError::at(
+                        assign.span,
+                        format!("Degisken bulunamadi: `{}`", assign.target.name),
+                    )
+                })?;
+        }
+
         self.assign(&assign.target.name, value).ok_or_else(|| {
             RuntimeError::at(
                 assign.span,
@@ -421,6 +436,35 @@ impl<'a> Interpreter<'a> {
             if scope.contains_key(name) {
                 scope.insert(name.to_string(), value);
                 return Some(());
+            }
+        }
+
+        None
+    }
+
+    fn assign_array_index(
+        &mut self,
+        span: SourceSpan,
+        name: &str,
+        index: i64,
+        value: Value,
+    ) -> Option<Result<(), RuntimeError>> {
+        for scope in self.scopes.iter_mut().rev() {
+            if let Some(current) = scope.get_mut(name) {
+                let Value::Array(values) = current else {
+                    return Some(Err(RuntimeError::at(
+                        span,
+                        "Index atamasi icin dizi bekleniyordu",
+                    )));
+                };
+                if index < 0 {
+                    return Some(Err(RuntimeError::at(span, "Dizi index'i negatif olamaz")));
+                }
+                let Some(slot) = values.get_mut(index as usize) else {
+                    return Some(Err(RuntimeError::at(span, "Dizi index'i aralik disinda")));
+                };
+                *slot = value;
+                return Some(Ok(()));
             }
         }
 

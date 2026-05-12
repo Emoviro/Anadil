@@ -111,6 +111,7 @@ pub struct VarDecl {
 pub struct AssignStmt {
     pub span: SourceSpan,
     pub target: String,
+    pub index: Option<Box<Expr>>,
     pub value: Expr,
 }
 

@@ -473,6 +473,27 @@ impl Analyzer {
             ));
         };
 
+        if let Some(index) = &assign.index {
+            if target.ty != Type::Dizi {
+                return Err(SemanticError::at(
+                    assign.span,
+                    format!(
+                        "Index atamasi yalnizca `dizi` uzerinde kullanilabilir, bulunan `{}`",
+                        target.ty
+                    ),
+                ));
+            }
+            let index_type = self.expect_value_expr(index, scopes, context)?;
+            if index_type != Type::Sayi {
+                return Err(SemanticError::at(
+                    index.span,
+                    format!("Dizi index'i `sayi` olmali, bulunan `{index_type}`"),
+                ));
+            }
+            self.expect_value_expr(&assign.value, scopes, context)?;
+            return Ok(());
+        }
+
         let value_type = self.expect_value_expr(&assign.value, scopes, context)?;
 
         if value_type != target.ty {
@@ -1115,6 +1136,41 @@ impl Analyzer {
         })?;
 
         let value = self.expect_typed_value_expr(&assign.value, scopes, context)?;
+        let index = if let Some(index) = &assign.index {
+            if target.ty != Type::Dizi {
+                return Err(SemanticError::at(
+                    assign.span,
+                    format!(
+                        "Index atamasi yalnizca `dizi` uzerinde kullanilabilir, bulunan `{}`",
+                        target.ty
+                    ),
+                ));
+            }
+            let index = self.expect_typed_value_expr(index, scopes, context)?;
+            let index_type = match index.ty {
+                TypedExprType::Value(ty) => ty,
+                TypedExprType::Void => unreachable!(),
+            };
+            if index_type != Type::Sayi {
+                return Err(SemanticError::at(
+                    index.span,
+                    format!("Dizi index'i `sayi` olmali, bulunan `{index_type}`"),
+                ));
+            }
+            Some(Box::new(index))
+        } else {
+            None
+        };
+
+        if index.is_some() {
+            return Ok(TypedAssignStmt {
+                span: assign.span,
+                target: self.typed_local_ref(&assign.target, target),
+                index,
+                value,
+            });
+        }
+
         let value_type = match value.ty {
             TypedExprType::Value(ty) => ty,
             TypedExprType::Void => unreachable!(),
@@ -1133,6 +1189,7 @@ impl Analyzer {
         Ok(TypedAssignStmt {
             span: assign.span,
             target: self.typed_local_ref(&assign.target, target),
+            index,
             value,
         })
     }

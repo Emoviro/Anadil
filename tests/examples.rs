@@ -51,7 +51,7 @@ fn runs_metin_v02_example() {
 
 #[test]
 fn runs_dizi_v03_example() {
-    assert_example_output(include_str!("../examples/dizi_v03.ana"), "3\n1\niki");
+    assert_example_output(include_str!("../examples/dizi_v03.ana"), "3\n1\nbir\niki");
 }
 
 #[test]
